@@ -45,9 +45,12 @@ export const AppRoutes: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <Routes>
+  return (
+    <Routes>
+      {/* Public Interview Room for Candidates */}
+      <Route path="interview" element={<InterviewPage />} />
+
+      {!isAuthenticated ? (
         <Route
           path="*"
           element={
@@ -60,20 +63,15 @@ export const AppRoutes: React.FC = () => {
             </AuthLayout>
           }
         />
-      </Routes>
-    );
-  }
-
-  return (
-    <Routes>
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="assessments" element={<AssessmentsPage />} />
-        <Route path="candidates" element={<CandidatesPage />} />
-        <Route path="interview" element={<InterviewPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Route>
+      ) : (
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="assessments" element={<AssessmentsPage />} />
+          <Route path="candidates" element={<CandidatesPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      )}
     </Routes>
   );
 };

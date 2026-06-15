@@ -19,7 +19,7 @@ import type { ChatMessage } from "../../../types/socket.types";
 interface InterviewRoomProps {
   /** Candidate invitation token — obtained from the assessment invite link. */
   token: string;
-  onExit: () => void;
+  onExit?: () => void;
 }
 
 // ── sub-components ────────────────────────────────────────────────────────────
@@ -216,13 +216,15 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({
       {/* Room header */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
         <div className="flex items-center gap-4">
-          <button
-            onClick={onExit}
-            className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Dashboard
-          </button>
+          {onExit && (
+            <button
+              onClick={onExit}
+              className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Dashboard
+            </button>
+          )}
           <div>
             <h2 className="text-sm font-bold text-gray-900">
               AI Interview Session

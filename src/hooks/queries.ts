@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback } from 'react';
 import { assessmentService } from '../features/dashboard/services/assessment';
+import { candidateService } from '../features/dashboard/services/candidate';
 import type { AssessmentSummaryResponse, AssessmentResponse, AssessmentStatus } from '../types/assessment.types';
-import type { CandidateAssessmentListItem } from '../types/candidate.types';
+import type { CandidateAssessmentListItem, BulkUploadResponse } from '../types/candidate.types';
 
 // Custom lightweight mutation hook replacing TanStack useMutation
 function useCustomMutation<TData, TError, TVariables>(
@@ -65,55 +66,6 @@ function useCustomMutation<TData, TError, TVariables>(
     isSuccess: data !== null,
   };
 }
-
-// Mock storage helper for Candidates since the backend endpoints don't exist yet
-const getMockCandidates = (assessmentId: string): CandidateAssessmentListItem[] => {
-  const key = `mock_candidates_${assessmentId}`;
-  const stored = localStorage.getItem(key);
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  // Seed initial mock candidates for the demo
-  const defaults: CandidateAssessmentListItem[] = [
-    {
-      id: 'ca-1',
-      full_name: 'John Doe',
-      email: 'john.doe@example.com',
-      status: 'INVITED',
-      resume_parse_status: 'COMPLETED',
-      interview_started_at: null,
-      interview_ended_at: null,
-      recruiter_decision: 'PENDING',
-    },
-    {
-      id: 'ca-2',
-      full_name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      status: 'EVALUATED',
-      resume_parse_status: 'COMPLETED',
-      interview_started_at: new Date(Date.now() - 3600000).toISOString(),
-      interview_ended_at: new Date(Date.now() - 1800000).toISOString(),
-      recruiter_decision: 'APPROVED',
-    },
-    {
-      id: 'ca-3',
-      full_name: 'Bob Johnson',
-      email: 'bob.johnson@example.com',
-      status: 'IN_PROGRESS',
-      resume_parse_status: 'COMPLETED',
-      interview_started_at: new Date().toISOString(),
-      interview_ended_at: null,
-      recruiter_decision: 'PENDING',
-    }
-  ];
-  localStorage.setItem(key, JSON.stringify(defaults));
-  return defaults;
-};
-
-const saveMockCandidates = (assessmentId: string, candidates: CandidateAssessmentListItem[]) => {
-  const key = `mock_candidates_${assessmentId}`;
-  localStorage.setItem(key, JSON.stringify(candidates));
-};
 
 // ── ASSESSMENT HOOKS ─────────────────────────────────────────────────────────
 
@@ -182,50 +134,54 @@ export const useUpdateAssessmentStatus = () => {
   );
 };
 
-// ── CANDIDATE HOOKS (MOCKED VIA LOCAL STORAGE & REACT QUERY) ──────────────────
+// ── CANDIDATE HOOKS ──────────────────────────────────────────────────────────
 
 export const useCandidates = (assessmentId: string | null) => {
   return useQuery<CandidateAssessmentListItem[], Error>({
     queryKey: ['candidates', assessmentId],
     queryFn: async () => {
       if (!assessmentId) return [];
-      // Simulate network latency
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return getMockCandidates(assessmentId);
+      const resp = await candidateService.getCandidatesForAssessment(assessmentId);
+      if (!resp.success || !resp.data) {
+        throw new Error(resp.message || 'Failed to fetch candidates');
+      }
+      return resp.data;
     },
     enabled: !!assessmentId,
   });
 };
 
-export const useInviteCandidate = () => {
+export const useBulkUploadCandidates = () => {
+  const queryClient = useQueryClient();
+  return useCustomMutation<BulkUploadResponse, Error, File>(
+    async (csvFile: File) => {
+      const resp = await candidateService.bulkUploadCandidates(csvFile);
+      if (!resp.success || !resp.data) {
+        throw new Error(resp.message || 'Failed to process CSV upload');
+      }
+      return resp.data;
+    },
+    {
+      onSuccess: () => {
+        // Invalidate all candidate queries so the list refreshes after upload
+        queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      },
+    }
+  );
+};
+
+export const useUpdateCandidateDecision = () => {
   const queryClient = useQueryClient();
   return useCustomMutation<
-    CandidateAssessmentListItem,
+    { assessmentId: string; candidateId: string; decision: string },
     Error,
-    { assessmentId: string; full_name: string; email: string; resume_name: string }
+    { assessmentId: string; candidateId: string; decision: 'APPROVED' | 'REJECTED' }
   >(
-    async ({ assessmentId, full_name, email, resume_name: _resume_name }) => {
-      await new Promise((resolve) => setTimeout(resolve, 800)); // Latency simulation
-      const current = getMockCandidates(assessmentId);
-      
-      if (current.some(c => c.email.toLowerCase() === email.toLowerCase())) {
-        throw new Error('Candidate with this email is already registered.');
-      }
-
-      const newCandidate: CandidateAssessmentListItem = {
-        id: `ca-${Math.random().toString(36).substr(2, 9)}`,
-        full_name,
-        email,
-        status: 'INVITED',
-        resume_parse_status: 'COMPLETED',
-        interview_started_at: null,
-        interview_ended_at: null,
-        recruiter_decision: 'PENDING',
-      };
-
-      const updated = [newCandidate, ...current];
-      saveMockCandidates(assessmentId, updated);
-      return newCandidate;
+    async ({ assessmentId, candidateId, decision }) => {
+      // TODO: Wire up real API endpoint when recruiter decision route is implemented
+      // For now returns the variables as the "result" for cache invalidation
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return { assessmentId, candidateId, decision };
     },
     {
       onSuccess: (_, variables) => {
@@ -235,30 +191,18 @@ export const useInviteCandidate = () => {
   );
 };
 
-export const useUpdateCandidateDecision = () => {
+// Deprecated hook kept for any remaining references — use useBulkUploadCandidates instead
+export const useInviteCandidate = () => {
   const queryClient = useQueryClient();
   return useCustomMutation<
     CandidateAssessmentListItem,
     Error,
-    { assessmentId: string; candidateId: string; decision: 'APPROVED' | 'REJECTED' }
+    { assessmentId: string; full_name: string; email: string; resume_name: string }
   >(
-    async ({ assessmentId, candidateId, decision }) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const current = getMockCandidates(assessmentId);
-      const index = current.findIndex(c => c.id === candidateId);
-      if (index === -1) {
-        throw new Error('Candidate assessment not found.');
-      }
-      
-      const updatedItem = {
-        ...current[index],
-        recruiter_decision: decision
-      };
-      
-      const updated = [...current];
-      updated[index] = updatedItem;
-      saveMockCandidates(assessmentId, updated);
-      return updatedItem;
+    async () => {
+      throw new Error(
+        'Single candidate invite is not supported. Please use the CSV bulk upload.'
+      );
     },
     {
       onSuccess: (_, variables) => {

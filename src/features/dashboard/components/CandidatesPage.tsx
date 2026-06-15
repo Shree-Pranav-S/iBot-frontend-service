@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useToast } from '../../../hooks/useToast';
-import { useAssessments, useCandidates, useInviteCandidate, useUpdateCandidateDecision } from '../../../hooks/queries';
+import {
+  useAssessments,
+  useCandidates,
+  useBulkUploadCandidates,
+  useUpdateCandidateDecision,
+} from '../../../hooks/queries';
+import type { BulkUploadResponse } from '../../../types/candidate.types';
 import {
   Users,
   Mail,
@@ -8,20 +14,25 @@ import {
   Loader2,
   AlertCircle,
   Upload,
-  Plus,
   X,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  CheckCircle2,
+  XCircle,
+  FileSpreadsheet,
+  ChevronDown,
+  Info,
+  Briefcase,
 } from 'lucide-react';
 
 export const CandidatesPage: React.FC = () => {
   const { error: toastError, success: toastSuccess } = useToast();
-  
-  // Fetch campaigns for dropdown selector
+
+  // Fetch assessments for dropdown selector
   const { data: assessments = [], isLoading: loadingCampaigns } = useAssessments();
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('');
 
-  // Auto-select first campaign
+  // Auto-select first assessment
   useEffect(() => {
     if (assessments.length > 0 && !selectedCampaignId) {
       setSelectedCampaignId(assessments[0].id);
@@ -30,41 +41,72 @@ export const CandidatesPage: React.FC = () => {
 
   // Candidates query & mutations
   const { data: candidates = [], isLoading: loadingCandidates } = useCandidates(selectedCampaignId || null);
-  const inviteMutation = useInviteCandidate();
+  const selectedAssessment = assessments.find(a => a.id === selectedCampaignId) || null;
+  const bulkUploadMutation = useBulkUploadCandidates();
   const decisionMutation = useUpdateCandidateDecision();
 
-  // Invite/Upload Form States
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [candidateName, setCandidateName] = useState('');
-  const [candidateEmail, setCandidateEmail] = useState('');
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  // CSV Upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadResult, setUploadResult] = useState<BulkUploadResponse | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInviteSubmit = async (e: React.FormEvent) => {
+  const resetUploadModal = () => {
+    setCsvFile(null);
+    setUploadResult(null);
+    setDragOver(false);
+  };
+
+  const handleCloseUpload = () => {
+    setShowUploadModal(false);
+    resetUploadModal();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    setFormError(null);
-    if (!selectedCampaignId) {
-      setFormError('Please select a campaign first.');
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.name.endsWith('.csv')) {
+      setCsvFile(file);
+    } else {
+      toastError('Invalid File', 'Please upload a .csv file.');
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file && !file.name.endsWith('.csv')) {
+      toastError('Invalid File', 'Please upload a .csv file.');
       return;
     }
+    setCsvFile(file);
+  };
 
+  const handleBulkUpload = async () => {
+    if (!csvFile) return;
     try {
-      await inviteMutation.mutateAsync({
-        assessmentId: selectedCampaignId,
-        full_name: candidateName,
-        email: candidateEmail,
-        resume_name: resumeFile ? resumeFile.name : 'resume.pdf'
-      });
-
-      setCandidateName('');
-      setCandidateEmail('');
-      setResumeFile(null);
-      setShowInviteModal(false);
-      toastSuccess('Candidate Invited', 'An invitation has been registered and token generated.');
+      const result = await bulkUploadMutation.mutateAsync(csvFile);
+      setUploadResult(result);
+      if (result.failed_rows === 0) {
+        toastSuccess(
+          'Upload Successful',
+          `${result.successful_rows} candidate(s) invited successfully.`
+        );
+      } else if (result.successful_rows > 0) {
+        toastSuccess(
+          'Upload Completed with Errors',
+          `${result.successful_rows} invited, ${result.failed_rows} failed. See details below.`
+        );
+      } else {
+        toastError(
+          'Upload Failed',
+          `All ${result.failed_rows} rows failed. Check the CSV and try again.`
+        );
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to register candidate.';
-      setFormError(msg);
-      toastError('Invitation Failed', msg);
+      const msg = err instanceof Error ? err.message : 'CSV upload failed.';
+      toastError('Upload Failed', msg);
     }
   };
 
@@ -74,7 +116,7 @@ export const CandidatesPage: React.FC = () => {
       await decisionMutation.mutateAsync({
         assessmentId: selectedCampaignId,
         candidateId,
-        decision
+        decision,
       });
       toastSuccess('Decision Recorded', `Candidate status updated to ${decision}.`);
     } catch (err: unknown) {
@@ -127,7 +169,7 @@ export const CandidatesPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Users className="h-6 w-6 text-indigo-600" />
           <h2 className="text-lg font-bold text-gray-900">Manage Candidates</h2>
-          
+
           <div className="relative">
             <select
               value={selectedCampaignId}
@@ -139,35 +181,36 @@ export const CandidatesPage: React.FC = () => {
               ) : assessments.length === 0 ? (
                 <option>No campaigns available</option>
               ) : (
-                assessments.map(a => (
-                  <option key={a.id} value={a.id}>{a.title} ({a.role_name})</option>
+                assessments.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({a.role_name})
+                  </option>
                 ))
               )}
             </select>
             <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-gray-400">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown className="h-4 w-4" />
             </div>
           </div>
         </div>
 
         <button
           onClick={() => {
-            if (!selectedCampaignId) {
-              toastError('Missing Campaign', 'Please select or create an assessment campaign first.');
+            if (assessments.length === 0) {
+              toastError('No Assessments', 'Create an assessment before uploading candidates.');
               return;
             }
-            setShowInviteModal(true);
+            setShowUploadModal(true);
           }}
           className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm"
+          id="upload-csv-btn"
         >
-          <Plus className="h-4 w-4" />
-          Add Candidate
+          <Upload className="h-4 w-4" />
+          Upload CSV
         </button>
       </div>
 
-      {/* Main Table Area (locked height, scrollable) */}
+      {/* Main Table Area */}
       <div className="flex-1 min-h-0 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
         {loadingCandidates ? (
           <div className="flex-1 flex flex-col items-center justify-center">
@@ -178,13 +221,25 @@ export const CandidatesPage: React.FC = () => {
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-gray-400">
             <Users className="h-12 w-12 text-gray-300 mb-3" />
             <p className="font-bold text-gray-600 text-sm">No Campaign Selected</p>
-            <p className="text-xs text-gray-400 mt-1 max-w-[280px]">Select or launch an assessment campaign to track and manage candidate evaluations.</p>
+            <p className="text-xs text-gray-400 mt-1 max-w-[280px]">
+              Select or launch an assessment campaign to track and manage candidate evaluations.
+            </p>
           </div>
         ) : candidates.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-gray-400">
-            <Users className="h-12 w-12 text-gray-300 mb-3" />
-            <p className="font-bold text-gray-600 text-sm">No Candidates Found</p>
-            <p className="text-xs text-gray-400 mt-1 max-w-[280px]">Invite or upload candidate details to evaluate them for this role.</p>
+            <FileSpreadsheet className="h-12 w-12 text-gray-300 mb-3" />
+            <p className="font-bold text-gray-600 text-sm">No Candidates Yet</p>
+            <p className="text-xs text-gray-400 mt-1 max-w-[300px]">
+              Upload a CSV file with candidate details. The system will automatically match them
+              to the correct assessment by role and send invitation emails.
+            </p>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              Upload Candidates CSV
+            </button>
           </div>
         ) : (
           <div className="flex-1 overflow-auto">
@@ -192,6 +247,7 @@ export const CandidatesPage: React.FC = () => {
               <thead className="sticky top-0 bg-gray-50 border-b border-gray-100 z-10">
                 <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
                   <th className="px-6 py-4">Candidate Details</th>
+                  <th className="px-6 py-4">Applied Role</th>
                   <th className="px-6 py-4">Resume Parsing</th>
                   <th className="px-6 py-4">Evaluation Status</th>
                   <th className="px-6 py-4 text-center">AI Score</th>
@@ -221,13 +277,23 @@ export const CandidatesPage: React.FC = () => {
                         </div>
                       </td>
 
+                      {/* Applied Role */}
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                          <Briefcase className="h-3 w-3" />
+                          {selectedAssessment?.role_name ?? '—'}
+                        </span>
+                      </td>
+
                       {/* Resume Parse */}
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
-                          c.resume_parse_status === 'COMPLETED'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            : 'bg-amber-50 text-amber-700 border-amber-100'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
+                            c.resume_parse_status === 'COMPLETED'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : 'bg-amber-50 text-amber-700 border-amber-100'
+                          }`}
+                        >
                           <FileText className="h-3 w-3" />
                           {c.resume_parse_status}
                         </span>
@@ -235,7 +301,9 @@ export const CandidatesPage: React.FC = () => {
 
                       {/* Status */}
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold border ${getStatusBadgeClass(c.status)}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold border ${getStatusBadgeClass(c.status)}`}
+                        >
                           {c.status}
                         </span>
                       </td>
@@ -252,7 +320,9 @@ export const CandidatesPage: React.FC = () => {
 
                       {/* Decision */}
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold border ${getDecisionBadgeClass(c.recruiter_decision)}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold border ${getDecisionBadgeClass(c.recruiter_decision)}`}
+                        >
                           {c.recruiter_decision}
                         </span>
                       </td>
@@ -266,7 +336,7 @@ export const CandidatesPage: React.FC = () => {
                             className="p-1.5 rounded-lg border border-gray-200 bg-white text-emerald-600 hover:bg-emerald-50 disabled:opacity-40 transition-colors shadow-sm"
                             title="Approve Candidate"
                           >
-                            <ThumbsUp className="h-4.5 w-4.5" />
+                            <ThumbsUp className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleRecruiterDecision(c.id, 'REJECTED')}
@@ -274,7 +344,7 @@ export const CandidatesPage: React.FC = () => {
                             className="p-1.5 rounded-lg border border-gray-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors shadow-sm"
                             title="Reject Candidate"
                           >
-                            <ThumbsDown className="h-4.5 w-4.5" />
+                            <ThumbsDown className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
@@ -287,107 +357,222 @@ export const CandidatesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Add Candidate Modal */}
-      {showInviteModal && (
+      {/* CSV Upload Modal */}
+      {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 flex flex-col gap-5">
-            
-            {/* Header */}
-            <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+          <div className="relative w-full max-w-lg bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+
+            {/* Modal Header */}
+            <div className="flex justify-between items-start border-b border-gray-100 px-6 py-4 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Users className="h-5 w-5 text-indigo-500" />
-                  Add New Candidate
+                  <FileSpreadsheet className="h-5 w-5 text-indigo-500" />
+                  Bulk Upload Candidates
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">Register the candidate and upload their resume PDF.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload a CSV to create candidates and send invitation emails automatically.
+                </p>
               </div>
               <button
-                onClick={() => {
-                  setShowInviteModal(false);
-                  setFormError(null);
-                }}
+                onClick={handleCloseUpload}
                 className="rounded-xl border border-gray-200 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                id="close-upload-modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Error Notification */}
-            {formError && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5">
-                <AlertCircle className="h-4.5 w-4.5 shrink-0 text-red-500" />
-                <span>{formError}</span>
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleInviteSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-700">Full Name</label>
-                <input
-                  required
-                  type="text"
-                  value={candidateName}
-                  onChange={(e) => setCandidateName(e.target.value)}
-                  placeholder="e.g. John Doe"
-                  className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-700">Email Address</label>
-                <input
-                  required
-                  type="email"
-                  value={candidateEmail}
-                  onChange={(e) => setCandidateEmail(e.target.value)}
-                  placeholder="e.g. john.doe@example.com"
-                  className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-700">Resume PDF (Optional)</label>
-                <div className="border border-dashed border-gray-300 bg-gray-50 p-4 rounded-xl flex flex-col items-center justify-center gap-1.5 text-center relative hover:border-indigo-400 transition-colors">
-                  <Upload className="h-6 w-6 text-gray-400" />
-                  {resumeFile ? (
-                    <span className="text-xs text-indigo-600 font-bold">{resumeFile.name}</span>
-                  ) : (
-                    <span className="text-[11px] text-gray-500">Upload candidate resume file (PDF)</span>
-                  )}
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-6 py-5 flex flex-col gap-5">
+                {/* CSV Format Info */}
+                <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-100 flex items-start gap-2.5">
+                  <Info className="h-4 w-4 text-indigo-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-semibold text-indigo-800 mb-1">Required CSV Format</p>
+                    <p className="text-[11px] text-indigo-700 leading-relaxed">
+                      Your CSV must contain these columns:{' '}
+                      <code className="bg-indigo-100 px-1 py-0.5 rounded text-[10px]">name</code>,{' '}
+                      <code className="bg-indigo-100 px-1 py-0.5 rounded text-[10px]">email</code>,{' '}
+                      <code className="bg-indigo-100 px-1 py-0.5 rounded text-[10px]">resume</code>,{' '}
+                      <code className="bg-indigo-100 px-1 py-0.5 rounded text-[10px]">role</code>.
+                      The <strong>role</strong> field must match an existing assessment role name exactly.
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="border-t border-gray-100 pt-4 flex justify-end gap-3.5 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={inviteMutation.isPending}
-                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                >
-                  {inviteMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Registering...
-                    </>
-                  ) : (
-                    'Register Candidate'
-                  )}
-                </button>
+                {/* Upload Result (if available) */}
+                {uploadResult ? (
+                  <div className="flex flex-col gap-3">
+                    {/* Summary banner */}
+                    <div
+                      className={`flex items-center gap-3 p-3.5 rounded-xl border ${
+                        uploadResult.failed_rows === 0
+                          ? 'bg-emerald-50 border-emerald-200'
+                          : uploadResult.successful_rows > 0
+                          ? 'bg-amber-50 border-amber-200'
+                          : 'bg-red-50 border-red-200'
+                      }`}
+                    >
+                      {uploadResult.failed_rows === 0 ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                      ) : uploadResult.successful_rows > 0 ? (
+                        <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+                      )}
+                      <div>
+                        <p className={`text-xs font-bold ${
+                          uploadResult.failed_rows === 0 ? 'text-emerald-800' :
+                          uploadResult.successful_rows > 0 ? 'text-amber-800' : 'text-red-800'
+                        }`}>
+                          {uploadResult.failed_rows === 0
+                            ? 'All candidates processed successfully!'
+                            : uploadResult.successful_rows > 0
+                            ? `Completed with ${uploadResult.failed_rows} error(s)`
+                            : 'Upload failed for all rows'}
+                        </p>
+                        <p className="text-[11px] text-gray-600 mt-0.5">
+                          {uploadResult.successful_rows} invited · {uploadResult.failed_rows} failed ·{' '}
+                          {uploadResult.total_rows} total rows
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Per-row results */}
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                          Row-by-row Results
+                        </p>
+                      </div>
+                      <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                        {uploadResult.row_results.map((r) => (
+                          <div key={r.row} className="flex items-start gap-3 px-4 py-2.5">
+                            {r.status === 'success' ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            ) : (
+                              <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-semibold text-gray-800 truncate">
+                                Row {r.row}: {r.email}
+                              </p>
+                              {r.reason && (
+                                <p className="text-[10px] text-gray-500 mt-0.5">{r.reason}</p>
+                              )}
+                            </div>
+                            <span
+                              className={`shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold border ${
+                                r.status === 'success'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-red-50 text-red-700 border-red-200'
+                              }`}
+                            >
+                              {r.status.toUpperCase()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* File Drop Zone */
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 text-center transition-all cursor-pointer ${
+                      dragOver
+                        ? 'border-indigo-400 bg-indigo-50'
+                        : csvFile
+                        ? 'border-emerald-400 bg-emerald-50'
+                        : 'border-gray-300 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50/50'
+                    }`}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      id="csv-file-input"
+                    />
+                    {csvFile ? (
+                      <>
+                        <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                        <div>
+                          <p className="text-sm font-bold text-emerald-700">{csvFile.name}</p>
+                          <p className="text-xs text-emerald-600 mt-0.5">
+                            {(csvFile.size / 1024).toFixed(1)} KB — ready to upload
+                          </p>
+                        </div>
+                        <button
+                          className="text-[11px] text-gray-500 underline hover:text-gray-700"
+                          onClick={(e) => { e.stopPropagation(); setCsvFile(null); }}
+                        >
+                          Change file
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="h-14 w-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                          <Upload className="h-7 w-7 text-indigo-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-700">
+                            Drop your CSV file here
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            or click to browse — .csv files only
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
-            </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3 flex-shrink-0">
+              {uploadResult ? (
+                <button
+                  onClick={handleCloseUpload}
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm"
+                >
+                  Done
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCloseUpload}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleBulkUpload}
+                    disabled={!csvFile || bulkUploadMutation.isPending}
+                    className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="submit-upload-btn"
+                  >
+                    {bulkUploadMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload & Invite
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

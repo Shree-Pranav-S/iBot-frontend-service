@@ -3,9 +3,10 @@ import type { APIResponse } from '../../../types/api.types';
 import type {
   CandidateAssessmentListItem,
   BulkUploadResponse,
+  TokenValidationResponse,
 } from '../../../types/candidate.types';
 
-export type { CandidateAssessmentListItem, BulkUploadResponse };
+export type { CandidateAssessmentListItem, BulkUploadResponse, TokenValidationResponse };
 
 // ── Candidate service ─────────────────────────────────────────────────────────
 
@@ -45,6 +46,24 @@ export const candidateService = {
     try {
       const response = await api.get<APIResponse<CandidateAssessmentListItem[]>>(
         `/candidates?assessment_id=${assessmentId}`
+      );
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
+
+  /**
+   * Validate candidate token and retrieve details for the waiting room.
+   */
+  async validateCandidateToken(token: string): Promise<APIResponse<TokenValidationResponse>> {
+    try {
+      const response = await api.get<APIResponse<TokenValidationResponse>>(
+        `/interview/validate-token`,
+        {
+          params: { token },
+        }
       );
       return response.data;
     } catch (err: any) {

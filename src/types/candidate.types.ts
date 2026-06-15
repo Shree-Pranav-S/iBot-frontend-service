@@ -30,3 +30,12 @@ export interface BulkUploadResponse {
   row_results: CSVRowResult[];
   overall_status: string;
 }
+
+export interface TokenValidationResponse {
+  candidate_name: string;
+  assessment_title: string;
+  interview_duration_mins: number;
+  window_end: string;
+  status: string;
+  sections_overview: string[];
+}

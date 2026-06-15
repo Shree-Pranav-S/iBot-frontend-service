@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { InterviewRoom } from './InterviewRoom';
+import { WaitingRoom } from './WaitingRoom';
+import { DemoInterviewRoom } from './DemoInterviewRoom';
 import { ShieldAlert, AlertTriangle } from 'lucide-react';
 
 export const InterviewPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token')?.trim() || null;
+  const [view, setView] = useState<'waiting_room' | 'interview' | 'demo'>('waiting_room');
 
   if (token) {
+    if (view === 'waiting_room') {
+      return (
+        <WaitingRoom
+          token={token}
+          onStartInterview={() => setView('interview')}
+          onStartDemo={() => setView('demo')}
+        />
+      );
+    }
+
+    if (view === 'demo') {
+      return (
+        <DemoInterviewRoom
+          token={token}
+          onExit={() => setView('waiting_room')}
+        />
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-50 bg-white flex flex-col h-screen w-screen overflow-hidden">
         {/* Viewport Header */}

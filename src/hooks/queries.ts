@@ -1,9 +1,75 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+type QueryKey = (string | null)[];
+
+const queryCache = new Map<string, any>();
+const queryListeners = new Map<string, Set<() => void>>();
+
+export function useQuery<TData, TError>({
+  queryKey,
+  queryFn,
+  enabled = true,
+}: {
+  queryKey: QueryKey;
+  queryFn: () => Promise<TData>;
+  enabled?: boolean;
+}) {
+  const keyString = JSON.stringify(queryKey);
+  const [data, setData] = useState<TData | undefined>(queryCache.get(keyString));
+  const [isLoading, setIsLoading] = useState(!queryCache.has(keyString) && enabled);
+  const [error, setError] = useState<TError | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (!enabled) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await queryFn();
+      queryCache.set(keyString, result);
+      setData(result);
+    } catch (err) {
+      setError(err as TError);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [keyString, enabled, queryFn]);
+
+  useEffect(() => {
+    fetchData();
+
+    let listeners = queryListeners.get(keyString);
+    if (!listeners) {
+      listeners = new Set();
+      queryListeners.set(keyString, listeners);
+    }
+    listeners.add(fetchData);
+
+    return () => {
+      listeners?.delete(fetchData);
+    };
+  }, [fetchData, keyString]);
+
+  return { data, isLoading, isPending: isLoading, error, isError: error !== null };
+}
+
+// Invalidation event system
+type InvalidateQueryFilters = { queryKey: QueryKey };
+export const queryClient = {
+  invalidateQueries: (filters: InvalidateQueryFilters) => {
+    const prefix = JSON.stringify(filters.queryKey).slice(0, -1); // '["assessments"]' -> '["assessments"'
+    for (const [key, listeners] of queryListeners.entries()) {
+      if (key.startsWith(prefix)) {
+        queryCache.delete(key);
+        listeners.forEach(listener => listener());
+      }
+    }
+  }
+};
+export const useQueryClient = () => queryClient;
 import { assessmentService } from '../features/dashboard/services/assessment';
 import { candidateService } from '../features/dashboard/services/candidate';
 import type { AssessmentSummaryResponse, AssessmentResponse, AssessmentStatus } from '../types/assessment.types';
-import type { CandidateAssessmentListItem, BulkUploadResponse } from '../types/candidate.types';
+import type { CandidateAssessmentListItem, BulkUploadResponse, InterviewEvaluationResponse, SingleCandidateResponse } from '../types/candidate.types';
 
 // Custom lightweight mutation hook replacing TanStack useMutation
 function useCustomMutation<TData, TError, TVariables>(
@@ -191,23 +257,36 @@ export const useUpdateCandidateDecision = () => {
   );
 };
 
-// Deprecated hook kept for any remaining references — use useBulkUploadCandidates instead
-export const useInviteCandidate = () => {
+export const useCreateCandidate = () => {
   const queryClient = useQueryClient();
-  return useCustomMutation<
-    CandidateAssessmentListItem,
-    Error,
-    { assessmentId: string; full_name: string; email: string; resume_name: string }
-  >(
-    async () => {
-      throw new Error(
-        'Single candidate invite is not supported. Please use the CSV bulk upload.'
-      );
+  return useCustomMutation<SingleCandidateResponse, Error, { name: string; email: string; role: string; resumeFile: File }>(
+    async (data) => {
+      const resp = await candidateService.createSingleCandidate(data);
+      if (!resp.success || !resp.data) {
+        throw new Error(resp.message || 'Failed to create candidate');
+      }
+      return resp.data;
     },
     {
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: ['candidates', variables.assessmentId] });
+      onSuccess: () => {
+        // Invalidate all candidate queries so the list refreshes after creation
+        queryClient.invalidateQueries({ queryKey: ['candidates'] });
       },
     }
   );
+};
+
+export const useCandidateEvaluation = (caId: string | null) => {
+  return useQuery<InterviewEvaluationResponse | null, Error>({
+    queryKey: ['candidate-evaluation', caId],
+    queryFn: async () => {
+      if (!caId) return null;
+      const resp = await candidateService.getCandidateEvaluation(caId);
+      if (!resp.success || !resp.data) {
+        throw new Error(resp.message || 'Failed to fetch candidate evaluation');
+      }
+      return resp.data;
+    },
+    enabled: !!caId,
+  });
 };

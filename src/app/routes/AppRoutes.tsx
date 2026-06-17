@@ -10,6 +10,7 @@ import { DashboardPage } from "../../features/dashboard/components/DashboardPage
 import { AssessmentsPage } from "../../features/dashboard/components/AssessmentsPage";
 import { CandidatesPage } from "../../features/dashboard/components/CandidatesPage";
 import { InterviewPage } from "../../features/dashboard/components/InterviewPage";
+import { EvaluationReportPage } from "../../features/dashboard/components/EvaluationReportPage";
 import { Loader2 } from "lucide-react";
 
 export const AppRoutes: React.FC = () => {
@@ -69,6 +70,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="assessments" element={<AssessmentsPage />} />
           <Route path="candidates" element={<CandidatesPage />} />
+          <Route path="candidates/:id/report" element={<EvaluationReportPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       )}

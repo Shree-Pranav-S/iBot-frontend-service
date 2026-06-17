@@ -4,9 +4,11 @@ import type {
   CandidateAssessmentListItem,
   BulkUploadResponse,
   TokenValidationResponse,
+  InterviewEvaluationResponse,
+  SingleCandidateResponse,
 } from '../../../types/candidate.types';
 
-export type { CandidateAssessmentListItem, BulkUploadResponse, TokenValidationResponse };
+export type { CandidateAssessmentListItem, BulkUploadResponse, TokenValidationResponse, InterviewEvaluationResponse, SingleCandidateResponse };
 
 // ── Candidate service ─────────────────────────────────────────────────────────
 
@@ -38,6 +40,33 @@ export const candidateService = {
   },
 
   /**
+   * Create a single candidate manually.
+   */
+  async createSingleCandidate(data: { name: string; email: string; role: string; resumeFile: File }): Promise<APIResponse<SingleCandidateResponse>> {
+    try {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('email', data.email);
+      formData.append('role', data.role);
+      formData.append('resume', data.resumeFile);
+
+      const response = await api.post<APIResponse<SingleCandidateResponse>>(
+        '/candidates/manual',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (err: any) {
+      const respData = err.response?.data;
+      throw new Error(respData?.message || err.message);
+    }
+  },
+
+  /**
    * Fetch all candidate-assessment records for a specific assessment.
    */
   async getCandidatesForAssessment(
@@ -64,6 +93,21 @@ export const candidateService = {
         {
           params: { token },
         }
+      );
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
+
+  /**
+   * Fetch evaluation report for a candidate assessment.
+   */
+  async getCandidateEvaluation(caId: string): Promise<APIResponse<InterviewEvaluationResponse>> {
+    try {
+      const response = await api.get<APIResponse<InterviewEvaluationResponse>>(
+        `/candidates/${caId}/evaluation`
       );
       return response.data;
     } catch (err: any) {

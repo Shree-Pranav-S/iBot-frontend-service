@@ -3,7 +3,6 @@ import {
   Mic,
   MicOff,
   PhoneOff,
-  Send,
   Wifi,
   WifiOff,
   Loader2,
@@ -102,7 +101,6 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
   token,
   onExit,
 }) => {
-  const [inputText, setInputText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
 
@@ -116,7 +114,6 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
     lastAudioBytes,
     connect,
     startSession,
-    sendText,
     sendAudioChunk,
     stopSession,
   } = useDemoInterviewSocket({ token });
@@ -146,12 +143,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
     setSessionStarted(true);
   };
 
-  const handleSendText = () => {
-    const text = inputText.trim();
-    if (!text || status !== "connected") return;
-    sendText(text);
-    setInputText("");
-  };
+
 
   const handleToggleMic = async () => {
     if (isRecording) {
@@ -341,32 +333,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
               )}
             </button>
 
-            {/* Text input */}
-            <input
-              id="input-demo-text"
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              disabled={!isLive || !sessionStarted}
-              placeholder={
-                !isLive
-                  ? "Connect to start…"
-                  : !sessionStarted
-                    ? "Start the session first…"
-                    : "Type your answer…"
-              }
-              className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-            />
 
-            {/* Send */}
-            <button
-              id="btn-send-demo-text"
-              onClick={handleSendText}
-              disabled={!isLive || !sessionStarted || !inputText.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-200"
-            >
-              <Send className="h-4 w-4" />
-            </button>
 
             {/* End session */}
             {(isLive || isRecording) && (

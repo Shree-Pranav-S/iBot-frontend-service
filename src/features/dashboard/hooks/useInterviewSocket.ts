@@ -5,18 +5,25 @@
  * Connects through the gateway at /ws/interview?token=<invitation_token>.
  *
  * The hook exposes:
- *  - messages      : ordered list of chat messages (transcripts + assistant replies)
- *  - status        : 'idle' | 'connecting' | 'connected' | 'error' | 'closed'
- *  - sendText      : send a typed message to the interview AI
- *  - startSession  : trigger session_start (fires LLM greeting)
- *  - stopSession   : send stop + close the socket
- *  - sendAudioChunk: forward a raw PCM/opus binary chunk to the server
- *  - lastAudioBytes: the most recent TTS MP3 blob from the server (play it!)
+ *  - messages       : ordered list of chat messages (transcripts + assistant replies)
+ *  - status         : 'idle' | 'connecting' | 'connected' | 'error' | 'closed'
+ *  - sendText       : send a typed message to the interview AI
+ *  - startSession   : trigger session_start (fires LLM greeting)
+ *  - stopSession    : send stop + close the socket
+ *  - sendAudioChunk : forward a raw PCM/opus binary chunk to the server
+ *  - lastAudioBytes : the most recent TTS MP3 blob from the server (play it!)
+ *  - interviewMeta  : section info, completion status, bot speaking state
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../../config/api';
-import type { MessageRole, ChatMessage, SocketStatus, UseInterviewSocketOptions } from '../../../types/socket.types';
+import type {
+  MessageRole,
+  ChatMessage,
+  SocketStatus,
+  UseInterviewSocketOptions,
+  InterviewMeta,
+} from '../../../types/socket.types';
 
 export type { MessageRole, ChatMessage, SocketStatus };
 
@@ -29,6 +36,12 @@ export function useInterviewSocket({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<SocketStatus>('idle');
   const [lastAudioBytes, setLastAudioBytes] = useState<Blob | null>(null);
+  const [interviewMeta, setInterviewMeta] = useState<InterviewMeta>({
+    currentSection: null,
+    isInterviewComplete: false,
+    isTerminated: false,
+    isBotSpeaking: false,
+  });
 
   const wsRef = useRef<WebSocket | null>(null);
   // Tracks whether next binary frame is expected TTS audio
@@ -37,7 +50,7 @@ export function useInterviewSocket({
   // ── internal helpers ────────────────────────────────────────────────────────
 
   const pushMessage = useCallback(
-    (role: MessageRole, text: string, isFinal = true) => {
+    (role: MessageRole, text: string, isFinal = true, replyType?: string) => {
       setMessages((prev) => [
         ...prev,
         {
@@ -46,6 +59,7 @@ export function useInterviewSocket({
           text,
           isFinal,
           timestamp: new Date(),
+          replyType,
         },
       ]);
     },
@@ -81,6 +95,13 @@ export function useInterviewSocket({
 
     setStatus('connecting');
     setMessages([]);
+    setInterviewMeta({
+      currentSection: null,
+      isInterviewComplete: false,
+      isTerminated: false,
+      isBotSpeaking: false,
+    });
+
     const ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
@@ -137,12 +158,67 @@ export function useInterviewSocket({
             break;
 
           case 'assistant_text':
-            pushMessage('assistant', payload.text ?? '');
+            pushMessage('assistant', payload.text ?? '', true, payload.reply_type);
             break;
 
           case 'tts_audio':
-            // Next binary frame will be audio — flag it
             expectAudioRef.current = true;
+            break;
+
+          case 'section_start':
+            setInterviewMeta((prev) => ({
+              ...prev,
+              currentSection: {
+                sectionName: payload.section_name ?? '',
+                skill: payload.skill ?? '',
+                timeBudgetSecs: payload.time_budget_secs ?? 0,
+                sectionNumber: payload.section_number ?? 1,
+                totalSections: payload.total_sections ?? 1,
+              },
+            }));
+            break;
+
+          case 'section_transition':
+            setInterviewMeta((prev) => ({
+              ...prev,
+              currentSection: payload.to_section
+                ? {
+                    ...prev.currentSection!,
+                    sectionName: payload.to_section,
+                  }
+                : prev.currentSection,
+            }));
+            break;
+
+          case 'bot_speaking':
+            setInterviewMeta((prev) => ({ ...prev, isBotSpeaking: true }));
+            break;
+
+          case 'bot_done_speaking':
+            setInterviewMeta((prev) => ({ ...prev, isBotSpeaking: false }));
+            break;
+
+          case 'interview_complete':
+            setInterviewMeta((prev) => ({
+              ...prev,
+              isInterviewComplete: true,
+              isBotSpeaking: false,
+            }));
+            break;
+
+          case 'session_terminated':
+            setInterviewMeta((prev) => ({
+              ...prev,
+              isTerminated: true,
+              isBotSpeaking: false,
+            }));
+            break;
+
+          case 'time_warning':
+            pushMessage(
+              'system',
+              `⏱ ${payload.seconds_remaining ?? 0}s remaining${payload.scope === 'section' ? ' in this section' : ' overall'}`,
+            );
             break;
 
           case 'error':
@@ -215,6 +291,7 @@ export function useInterviewSocket({
     messages,
     status,
     lastAudioBytes,
+    interviewMeta,
     connect,
     startSession,
     sendText,

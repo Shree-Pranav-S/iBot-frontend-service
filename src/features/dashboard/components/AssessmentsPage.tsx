@@ -536,6 +536,8 @@ export const AssessmentsPage: React.FC = () => {
                     onChange={(e) => setCreateDuration(Number(e.target.value))}
                     className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
                   >
+                    <option value={5}>5 Minutes</option>
+                    <option value={10}>10 Minutes</option>
                     <option value={15}>15 Minutes</option>
                     <option value={30}>30 Minutes</option>
                     <option value={45}>45 Minutes</option>

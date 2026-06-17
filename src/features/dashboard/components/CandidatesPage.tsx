@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
 import {
   useAssessments,
   useCandidates,
   useBulkUploadCandidates,
   useUpdateCandidateDecision,
+  useCreateCandidate,
 } from '../../../hooks/queries';
 import type { BulkUploadResponse } from '../../../types/candidate.types';
 import {
@@ -27,6 +29,7 @@ import {
 
 export const CandidatesPage: React.FC = () => {
   const { error: toastError, success: toastSuccess } = useToast();
+  const navigate = useNavigate();
 
   // Fetch assessments for dropdown selector
   const { data: assessments = [], isLoading: loadingCampaigns } = useAssessments();
@@ -57,6 +60,53 @@ export const CandidatesPage: React.FC = () => {
     setUploadResult(null);
     setDragOver(false);
   };
+
+  // Manual Create modal state
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
+  const [manualRole, setManualRole] = useState('');
+  const [manualResume, setManualResume] = useState<File | null>(null);
+  const createMutation = useCreateCandidate();
+
+  const resetManualModal = () => {
+    setManualName('');
+    setManualEmail('');
+    setManualRole(selectedAssessment?.role_name || '');
+    setManualResume(null);
+  };
+
+  const handleCloseManual = () => {
+    setShowManualModal(false);
+    resetManualModal();
+  };
+
+  const handleManualCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualName || !manualEmail || !manualRole || !manualResume) {
+      toastError('Missing Fields', 'Please fill in all fields and attach a resume.');
+      return;
+    }
+    try {
+      await createMutation.mutateAsync({
+        name: manualName,
+        email: manualEmail,
+        role: manualRole,
+        resumeFile: manualResume,
+      });
+      toastSuccess('Candidate Created', 'Candidate has been created and invited.');
+      handleCloseManual();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Candidate creation failed.';
+      toastError('Creation Failed', msg);
+    }
+  };
+
+  useEffect(() => {
+    if (showManualModal && selectedAssessment && !manualRole) {
+      setManualRole(selectedAssessment.role_name);
+    }
+  }, [showManualModal, selectedAssessment, manualRole]);
 
   const handleCloseUpload = () => {
     setShowUploadModal(false);
@@ -194,20 +244,35 @@ export const CandidatesPage: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => {
-            if (assessments.length === 0) {
-              toastError('No Assessments', 'Create an assessment before uploading candidates.');
-              return;
-            }
-            setShowUploadModal(true);
-          }}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm"
-          id="upload-csv-btn"
-        >
-          <Upload className="h-4 w-4" />
-          Upload CSV
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (assessments.length === 0) {
+                toastError('No Assessments', 'Create an assessment before adding candidates.');
+                return;
+              }
+              setShowManualModal(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-xl bg-white border border-indigo-200 px-4 py-2.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-all shadow-sm"
+          >
+            <Users className="h-4 w-4" />
+            Add Candidate
+          </button>
+          <button
+            onClick={() => {
+              if (assessments.length === 0) {
+                toastError('No Assessments', 'Create an assessment before uploading candidates.');
+                return;
+              }
+              setShowUploadModal(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all shadow-sm"
+            id="upload-csv-btn"
+          >
+            <Upload className="h-4 w-4" />
+            Upload CSV
+          </button>
+        </div>
       </div>
 
       {/* Main Table Area */}
@@ -330,6 +395,15 @@ export const CandidatesPage: React.FC = () => {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {c.status === 'EVALUATED' && (
+                            <button
+                              onClick={() => navigate(`/candidates/${c.id}/report`)}
+                              className="p-1.5 rounded-lg border border-gray-200 bg-white text-indigo-600 hover:bg-indigo-50 transition-colors shadow-sm"
+                              title="View Evaluation Report"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleRecruiterDecision(c.id, 'APPROVED')}
                             disabled={c.recruiter_decision === 'APPROVED' || decisionMutation.isPending}
@@ -572,6 +646,116 @@ export const CandidatesPage: React.FC = () => {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Creation Modal */}
+      {showManualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col my-8 max-h-[90vh]">
+            <div className="flex justify-between items-start border-b border-gray-100 px-6 py-4 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-indigo-500" />
+                  Add Candidate
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter candidate details and upload their resume to invite them.
+                </p>
+              </div>
+              <button
+                onClick={handleCloseManual}
+                className="rounded-xl border border-gray-200 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <form id="manual-candidate-form" onSubmit={handleManualCreate} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-700">Full Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    placeholder="e.g. Jane Doe"
+                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-700">Email Address</label>
+                  <input
+                    required
+                    type="email"
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                    placeholder="e.g. jane@example.com"
+                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-gray-700">Role</label>
+                  <input
+                    required
+                    type="text"
+                    value={manualRole}
+                    onChange={(e) => setManualRole(e.target.value)}
+                    placeholder="e.g. Backend Developer"
+                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                  />
+                  <p className="text-[10px] text-gray-500">Must match exactly with the assessment role name.</p>
+                </div>
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <label className="text-xs font-semibold text-gray-700">Resume PDF</label>
+                  <div className="border border-dashed border-gray-300 bg-gray-50 p-6 rounded-2xl flex flex-col items-center justify-center gap-2 text-center relative hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                    {manualResume ? (
+                      <span className="text-xs text-indigo-600 font-bold">{manualResume.name}</span>
+                    ) : (
+                      <span className="text-xs text-gray-500">Select PDF resume</span>
+                    )}
+                    <input
+                      required
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => setManualResume(e.target.files?.[0] || null)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleCloseManual}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="manual-candidate-form"
+                disabled={createMutation.isPending}
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4" />
+                    Add & Invite
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

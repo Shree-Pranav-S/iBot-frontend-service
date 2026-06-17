@@ -14,11 +14,31 @@ export interface ChatMessage {
   text: string;
   isFinal?: boolean;
   timestamp: Date;
+  replyType?: string;
 }
 
 // ── Connection status ─────────────────────────────────────────────────────────
 
 export type SocketStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'closed';
+
+// ── Interview section info ────────────────────────────────────────────────────
+
+export interface SectionInfo {
+  sectionName: string;
+  skill: string;
+  timeBudgetSecs: number;
+  sectionNumber: number;
+  totalSections: number;
+}
+
+// ── Interview state exposed to UI ─────────────────────────────────────────────
+
+export interface InterviewMeta {
+  currentSection: SectionInfo | null;
+  isInterviewComplete: boolean;
+  isTerminated: boolean;
+  isBotSpeaking: boolean;
+}
 
 // ── Hook options ──────────────────────────────────────────────────────────────
 

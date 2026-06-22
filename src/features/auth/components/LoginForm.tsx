@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../hooks/useToast';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import type { LoginFormProps } from '../../../types/auth.types';
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onToggleView }) => {
+export const LoginForm: React.FC<LoginFormProps> = () => {
   const { login, clearError } = useAuth();
   const { error: toastError } = useToast();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +19,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleView }) => {
     clearError();
 
     if (!email || !password) {
-      toastError('Missing Fields', 'Please fill in your email and password.');
+      toastError('Missing Fields', 'Enter your email and password.');
       return;
     }
 
@@ -25,36 +27,32 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleView }) => {
     try {
       await login({ email, password });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Invalid credentials. Please try again.';
-      toastError('Authentication Failed', message);
+      const message = err instanceof Error ? err.message : 'Invalid credentials.';
+      toastError('Login Failed', message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div
-      className="w-full rounded-2xl border border-white/10 p-8 backdrop-blur-xl shadow-2xl"
-      style={{ background: 'rgba(255,255,255,0.06)' }}
-    >
+    <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">
+      {/* Subtle top edge glow */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
+      
       {/* Header */}
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold text-indigo-300 border border-indigo-500/30 bg-indigo-500/10 mb-4">
-          <Sparkles className="h-3 w-3" />
-          Recruiter Portal
-        </div>
-        <h2 className="text-2xl font-extrabold text-white tracking-tight">Welcome back</h2>
-        <p className="mt-1.5 text-sm text-slate-400">Sign in to your recruiter account</p>
+      <div className="mb-7 text-center">
+        <h2 className="text-xl font-bold tracking-tight text-white font-display">Welcome back</h2>
+        <p className="mt-1 text-sm text-secondary">Sign in to your account</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
-            Email Address
+          <label className="block text-[11px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
+            Email
           </label>
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <div className="relative group">
+            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
             <input
               id="login-email"
               type="email"
@@ -62,19 +60,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleView }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className="w-full rounded-xl border border-white/15 bg-white/8 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 focus:bg-white/10"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+              className="w-full rounded-input-btn border border-subtle bg-elevated-2/60 py-3 pl-11 pr-4 text-sm text-white placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2"
             />
           </div>
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">
+          <label className="block text-[11px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
             Password
           </label>
-          <div className="relative">
-            <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <div className="relative group">
+            <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
             <input
               id="login-password"
               type={showPassword ? 'text' : 'password'}
@@ -82,13 +79,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleView }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-xl border border-white/15 bg-white/8 py-3 pl-10 pr-11 text-sm text-white placeholder-slate-500 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 focus:bg-white/10"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+              className="w-full rounded-input-btn border border-subtle bg-elevated-2/60 py-3 pl-11 pr-11 text-sm text-white placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -100,34 +96,34 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleView }) => {
           id="btn-login-submit"
           type="submit"
           disabled={isSubmitting}
-          className="group relative w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+          className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-input-btn py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-emerald active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+          style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
         >
-          <span className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity" style={{ background: 'linear-gradient(135deg, #fff, transparent)' }} />
+          <span className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, #fff, transparent)' }} />
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
-              <span>Sign In</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              Sign In
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </>
           )}
         </button>
       </form>
 
       {/* Divider */}
-      <div className="my-6 flex items-center gap-3">
-        <div className="flex-1 h-px bg-white/10" />
-        <span className="text-xs text-slate-500 font-medium">New to iBot?</span>
-        <div className="flex-1 h-px bg-white/10" />
+      <div className="my-6 flex items-center">
+        <div className="flex-1 h-px bg-subtle" />
+        <span className="px-3 text-[10px] font-medium text-muted">New here?</span>
+        <div className="flex-1 h-px bg-subtle" />
       </div>
 
       <button
         id="btn-goto-register"
-        onClick={() => { clearError(); onToggleView(); }}
-        className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/15 py-3 text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/25 transition-all duration-200"
+        onClick={() => { clearError(); navigate('/register'); }}
+        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-emerald-500/20 bg-transparent py-2.5 text-sm font-semibold text-secondary transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-400"
       >
-        Create Recruiter Account
+        Create Account
       </button>
     </div>
   );

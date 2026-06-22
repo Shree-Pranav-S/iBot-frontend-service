@@ -249,7 +249,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const getLatencyLabel = (ms: number | null) => {
     if (ms === null) return { text: "Disconnected", color: "text-red-500", bg: "bg-red-50" };
     if (ms < 100) return { text: `Excellent (${ms}ms)`, color: "text-emerald-600", bg: "bg-emerald-50" };
-    if (ms < 250) return { text: `Good (${ms}ms)`, color: "text-indigo-600", bg: "bg-indigo-50" };
+    if (ms < 250) return { text: `Good (${ms}ms)`, color: "text-teal-600", bg: "bg-teal-50" };
     return { text: `Poor (${ms}ms)`, color: "text-amber-600", bg: "bg-amber-50" };
   };
 
@@ -270,288 +270,288 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-indigo-50/20 flex flex-col items-center justify-center p-6">
+      <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-slate-50 p-6">
         <div className="relative">
-          <div className="absolute -inset-4 rounded-full bg-indigo-100 blur-xl animate-pulse" />
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-600 relative" />
+          <div className="absolute -inset-4 rounded-full bg-emerald-100 blur-xl animate-pulse" />
+          <Loader2 className="relative h-10 w-10 animate-spin text-emerald-600" />
         </div>
-        <p className="mt-4 text-sm font-medium text-gray-500 animate-pulse">
-          Entering Waiting Room...
-        </p>
+        <p className="mt-4 text-sm font-bold text-slate-500">Preparing your waiting room...</p>
       </div>
     );
   }
 
   if (error || !details) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full p-8 bg-white border border-gray-200 rounded-2xl shadow-xl text-center space-y-5">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 border border-red-200 text-red-500 mx-auto">
-            <AlertTriangle className="h-7 w-7 animate-bounce" />
+      <div className="flex h-screen items-center justify-center overflow-hidden bg-slate-50 p-6">
+        <div className="w-full max-w-md space-y-5 rounded-lg border border-red-100 bg-white p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500">
+            <AlertTriangle className="h-7 w-7" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-bold text-gray-900">Unable to Join Waiting Room</h2>
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <h2 className="text-xl font-black text-slate-950">Unable to Join Waiting Room</h2>
+            <p className="text-sm leading-relaxed text-slate-500">
               {error || "We encountered an error loading your interview details. The token may be invalid or expired."}
             </p>
           </div>
-          <div className="pt-2 text-xs text-gray-400 border-t border-gray-100">
-            Please make sure you have copied the correct URL from your email invitation or reach out to your recruiter.
+          <div className="border-t border-slate-100 pt-4 text-xs font-medium leading-relaxed text-slate-400">
+            Please make sure you copied the complete URL from your email invitation or reach out to your recruiter.
           </div>
         </div>
       </div>
     );
   }
 
+  const latencyInfo = getLatencyLabel(latency);
+  const isReady = micStatus === "granted" && isOnline;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-indigo-50/20 flex flex-col">
-      {/* Hidden tester audio element */}
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-100">
       <audio
         ref={testAudioRef}
         onEnded={() => setIsPlayingTest(false)}
         className="hidden"
       />
 
-      {/* Dynamic Header */}
-      <header className="h-16 border-b border-gray-200 bg-white/70 backdrop-blur-md sticky top-0 z-30 flex items-center px-8 justify-between shadow-sm">
+      <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-100">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-md shadow-emerald-900/10"
+            style={{ background: "linear-gradient(135deg, #10b981, #0f766e)" }}
+          >
+            <Shield className="h-5 w-5" />
           </div>
-          <span className="text-base font-bold text-gray-900">
-            iBot <span className="text-xs font-semibold text-indigo-600 border border-indigo-200 rounded px-2 py-0.5 ml-1.5 bg-indigo-50">Waiting Room</span>
-          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-black tracking-tight text-slate-950">iBot</span>
+              <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                Waiting Room
+              </span>
+            </div>
+            <p className="text-[11px] font-medium text-slate-500">Complete checks before joining the interview</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
-            <Clock className="h-3.5 w-3.5 text-gray-400" />
-            Duration: {details.interview_duration_mins} Mins
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+            <Clock className="h-3.5 w-3.5 text-slate-400" />
+            {details.interview_duration_mins} mins
+          </div>
+          <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+            isReady
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-amber-200 bg-amber-50 text-amber-700"
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${isReady ? "bg-emerald-500" : "bg-amber-500"}`} />
+            {isReady ? "Ready" : "Checks pending"}
           </div>
         </div>
       </header>
 
-      {/* Main Grid View */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Column: Candidate & Assessment Details */}
-        <section className="lg:col-span-7 space-y-6">
-          
-          {/* Welcome Banner */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-indigo-50/40 blur-3xl pointer-events-none" />
-            <div className="space-y-4 relative">
-              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                AI Interview Prep
-              </span>
-              <div className="space-y-1.5">
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                  Welcome, {details.candidate_name}!
-                </h1>
-                <p className="text-sm text-gray-500">
-                  You are invited to take the interview for the role of:
-                </p>
-                <div className="text-xl font-semibold text-indigo-600 mt-1">
-                  {details.assessment_title}
-                </div>
+      <main className="grid min-h-0 flex-1 grid-cols-12 gap-4 p-5">
+        <section className="col-span-7 grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-4">
+          <div className="ibot-surface ibot-grid-bg rounded-lg border border-slate-200 p-5 shadow-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Invitation verified
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-950">
+              Welcome, {details.candidate_name}
+            </h1>
+            <p className="mt-2 text-sm font-medium text-slate-600">You are invited to interview for</p>
+            <div className="mt-3 rounded-lg border border-emerald-100 bg-white px-4 py-3">
+              <p className="text-lg font-black text-emerald-700">{details.assessment_title}</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <p className="font-bold uppercase tracking-[0.16em] text-slate-400">Valid Until</p>
+                <p className="mt-1 font-black text-slate-800">{getFormatDate(details.window_end)}</p>
               </div>
-
-              <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-y-2 justify-between text-xs text-gray-500">
-                <div>
-                  Invitation Validity: <span className="font-semibold text-gray-800">{getFormatDate(details.window_end)}</span>
-                </div>
-                <div>
-                  Current Status: <span className="px-2 py-0.5 text-[10px] font-bold tracking-wide rounded-md bg-amber-50 text-amber-800 border border-amber-200 uppercase">{details.status}</span>
-                </div>
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <p className="font-bold uppercase tracking-[0.16em] text-slate-400">Status</p>
+                <p className="mt-1 font-black uppercase text-amber-700">{details.status}</p>
               </div>
             </div>
           </div>
 
-          {/* Quick Rules & View Instructions Button */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-5">
-            <div className="flex items-center justify-between">
+          <div className="min-h-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-indigo-600" />
-                <h2 className="text-base font-bold text-gray-900">Interview Overview & Rules</h2>
+                <FileText className="h-5 w-5 text-emerald-600" />
+                <h2 className="text-sm font-black text-slate-950">Interview Overview</h2>
               </div>
               <button
                 onClick={() => setInstructionsOpen(true)}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-4 flex items-center gap-1"
+                className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 hover:bg-emerald-100"
               >
-                View Detailed Rules <Info className="h-3.5 w-3.5" />
+                Rules <Info className="h-3.5 w-3.5" />
               </button>
             </div>
+            <div className="grid grid-cols-2 gap-3 p-5">
+              {[
+                "Keep this tab active during the interview.",
+                "Use a quiet room and speak naturally into your mic.",
+                "Do not close the browser after the session starts.",
+                "Complete the setup checks before joining live mode.",
+              ].map((item) => (
+                <div key={item} className="flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <p className="text-xs font-semibold leading-relaxed text-slate-600">{item}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mx-5 mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <div className="flex gap-3">
+                <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-xs font-black text-amber-900">Proctored assessment</p>
+                  <p className="mt-1 text-[11px] font-medium leading-relaxed text-amber-800">
+                    Browser focus, audio input, and session continuity may be monitored for integrity.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            <p className="text-xs text-gray-500 leading-relaxed">
-              This is a fully automated, AI-driven technical and behavioural interview. Please review the instructions and complete the system checks to verify your setup before launching the session.
-            </p>
+          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div>
+              <p className="text-sm font-black text-slate-950">Ready to begin?</p>
+              <p className={`mt-1 text-xs font-semibold ${isReady ? "text-emerald-700" : "text-red-500"}`}>
+                {isReady ? "Microphone and network checks are complete." : "Enable microphone access and stay online to continue."}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onStartDemo}
+                disabled={!isReady}
+                className={`flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-black border transition-all ${
+                  isReady
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    : "border-slate-200 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                Attend Demo Interview
+              </button>
+              <button
+                onClick={() => setConfirmStartOpen(true)}
+                disabled={!isReady}
+                className={`flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-black text-white transition-all shadow-sm ${
+                  isReady
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/10"
+                    : "bg-slate-300 cursor-not-allowed shadow-none"
+                }`}
+              >
+                Start Interview
+              </button>
+            </div>
+          </div>
+        </section>
 
-            <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-xl flex gap-3 text-xs text-amber-800">
-              <Shield className="h-4.5 w-4.5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-bold">Proctored Assessment Warning</p>
-                <p className="leading-relaxed text-amber-700 text-[11px]">
-                  Navigating away from the window, closing tabs, or using external browser aids will be flagged by our monitoring engine. Please complete the checks on the right before launching.
+        <aside className="col-span-5 grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-black text-slate-950">Connection Quality</h2>
+                <p className="mt-1 text-xs font-medium text-slate-500">Needed for real-time speech processing</p>
+              </div>
+              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                isOnline ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+              }`}>
+                {isOnline ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Network</p>
+                <p className={`mt-1 text-sm font-black ${isOnline ? "text-emerald-700" : "text-red-600"}`}>
+                  {isOnline ? "Online" : "Offline"}
+                </p>
+              </div>
+              <div className={`rounded-lg border border-slate-200 p-3 ${latencyInfo.bg}`}>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Latency</p>
+                <p className={`mt-1 text-sm font-black ${latencyInfo.color}`}>
+                  {latencyChecking ? "Checking..." : latencyInfo.text}
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* Action start button area */}
-          <div className="flex justify-end items-center gap-4 pt-2">
             <button
-              onClick={onStartDemo}
-              disabled={micStatus !== "granted" || !isOnline}
-              className={`flex items-center gap-2 rounded-xl px-6 py-4 text-sm font-bold border transition-all ${
-                micStatus === "granted" && isOnline
-                  ? "border-indigo-600 text-indigo-600 hover:bg-indigo-50/50 hover:-translate-y-0.5 active:translate-y-0"
-                  : "border-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
+              onClick={checkLatency}
+              disabled={latencyChecking || !isOnline}
+              className="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Attend Demo Interview
-            </button>
-            <button
-              onClick={() => setConfirmStartOpen(true)}
-              disabled={micStatus !== "granted" || !isOnline}
-              className={`flex items-center gap-2 rounded-xl px-8 py-4 text-sm font-bold text-white transition-all shadow-md ${
-                micStatus === "granted" && isOnline
-                  ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 hover:-translate-y-0.5 active:translate-y-0"
-                  : "bg-gray-300 cursor-not-allowed shadow-none"
-              }`}
-            >
-              Start Interview
+              Retest Connection
             </button>
           </div>
-          {micStatus !== "granted" && (
-            <p className="text-right text-xs font-medium text-red-500 animate-pulse">
-              ⚠️ Please allow and test your microphone to start the interview.
-            </p>
-          )}
 
-        </section>
-
-        {/* Right Column: Compatibility Checks */}
-        <section className="lg:col-span-5 space-y-6">
-          
-          {/* Equipment Checks Card */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
-            <div className="border-b border-gray-100 pb-3">
-              <h2 className="text-base font-bold text-gray-900">Compatibility & Setup Checks</h2>
-              <p className="text-xs text-gray-500 mt-1">Ensure your system complies with testing rules.</p>
-            </div>
-
-            {/* Check 1: Internet Connection */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-2 rounded-lg ${isOnline ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>
-                    {isOnline ? <Wifi className="h-4.5 w-4.5" /> : <WifiOff className="h-4.5 w-4.5" />}
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-800">Internet Connection</h3>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Required for real-time speech processing</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isOnline ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-                    {isOnline ? "Online" : "Offline"}
-                  </span>
-                </div>
+          <div className="min-h-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h2 className="text-sm font-black text-slate-950">Microphone Check</h2>
+                <p className="mt-1 text-xs font-medium text-slate-500">Grant access and verify playback</p>
               </div>
-
-              {isOnline && (
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    <span className="text-[11px] text-gray-500">Latency to Gateway:</span>
-                    <span className={`font-semibold ${getLatencyLabel(latency).color}`}>
-                      {latencyChecking ? "checking..." : getLatencyLabel(latency).text}
-                    </span>
-                  </div>
-                  <button
-                    onClick={checkLatency}
-                    disabled={latencyChecking}
-                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-                  >
-                    Retest
-                  </button>
-                </div>
-              )}
+              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                micStatus === "granted" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"
+              }`}>
+                <Mic className="h-5 w-5" />
+              </div>
             </div>
 
-            <div className="h-px bg-gray-100" />
-
-            {/* Check 2: Microphone Check */}
-            <div className="space-y-4">
+            <div className="p-5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-2 rounded-lg ${micStatus === "granted" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-gray-400"}`}>
-                    <Mic className="h-4.5 w-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-800">Microphone Input</h3>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Speak clearly into your microphone</p>
-                  </div>
-                </div>
-                
                 {micStatus === "granted" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                    <CheckCircle2 className="h-3 w-3" /> Ready
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Ready
                   </span>
                 ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
+                    Permission required
+                  </span>
+                )}
+                {micStatus !== "granted" && (
                   <button
                     onClick={requestMicPermission}
                     disabled={micStatus === "checking"}
-                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 shadow-sm"
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
                   >
                     {micStatus === "checking" ? "Checking..." : "Enable Mic"}
                   </button>
                 )}
               </div>
 
-              {/* Live Mic Meter & Test Record */}
               {micStatus === "granted" && (
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-4">
-                  {/* Meter */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] text-gray-500">
-                      <span className="flex items-center gap-1 font-medium"><Volume2 className="h-3 w-3" /> Microphone Activity</span>
-                      <span className="font-bold">{micVolume}%</span>
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate-500">
+                      <span className="flex items-center gap-1.5"><Volume2 className="h-3.5 w-3.5" /> Input Activity</span>
+                      <span>{micVolume}%</span>
                     </div>
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full bg-indigo-500 transition-all duration-75"
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-75"
                         style={{ width: `${micVolume}%` }}
                       />
                     </div>
                   </div>
 
-                  {/* Playback tester recorder */}
-                  <div className="pt-2 border-t border-slate-200/60 space-y-3">
-                    <h4 className="text-[11px] font-bold text-gray-700">Test Your Audio Playback</h4>
-                    <p className="text-[10px] text-gray-400 leading-relaxed">
-                      Record a 5-second snippet and play it back to verify your audio input and output volume.
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <h4 className="text-xs font-black text-slate-800">Playback Test</h4>
+                    <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-500">
+                      Record five seconds and play it back to confirm audio input and output.
                     </p>
-
-                    <div className="flex items-center gap-3">
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
                       {!isRecording ? (
                         <button
                           onClick={startRecording}
                           disabled={isPlayingTest}
-                          className="flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-2 disabled:opacity-40"
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
                         >
-                          <Play className="h-3 w-3" /> Record 5s Clip
+                          <Play className="h-3.5 w-3.5" /> Record 5s
                         </button>
                       ) : (
                         <button
                           onClick={stopRecording}
-                          className="flex items-center gap-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 text-xs font-bold px-3 py-2 animate-pulse"
+                          className="flex items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-black text-white animate-pulse hover:bg-red-600"
                         >
-                          <Square className="h-3 w-3" /> Stop ({5 - recordingSeconds}s)
+                          <Square className="h-3.5 w-3.5" /> Stop ({5 - recordingSeconds}s)
                         </button>
                       )}
 
@@ -559,10 +559,10 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
                         <button
                           onClick={playRecordedAudio}
                           disabled={isPlayingTest}
-                          className={`flex items-center gap-1.5 rounded-lg text-xs font-bold px-3 py-2 transition-all ${
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-black transition-all ${
                             isPlayingTest
-                              ? "bg-slate-100 border border-slate-200 text-slate-400"
-                              : "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                              ? "border border-slate-200 bg-white text-slate-400"
+                              : "border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
                           }`}
                         >
                           <Volume2 className="h-3.5 w-3.5" />
@@ -575,107 +575,71 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
               )}
 
               {micStatus === "denied" && (
-                <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex gap-2.5 text-xs text-red-800">
-                  <AlertCircle className="h-4.5 w-4.5 text-red-500 shrink-0 mt-0.5" />
+                <div className="mt-4 flex gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                   <p className="leading-relaxed">
-                    Microphone access was denied. Please check your browser permission settings for this site and reload the page.
+                    Microphone access was denied. Check browser permissions for this site and reload the page.
                   </p>
                 </div>
               )}
             </div>
-
           </div>
-
-        </section>
-
+        </aside>
       </main>
 
-      {/* FOOTER */}
-      <footer className="py-6 border-t border-gray-200 bg-white text-center text-xs text-gray-400 mt-12 flex-shrink-0">
-        iBot Assessment System &copy; 2026. All rights reserved.
-      </footer>
-
-      {/* MODAL 1: INTERVIEW RULES AND INSTRUCTIONS */}
       {instructionsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setInstructionsOpen(false)}
           />
 
-          {/* Modal Container */}
-          <div className="relative bg-white rounded-2xl border border-gray-200 max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+          <div className="relative flex max-h-[86vh] w-full max-w-lg flex-col rounded-lg border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-gray-900">Detailed Rules & Guidelines</h3>
+                <FileText className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-base font-black text-slate-950">Detailed Rules & Guidelines</h3>
               </div>
               <button
                 onClick={() => setInstructionsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-50"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-xs text-gray-600 leading-relaxed pr-1">
-              <p>
-                Welcome to your automated AI interview. Please review the mandatory proctoring rules below. Violating these rules will terminate the test or flag flags on the recruiter dashboard:
+            <div className="ibot-scrollbar flex-1 overflow-y-auto py-4 pr-1 text-xs leading-relaxed text-slate-600">
+              <p className="font-medium">
+                Review these mandatory proctoring rules before starting the automated AI interview.
               </p>
 
-              <div className="space-y-3">
-                <div className="flex gap-2.5 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  <div>
-                    <span className="font-bold text-gray-800">Proctored Browser Focus:</span> You must maintain focus on the interview tab. Switching tabs, opening developer tools, or resizing the browser window is strictly monitored and flagged.
+              <div className="mt-4 space-y-3">
+                {[
+                  "Maintain focus on the interview tab. Switching tabs or opening developer tools may be flagged.",
+                  `The session runs continuously once launched. Make sure you are free for the full ${details.interview_duration_mins} minutes.`,
+                  "Use a quiet, well-lit environment so speech transcription remains accurate.",
+                  "Keep your microphone available during speech turns and avoid muting it unexpectedly.",
+                  "If your internet drops, do not close the tab. The client will try to reconnect automatically.",
+                ].map((rule) => (
+                  <div key={rule} className="flex items-start gap-2.5">
+                    <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                    <p>{rule}</p>
                   </div>
-                </div>
-
-                <div className="flex gap-2.5 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  <div>
-                    <span className="font-bold text-gray-800">No Session Pause:</span> The interview runs continuously in real-time. Once launched, you cannot pause or restart the session. Make sure you are free for the entire {details.interview_duration_mins} minutes.
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  <div>
-                    <span className="font-bold text-gray-800">Environment Requirements:</span> Ensure you are in a well-lit, quiet room. Background noise or third-party interference will disrupt the Speech-to-Text transcriber and may result in poor grading.
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  <div>
-                    <span className="font-bold text-gray-800">Always-On Microphone:</span> The AI engine processes answers in real-time. Do not mute or unplug your microphone during speech turns.
-                  </div>
-                </div>
-
-                <div className="flex gap-2.5 items-start">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  <div>
-                    <span className="font-bold text-gray-800">System Interruption:</span> In case of a sudden internet drop, do not close the tab. The client will try to reconnect automatically, or you can click "Reconnect" in the interview room.
-                  </div>
-                </div>
+                ))}
               </div>
 
-              <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-800 flex gap-2">
-                <Shield className="h-4.5 w-4.5 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="mt-5 flex gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3.5 text-emerald-800">
+                <Shield className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-[11px] leading-relaxed">
-                  By starting the assessment, you acknowledge that your responses and audio interactions will be transcribed, analyzed, and shared with the recruitment team for candidate evaluation.
+                  By starting the assessment, you acknowledge that your responses and audio interactions may be transcribed, analyzed, and shared with the recruitment team.
                 </p>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="border-t border-gray-100 pt-3 flex justify-end">
+            <div className="flex justify-end border-t border-slate-100 pt-3">
               <button
                 onClick={() => setInstructionsOpen(false)}
-                className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 font-semibold text-white transition-all shadow-sm"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700"
               >
                 I Understand
               </button>
@@ -684,34 +648,31 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
         </div>
       )}
 
-      {/* MODAL 2: CONFIRM INTERVIEW START */}
       {confirmStartOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setConfirmStartOpen(false)}
           />
 
-          {/* Modal Container */}
-          <div className="relative bg-white rounded-2xl border border-gray-200 max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 border border-amber-200 text-amber-600 mx-auto">
+          <div className="relative w-full max-w-md space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-600">
               <AlertTriangle className="h-6 w-6" />
             </div>
 
-            <div className="text-center space-y-2">
-              <h3 className="text-base font-bold text-gray-900">Are you sure you want to start the interview?</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">
-                By doing so, you will be redirected to a proctored environment where your browser workspace, audio input, and assessment timeline will be continuously monitored to ensure test integrity.
+            <div className="space-y-2 text-center">
+              <h3 className="text-base font-black text-slate-950">Start the live interview?</h3>
+              <p className="text-xs leading-relaxed text-slate-500">
+                You will enter a proctored interview environment. Browser focus, audio input, and assessment timeline may be monitored.
               </p>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setConfirmStartOpen(false)}
-                className="flex-1 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2.5 text-xs font-bold text-gray-700 transition-all"
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700 transition-all hover:bg-slate-50"
               >
-                No, Go Back
+                Go Back
               </button>
               <button
                 id="btn-confirm-start-interview"
@@ -719,9 +680,9 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
                   setConfirmStartOpen(false);
                   onStartInterview();
                 }}
-                className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 text-xs font-bold text-white transition-all shadow-md shadow-indigo-100"
+                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700"
               >
-                Yes, Start Now
+                Start Now
               </button>
             </div>
           </div>

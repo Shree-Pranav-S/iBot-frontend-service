@@ -25,6 +25,8 @@ import {
   ChevronUp,
   Mail,
   FileSpreadsheet,
+  BarChart3,
+  Gauge,
 } from 'lucide-react';
 import type { AssessmentStatus } from '../../../types/assessment.types';
 
@@ -36,7 +38,9 @@ export const AssessmentsPage: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: selectedAssessment, isLoading: loadingDetails } = useAssessmentDetails(selectedId);
   const { data: assessmentCandidates = [], isLoading: loadingCandidates } = useCandidates(selectedId);
-  const [showCandidates, setShowCandidates] = useState(false);
+  const [showCandidates, setShowCandidates] = useState(true);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [showJdModal, setShowJdModal] = useState(false);
 
   const createMutation = useCreateAssessment();
   const updateStatusMutation = useUpdateAssessmentStatus();
@@ -114,18 +118,18 @@ export const AssessmentsPage: React.FC = () => {
       setShowCreateModal(false);
       
       setSelectedId(created.id);
-      toastSuccess('Campaign Created', 'Your assessment campaign has been launched successfully.');
+      toastSuccess('Campaign Created', 'Assessment launched successfully.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create assessment.';
       setCreateError(msg);
-      toastError('Campaign Creation Failed', msg);
+      toastError('Creation Failed', msg);
     }
   };
 
   const addFocusArea = () => {
     if (!newSkillOverride.trim()) return;
     if (createFocusAreas.some(fa => fa.skill.toLowerCase() === newSkillOverride.trim().toLowerCase())) {
-      return; // duplicate
+      return;
     }
     setCreateFocusAreas([...createFocusAreas, { skill: newSkillOverride.trim(), weight: newWeightOverride }]);
     setNewSkillOverride('');
@@ -140,72 +144,88 @@ export const AssessmentsPage: React.FC = () => {
     const nextStatus: AssessmentStatus = currentStatus === 'ACTIVE' ? 'CLOSED' : 'ACTIVE';
     try {
       await updateStatusMutation.mutateAsync({ id, status: nextStatus });
-      toastSuccess('Status Updated', `Campaign status transitioned to ${nextStatus}.`);
+      toastSuccess('Status Updated', `Campaign is now ${nextStatus}.`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update campaign status.';
-      toastError('Status Transition Failed', msg);
+      const msg = err instanceof Error ? err.message : 'Failed to update status.';
+      toastError('Update Failed', msg);
     }
   };
 
+  const inputStyles = "rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all";
+
+  // Calculate statistics for the collapsible candidate overview
+  const totalCandidates = assessmentCandidates.length;
+  const completedCandidates = assessmentCandidates.filter(c => c.status === 'COMPLETED' || c.status === 'EVALUATED').length;
+  const inProgressCandidates = assessmentCandidates.filter(c => c.status === 'IN_PROGRESS').length;
+  const invitedCandidates = totalCandidates - completedCandidates - inProgressCandidates;
+
   return (
-    <div className="flex h-[calc(100vh-6rem)] overflow-hidden gap-8 -mt-2">
-      {/* Left Column: Campaigns List (locked height, scrollable) */}
+    <div className="flex h-full min-h-0 overflow-hidden gap-5 animate-fadeIn select-none">
+      {/* ── Left: Campaign List ──────────────────────────────────────────── */}
       <div className="w-80 flex-shrink-0 flex flex-col h-full gap-4">
         <div className="flex justify-between items-center flex-shrink-0">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Briefcase className="h-5 w-5 text-indigo-500" />
-            Campaigns ({assessments.length})
+          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+            <Briefcase className="h-4 w-4 text-emerald-500 animate-pulse" />
+            Campaigns
+            <span className="ml-1 text-[11px] font-bold text-slate-400">({assessments.length})</span>
           </h2>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-indigo-700 shadow-sm"
+            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white transition-all hover:bg-emerald-700 shadow-sm hover:scale-[1.03] active:scale-[0.97]"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Create
           </button>
         </div>
 
         {loadingAssessments ? (
-          <div className="flex-1 flex flex-col items-center justify-center border border-gray-200 bg-white rounded-2xl shadow-sm">
-            <Loader2 className="h-8 w-8 text-indigo-500 animate-spin mb-2" />
-            <p className="text-xs text-gray-500 font-medium">Loading campaigns...</p>
+          <div className="flex-1 flex flex-col items-center justify-center ibot-card">
+            <Loader2 className="h-6 w-6 text-emerald-500 animate-spin mb-2" />
+            <p className="text-[11px] text-slate-400 font-semibold">Loading…</p>
           </div>
         ) : assessments.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center border border-dashed border-gray-300 bg-white rounded-2xl">
-            <Briefcase className="h-8 w-8 text-gray-300 mb-2" />
-            <p className="font-semibold text-gray-600 text-sm">No campaigns found</p>
-            <p className="text-xs text-gray-400 mt-1 max-w-[200px] mx-auto">Create a campaign to automatically evaluate job descriptions and candidates.</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-5 text-center ibot-card border-dashed">
+            <Briefcase className="h-7 w-7 text-slate-300 mb-2" />
+            <p className="font-semibold text-slate-500 text-xs">No campaigns yet</p>
+            <p className="text-[10px] text-slate-400 mt-1">Create one to get started.</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-4">
-            {assessments.map((a) => (
+          <div className="ibot-scrollbar flex-1 overflow-y-auto space-y-2.5 pr-0.5 pb-2">
+            {assessments.map((a, i) => (
               <div
                 key={a.id}
                 onClick={() => { setSelectedId(a.id); setShowCandidates(false); }}
-                className={`cursor-pointer p-4 rounded-2xl border transition-all duration-200 ${
+                className={`relative cursor-pointer p-4 rounded-lg border transition-all duration-250 animate-slideUp hover:scale-[1.02] hover:shadow-sm ${
                   selectedId === a.id
-                    ? 'border-indigo-400 bg-indigo-50 shadow-sm shadow-indigo-100'
-                    : 'border-gray-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30 shadow-sm'
+                    ? 'border-emerald-300 bg-emerald-50/70 shadow-sm pl-5'
+                    : 'border-slate-200 bg-white hover:border-emerald-200'
                 }`}
+                style={{ animationDelay: `${i * 0.04}s` }}
               >
+                {/* 3px selected left accent bar */}
+                {selectedId === a.id && (
+                  <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-gradient-to-b from-emerald-400 to-emerald-600 animate-fadeIn" />
+                )}
+
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-gray-900 text-xs line-clamp-1 flex-1 pr-2">{a.title}</h3>
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold border ${
+                  <h3 className="font-bold text-slate-800 text-xs line-clamp-1 flex-1 pr-2">{a.title}</h3>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold border ${
                     a.status === 'ACTIVE'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-gray-100 text-gray-600 border-gray-200'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                      : 'bg-slate-50 text-slate-500 border-slate-200'
                   }`}>
+                    <span className={`h-1 w-1 rounded-full ${a.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                     {a.status}
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-500 font-medium mb-3">{a.role_name}</p>
-                <div className="flex justify-between items-center text-[10px] text-gray-400">
+                <p className="text-[10px] font-semibold text-slate-400 mb-2.5">{a.role_name}</p>
+                <div className="flex justify-between items-center text-[10px] font-medium text-slate-400">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {a.interview_duration_mins} mins
+                    {a.interview_duration_mins}m
                   </span>
                   <span>
-                    Expires {new Date(a.window_end).toLocaleDateString()}
+                    {new Date(a.window_end).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -214,237 +234,189 @@ export const AssessmentsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Right Column: Detail View (locked height, scrollable) */}
+      {/* ── Right: Detail View ───────────────────────────────────────────── */}
       <div className="flex-1 h-full min-w-0">
         {loadingDetails ? (
-          <div className="flex flex-col items-center justify-center h-full border border-gray-200 bg-white rounded-2xl shadow-sm">
-            <Loader2 className="h-10 w-10 text-indigo-500 animate-spin mb-3" />
-            <p className="text-sm text-gray-500 font-medium">Analyzing job description details...</p>
+          <div className="flex flex-col items-center justify-center h-full ibot-card">
+            <Loader2 className="h-8 w-8 text-emerald-500 animate-spin mb-3" />
+            <p className="text-xs text-slate-400 font-semibold">Loading details…</p>
           </div>
         ) : selectedAssessment ? (
-          <div className="h-full border border-gray-200 bg-white rounded-2xl flex flex-col overflow-hidden shadow-sm">
+          <div className="h-full ibot-card flex flex-col overflow-hidden animate-scaleIn">
             
-            {/* Detail Header */}
-            <div className="border-b border-gray-100 p-6 flex-shrink-0 bg-gray-50/50">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Header */}
+            <div className="border-b border-slate-100 p-5 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg md:text-xl font-extrabold text-gray-900 mb-1">{selectedAssessment.title}</h2>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500">
-                    <span className="font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-2 py-0.5">{selectedAssessment.role_name}</span>
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                  <h2 className="text-lg font-extrabold text-slate-900 mb-1 font-display">{selectedAssessment.title}</h2>
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 font-medium">
+                    <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 text-[10px]">{selectedAssessment.role_name}</span>
+                    <span className="text-slate-300">·</span>
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-gray-400" />
-                      {selectedAssessment.interview_duration_mins} mins
+                      <Clock className="h-3.5 w-3.5 text-slate-400" />
+                      {selectedAssessment.interview_duration_mins}m
                     </span>
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                    <span className="text-slate-300">·</span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      {new Date(selectedAssessment.window_start).toLocaleDateString()} - {new Date(selectedAssessment.window_end).toLocaleDateString()}
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      {new Date(selectedAssessment.window_start).toLocaleDateString()} – {new Date(selectedAssessment.window_end).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
                 
-                {/* Status Toggle Action */}
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-gray-500">Campaign Status:</span>
+                {/* Status Toggle Container */}
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1 transition-all hover:bg-slate-100/60">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">Status</span>
+                  <span className="text-xs font-semibold text-slate-700 capitalize">{selectedAssessment.status.toLowerCase()}</span>
                   <button
                     onClick={() => toggleCampaignStatus(selectedAssessment.id, selectedAssessment.status)}
                     disabled={updateStatusMutation.isPending}
-                    className="flex items-center hover:opacity-85 transition-opacity"
-                    title={selectedAssessment.status === 'ACTIVE' ? 'Close Campaign' : 'Activate Campaign'}
+                    className="hover:opacity-80 transition-all ml-1.5 active:scale-95 duration-100"
+                    title={selectedAssessment.status === 'ACTIVE' ? 'Close' : 'Activate'}
                   >
                     {selectedAssessment.status === 'ACTIVE' ? (
-                      <ToggleRight className="h-8 w-8 text-indigo-600" />
+                      <ToggleRight className="h-6 w-6 text-emerald-600" />
                     ) : (
-                      <ToggleLeft className="h-8 w-8 text-gray-400" />
+                      <ToggleLeft className="h-6 w-6 text-slate-400" />
                     )}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Scrollable Detail Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Content */}
+            <div className="ibot-scrollbar flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/30">
               
-              {/* LLM Inferred Signals Summary */}
-              {selectedAssessment.jd_analysis && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-5">
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Inferred Title</span>
-                    <span className="text-xs font-semibold text-gray-900 mt-1">{selectedAssessment.jd_analysis.inferred_role_title}</span>
+              {/* Analysis & JD Cards (Rich Interactive) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-white border border-slate-200/80 p-5 shadow-sm transition-all duration-300 hover:border-emerald-300 hover:scale-[1.02] hover:shadow-md group">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50 border border-emerald-500/10 text-emerald-600 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-350">
+                      <Sparkles className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-800">AI Analysis & Timeline</h3>
+                      <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        {selectedAssessment.jd_analysis?.skills?.length ?? 3} skills tracked · Plan generated
+                      </p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Seniority Level</span>
-                    <span className="text-xs font-semibold text-gray-900 mt-1">{selectedAssessment.jd_analysis.seniority_level}</span>
-                  </div>
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Evaluation Difficulty</span>
-                    <span className="text-xs font-semibold text-indigo-600 mt-1">{selectedAssessment.jd_analysis.difficulty}</span>
-                  </div>
+                  <button
+                    onClick={() => setShowAnalysisModal(true)}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:text-emerald-600 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  >
+                    <FileText className="h-3 w-3" />
+                    View
+                  </button>
                 </div>
-              )}
 
-              {/* Skills Priorities list */}
-              {selectedAssessment.jd_analysis?.skills && (
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-indigo-500" />
-                    JD Skill Analysis Priorities
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedAssessment.jd_analysis.skills.map((skillItem, index) => (
-                      <div key={index} className="p-4 bg-gray-50 border border-gray-200 hover:border-indigo-200 rounded-xl transition-all flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="font-bold text-gray-900 text-xs">{skillItem.skill}</span>
-                            <span className="inline-flex items-center rounded-full bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
-                              {skillItem.depth_required}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 leading-relaxed italic mb-3">
-                            "{skillItem.reasoning}"
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-1.5 mt-auto">
-                          <div className="flex justify-between items-center text-[10px] text-gray-400">
-                            <span>Score Priority:</span>
-                            <span className="font-bold text-indigo-700">{skillItem.priority_score}/10</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
-                            <div
-                              className="bg-indigo-500 h-1 rounded-full"
-                              style={{ width: `${skillItem.priority_score * 10}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-white border border-slate-200/80 p-5 shadow-sm transition-all duration-300 hover:border-emerald-300 hover:scale-[1.02] hover:shadow-md group">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50 border border-emerald-500/10 text-emerald-600 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-350">
+                      <FileText className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-800">Job Description (JD)</h3>
+                      <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        Launched {new Date(selectedAssessment.window_start).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setShowJdModal(true)}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:text-emerald-600 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  >
+                    <FileText className="h-3 w-3" />
+                    View JD
+                  </button>
                 </div>
-              )}
-
-              {/* Behavioural Signals */}
-              {selectedAssessment.jd_analysis?.behavioural_signals && selectedAssessment.jd_analysis.behavioural_signals.length > 0 && (
-                <div className="flex flex-col gap-2.5 border-t border-gray-100 pt-5">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Behavioural Signals Focus</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedAssessment.jd_analysis.behavioural_signals.map((sig, idx) => (
-                      <span key={idx} className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700">
-                        {sig}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Interview Plan Timeline */}
-              {selectedAssessment.interview_plan?.sections && (
-                <div className="flex flex-col gap-4 border-t border-gray-100 pt-5">
-                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sliders className="h-4 w-4 text-indigo-500" />
-                    Generated Time Allocation Plan
-                  </h3>
-                  <div className="relative pl-6 border-l border-gray-200 flex flex-col gap-5 mt-2 ml-2">
-                    {selectedAssessment.interview_plan.sections.map((section, idx) => (
-                      <div key={idx} className="relative">
-                        <span className="absolute -left-[28px] top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white border border-indigo-400" />
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div>
-                            <span className="font-bold text-gray-900 text-xs capitalize">
-                              {section.section_name === 'self_intro' ? 'Self Introduction' : section.section_name}
-                            </span>
-                            {section.skill && (
-                              <span className="text-[10px] text-gray-400 ml-2">({section.skill} technical section)</span>
-                            )}
-                          </div>
-                          <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded shrink-0">
-                            {section.allocated_mins} mins
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* Candidates Section */}
-              <div className="border-t border-gray-100 pt-5">
+              <div className="border-t border-slate-100 pt-5">
                 <button
                   onClick={() => setShowCandidates(v => !v)}
-                  className="flex w-full items-center justify-between group"
+                  className="flex w-full items-center justify-between group py-1.5 px-1 hover:bg-slate-100/40 rounded transition-colors duration-250"
                 >
-                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <Users className="h-4 w-4 text-indigo-500" />
+                  <h3 className="text-xs font-bold text-slate-600 flex items-center gap-1.5 uppercase tracking-wider">
+                    <Users className="h-4 w-4 text-emerald-500 transition-transform group-hover:scale-110" />
                     Candidates
-                    <span className="ml-1 inline-flex items-center justify-center h-4.5 px-1.5 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-bold">
+                    <span className="ml-1 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
                       {assessmentCandidates.length}
                     </span>
                   </h3>
-                  <div className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 group-hover:text-indigo-700">
+                  <div className="text-xs font-medium text-slate-400 group-hover:text-emerald-600 transition-all duration-200">
                     {showCandidates ? (
-                      <><ChevronUp className="h-3.5 w-3.5" /> Hide</>
+                      <ChevronUp className="h-4 w-4 transition-transform duration-250 group-hover:-translate-y-0.5" />
                     ) : (
-                      <><ChevronDown className="h-3.5 w-3.5" /> View Candidates</>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-250 group-hover:translate-y-0.5" />
                     )}
                   </div>
                 </button>
 
                 {showCandidates && (
-                  <div className="mt-3">
+                  <div className="mt-4 animate-slideUp">
                     {loadingCandidates ? (
-                      <div className="flex items-center justify-center py-6">
-                        <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
                       </div>
                     ) : assessmentCandidates.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-6 gap-2 text-center border border-dashed border-gray-200 rounded-xl bg-gray-50">
-                        <FileSpreadsheet className="h-7 w-7 text-gray-300" />
-                        <p className="text-xs font-semibold text-gray-500">No candidates yet</p>
-                        <p className="text-[10px] text-gray-400 max-w-[200px]">Upload a CSV from the Candidates tab to invite people to this campaign.</p>
+                      <div className="flex flex-col items-center justify-center py-8 gap-2 text-center border border-dashed border-slate-200 rounded-xl bg-white shadow-sm p-6">
+                        <FileSpreadsheet className="h-7 w-7 text-slate-300 animate-bounce" />
+                        <p className="text-xs font-semibold text-slate-500">No candidates yet</p>
+                        <p className="text-[10px] text-slate-400">Invite candidates via the Candidates dashboard</p>
                       </div>
                     ) : (
-                      <div className="border border-gray-200 rounded-xl overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-gray-50 border-b border-gray-100">
-                            <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                              <th className="px-4 py-2.5">Candidate</th>
-                              <th className="px-4 py-2.5">Status</th>
-                              <th className="px-4 py-2.5">Decision</th>
+                      <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead className="bg-slate-50/70 border-b border-slate-100">
+                            <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              <th className="px-4 py-3">Candidate</th>
+                              <th className="px-4 py-3">Status</th>
+                              <th className="px-4 py-3">Decision</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100">
+                          <tbody className="divide-y divide-slate-100">
                             {assessmentCandidates.map((c) => (
-                              <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-4 py-2.5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-[10px]">
+                              <tr key={c.id} className="group hover:bg-slate-100/50 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200/50 text-emerald-600 font-bold text-[10px] group-hover:scale-105 duration-200">
                                       {c.full_name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                      <p className="text-[11px] font-bold text-gray-800">{c.full_name}</p>
-                                      <p className="text-[9px] text-gray-400 flex items-center gap-0.5">
-                                        <Mail className="h-2.5 w-2.5" />{c.email}
+                                      <p className="font-semibold text-slate-800 text-xs group-hover:text-emerald-700 transition-colors">{c.full_name}</p>
+                                      <p className="text-[10px] text-slate-400 flex items-center gap-0.5 mt-0.5 font-medium">
+                                        <Mail className="h-3 w-3" />{c.email}
                                       </p>
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-4 py-2.5">
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold border ${
-                                    c.status === 'EVALUATED' ? 'bg-violet-50 text-violet-700 border-violet-200' :
-                                    c.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                    c.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                    'bg-gray-100 text-gray-600 border-gray-200'
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold border transition-transform group-hover:scale-105 ${
+                                    c.status === 'EVALUATED' ? 'bg-teal-50 text-teal-600 border-teal-200' :
+                                    c.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                                    c.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                    'bg-slate-50 text-slate-500 border-slate-200'
                                   }`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${
+                                      (c.status === 'COMPLETED' || c.status === 'EVALUATED') ? 'bg-emerald-500 animate-pulse' :
+                                      c.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-slate-400'
+                                    }`} />
                                     {c.status}
                                   </span>
                                 </td>
-                                <td className="px-4 py-2.5">
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold border ${
-                                    c.recruiter_decision === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                                    c.recruiter_decision === 'REJECTED' ? 'bg-red-100 text-red-800 border-red-200' :
-                                    'bg-amber-100 text-amber-800 border-amber-200'
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-extrabold border transition-transform group-hover:scale-105 ${
+                                    c.recruiter_decision === 'APPROVED' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                    c.recruiter_decision === 'REJECTED' ? 'bg-red-100 text-red-700 border-red-200' :
+                                    'bg-amber-50 text-amber-700 border-amber-200'
                                   }`}>
-                                    {c.recruiter_decision}
+                                    <span className={`h-1.5 w-1.5 rounded-full ${
+                                      c.recruiter_decision === 'APPROVED' ? 'bg-emerald-500' :
+                                      c.recruiter_decision === 'REJECTED' ? 'bg-red-500' : 'bg-amber-500'
+                                    }`} />
+                                    {c.recruiter_decision || 'PENDING'}
                                   </span>
                                 </td>
                               </tr>
@@ -457,248 +429,466 @@ export const AssessmentsPage: React.FC = () => {
                 )}
               </div>
 
+              {/* Campaign Progress segmented bar (Interactive) */}
+              {totalCandidates > 0 && (
+                <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm mt-3 animate-slideUp hover:border-emerald-300 hover:shadow-md transition-all duration-300 cursor-default group">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 mb-2.5 uppercase tracking-wider">
+                    <span>Campaign Progress</span>
+                    <span className="text-emerald-600 font-extrabold group-hover:scale-105 transition-transform">{completedCandidates} / {totalCandidates} Screened</span>
+                  </div>
+                  <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-slate-100 border border-slate-100">
+                    <div className="bg-emerald-500 transition-all duration-300 hover:opacity-90" style={{ width: `${(completedCandidates / totalCandidates) * 100}%` }} title={`Screened: ${completedCandidates}`} />
+                    <div className="bg-blue-500 transition-all duration-300 hover:opacity-90" style={{ width: `${(inProgressCandidates / totalCandidates) * 100}%` }} title={`In Progress: ${inProgressCandidates}`} />
+                    <div className="bg-amber-400 transition-all duration-300 hover:opacity-90" style={{ width: `${(invitedCandidates / totalCandidates) * 100}%` }} title={`Invited: ${invitedCandidates}`} />
+                  </div>
+                  <div className="flex flex-wrap gap-4 mt-2.5 text-[10px] font-semibold text-slate-500">
+                    <span className="flex items-center gap-1.5 hover:text-emerald-600 transition-colors">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {completedCandidates} Screened
+                    </span>
+                    <span className="flex items-center gap-1.5 hover:text-blue-600 transition-colors">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> {inProgressCandidates} In Progress
+                    </span>
+                    <span className="flex items-center gap-1.5 hover:text-amber-500 transition-colors">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> {invitedCandidates} Invited
+                    </span>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full border border-dashed border-gray-300 bg-white rounded-2xl p-6 text-center">
-            <Briefcase className="h-12 w-12 text-gray-300 mb-3" />
-            <p className="font-bold text-gray-600 text-sm">No campaign selected</p>
-            <p className="text-xs text-gray-400 mt-1 max-w-[280px]">Select a campaign from the list on the left to view the JD analysis details and interview timelines.</p>
+          <div className="flex flex-col items-center justify-center h-full ibot-card border-dashed p-6 text-center">
+            <Briefcase className="h-10 w-10 text-slate-300 mb-3 animate-pulse" />
+            <p className="font-semibold text-slate-500 text-sm">Select a campaign</p>
+            <p className="text-xs text-slate-400 mt-1">Choose from the list to view details</p>
           </div>
         )}
       </div>
 
-      {/* Create Assessment Campaign Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col gap-6 my-8 max-h-[90vh] overflow-y-auto">
+      {/* ── Analysis Modal ───────────────────────────────────────────────── */}
+      {showAnalysisModal && selectedAssessment && (
+        <div className="ibot-overlay">
+          <div className="ibot-modal max-w-3xl max-h-[85vh] relative flex flex-col bg-white">
             
-            {/* Modal Header */}
-            <div className="flex justify-between items-start border-b border-gray-100 pb-4">
+            <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-indigo-500" />
-                  Launch New Assessment Campaign
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
+                  <Sparkles className="h-4 w-4 text-emerald-500 animate-pulse" />
+                  Analysis & Interview Plan
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">Configure parameters and upload details. The AI parses the job and generates custom rubrics.</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">AI-generated from the job description</p>
               </div>
               <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setCreateError(null);
-                }}
-                className="rounded-xl border border-gray-200 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowAnalysisModal(false)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95 duration-100"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Error Notification */}
-            {createError && (
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
-                <span>{createError}</span>
-              </div>
-            )}
+            {/* Soft bottom fade-gradient above sticky footer */}
+            <div className="absolute bottom-[68px] left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
 
-            {/* Form */}
-            <form onSubmit={handleCreateAssessment} className="flex flex-col gap-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Campaign Title</label>
-                  <input
-                    required
-                    type="text"
-                    value={createTitle}
-                    onChange={(e) => setCreateTitle(e.target.value)}
-                    placeholder="e.g. Senior Node.js Developer Hiring"
-                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  />
+            <div className="ibot-scrollbar p-6 pb-12 overflow-y-auto space-y-6 flex-1">
+              {/* Inferred Signals */}
+              {selectedAssessment.jd_analysis && (
+                <div className="grid grid-cols-3 gap-3 shrink-0">
+                  {[
+                    { label: 'Role', value: selectedAssessment.jd_analysis.inferred_role_title, icon: Briefcase },
+                    { label: 'Level', value: selectedAssessment.jd_analysis.seniority_level, icon: BarChart3 },
+                    { label: 'Difficulty', value: selectedAssessment.jd_analysis.difficulty, icon: Gauge, accent: true },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.label} className="p-3 bg-slate-50 border border-slate-200/70 rounded-lg flex items-center gap-3 transition-all hover:scale-[1.03] hover:shadow-sm hover:border-emerald-500/20 cursor-default group">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-emerald-50 border border-emerald-500/10 text-emerald-600 transition-transform group-hover:scale-115">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-[9px] uppercase font-bold text-slate-400 tracking-wider leading-none mb-1">{item.label}</span>
+                          <span className={`block text-xs font-bold truncate ${item.accent ? 'text-emerald-700' : 'text-slate-800'}`}>
+                            {item.value}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Target Role Name</label>
-                  <input
-                    required
-                    type="text"
-                    value={createRoleName}
-                    onChange={(e) => setCreateRoleName(e.target.value)}
-                    placeholder="e.g. Backend Developer"
-                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  />
-                </div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Interview Duration (mins)</label>
-                  <select
-                    value={createDuration}
-                    onChange={(e) => setCreateDuration(Number(e.target.value))}
-                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  >
-                    <option value={5}>5 Minutes</option>
-                    <option value={10}>10 Minutes</option>
-                    <option value={15}>15 Minutes</option>
-                    <option value={30}>30 Minutes</option>
-                    <option value={45}>45 Minutes</option>
-                    <option value={60}>60 Minutes</option>
-                    <option value={90}>90 Minutes</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Start Window Datetime</label>
-                  <input
-                    required
-                    type="datetime-local"
-                    value={createWindowStart}
-                    onChange={(e) => setCreateWindowStart(e.target.value)}
-                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">End Window Datetime</label>
-                  <input
-                    required
-                    type="datetime-local"
-                    value={createWindowEnd}
-                    onChange={(e) => setCreateWindowEnd(e.target.value)}
-                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Focus Area overrides */}
-              <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50 flex flex-col gap-3">
+              {/* Skills */}
+              {selectedAssessment.jd_analysis?.skills && (
                 <div>
-                  <h3 className="text-xs font-bold text-gray-800">Focus Weight Overrides (Optional)</h3>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Define custom weights for specific technical skills. Otherwise, weights are inferred from the JD.</p>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSkillOverride}
-                    onChange={(e) => setNewSkillOverride(e.target.value)}
-                    placeholder="e.g. Docker"
-                    className="flex-1 rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Weight:</span>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={newWeightOverride}
-                      onChange={(e) => setNewWeightOverride(Number(e.target.value))}
-                      className="w-20 accent-indigo-600"
-                    />
-                    <span className="text-xs text-gray-900 font-bold w-4">{newWeightOverride}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addFocusArea}
-                    className="rounded-xl bg-gray-200 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-300 transition-colors font-semibold"
-                  >
-                    Add
-                  </button>
-                </div>
-                {createFocusAreas.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {createFocusAreas.map((fa, index) => (
-                      <span key={index} className="inline-flex items-center gap-1 rounded-xl bg-indigo-100 border border-indigo-200 px-3 py-1 text-xs text-indigo-700 font-medium">
-                        {fa.skill} (Weight: {fa.weight})
-                        <button type="button" onClick={() => removeFocusArea(index)} className="text-indigo-500 hover:text-indigo-700">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5 select-none">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                    Skill Priorities
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {selectedAssessment.jd_analysis.skills.map((skillItem, index) => (
+                      <div key={index} className="p-4 bg-white border border-slate-200 rounded-xl hover:border-emerald-300 hover:scale-[1.03] hover:shadow-md transition-all duration-300 group cursor-default">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="font-bold text-slate-800 text-xs group-hover:text-emerald-700 transition-colors">{skillItem.skill}</span>
+                          <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 transition-transform group-hover:scale-105">
+                            {skillItem.depth_required}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium leading-relaxed mb-3 line-clamp-2">
+                          {skillItem.reasoning}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-slate-50 border border-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500 group-hover:opacity-90"
+                              style={{ width: `${skillItem.priority_score * 10}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/50 px-1.5 py-0.5 rounded-full shrink-0 group-hover:scale-105 transition-transform">
+                            {skillItem.priority_score}/10
+                          </span>
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                )}
-              </div>
-
-              {/* JD Type Switcher */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-gray-700">Job Description Input Mode</label>
-                <div className="flex border border-gray-300 rounded-xl overflow-hidden bg-gray-50 max-w-xs self-start">
-                  <button
-                    type="button"
-                    onClick={() => setCreateJdType('text')}
-                    className={`px-4 py-2 text-xs font-semibold transition-all ${
-                      createJdType === 'text' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Paste Text
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCreateJdType('file')}
-                    className={`px-4 py-2 text-xs font-semibold transition-all ${
-                      createJdType === 'file' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Upload PDF
-                  </button>
-                </div>
-              </div>
-
-              {/* JD Input fields */}
-              {createJdType === 'text' ? (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Job Description Text</label>
-                  <textarea
-                    required
-                    value={createJdText}
-                    onChange={(e) => setCreateJdText(e.target.value)}
-                    placeholder="Paste the job requirements, responsibilities, skills, and qualifications here…"
-                    rows={5}
-                    className="rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Job Description PDF File</label>
-                  <div className="border border-dashed border-gray-300 bg-gray-50 p-6 rounded-2xl flex flex-col items-center justify-center gap-2 text-center relative hover:border-indigo-400 hover:bg-indigo-50/30 transition-colors">
-                    <FileText className="h-8 w-8 text-gray-400" />
-                    {createJdFile ? (
-                      <span className="text-xs text-indigo-600 font-bold">{createJdFile.name}</span>
-                    ) : (
-                      <span className="text-xs text-gray-500">Select PDF job description file (Max 10MB)</span>
-                    )}
-                    <input
-                      required
-                      type="file"
-                      accept=".pdf"
-                      onChange={(e) => setCreateJdFile(e.target.files?.[0] || null)}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
                   </div>
                 </div>
               )}
 
-              {/* Modal Buttons */}
-              <div className="border-t border-gray-100 pt-5 mt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                >
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Analyzing JD...
-                    </>
-                  ) : (
-                    'Launch Campaign'
-                  )}
-                </button>
+              {/* Behavioural Signals */}
+              {selectedAssessment.jd_analysis?.behavioural_signals && selectedAssessment.jd_analysis.behavioural_signals.length > 0 && (
+                <div className="border-t border-slate-100 pt-5">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 select-none">Behavioural Focus</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAssessment.jd_analysis.behavioural_signals.map((sig, idx) => (
+                      <span key={idx} className="rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1 text-[10px] font-semibold text-emerald-700 transition-all hover:scale-105 active:scale-95 duration-200 cursor-default">
+                        {sig}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Interview Plan Timeline / Labeled Stacked bar */}
+              {selectedAssessment.interview_plan?.sections && (
+                <div className="border-t border-slate-100 pt-5">
+                  <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5 select-none">
+                    <Sliders className="h-3.5 w-3.5 text-emerald-500" />
+                    Time Allocation
+                  </h3>
+                  
+                  {(() => {
+                    const totalAllocated = selectedAssessment.interview_plan.sections.reduce((sum, s) => sum + s.allocated_mins, 0) || 1;
+                    const colors = [
+                      'bg-emerald-500',
+                      'bg-teal-500',
+                      'bg-cyan-500',
+                      'bg-indigo-500',
+                      'bg-slate-500',
+                    ];
+                    return (
+                      <div className="space-y-4">
+                        {/* Segmented Horizontal Stacked Bar */}
+                        <div className="flex h-3.5 w-full rounded-full overflow-hidden bg-slate-100 border border-slate-200/20 shadow-inner group">
+                          {selectedAssessment.interview_plan.sections.map((section, idx) => {
+                            const pct = (section.allocated_mins / totalAllocated) * 100;
+                            const color = colors[idx % colors.length];
+                            return (
+                              <div
+                                key={idx}
+                                className={`${color} h-full transition-all duration-200 hover:opacity-85 hover:scale-y-110 cursor-pointer`}
+                                style={{ width: `${pct}%` }}
+                                title={`${section.section_name}: ${section.allocated_mins}m`}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {/* Legend row with swatches */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                          {selectedAssessment.interview_plan.sections.map((section, idx) => {
+                            const color = colors[idx % colors.length];
+                            return (
+                              <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200/50 bg-slate-50/50 text-[11px] font-medium text-slate-700 transition-all hover:scale-[1.03] hover:bg-slate-100/50 cursor-default group">
+                                <span className={`h-2.5 w-2.5 rounded-full shrink-0 transition-transform group-hover:scale-110 ${color}`} />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate capitalize font-semibold leading-none mb-0.5 group-hover:text-emerald-700 transition-colors">
+                                    {section.section_name === 'self_intro' ? 'Introduction' : section.section_name.replace('_', ' ')}
+                                  </p>
+                                  {section.skill && (
+                                    <p className="text-[9px] text-slate-400 font-normal truncate">({section.skill})</p>
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-bold text-emerald-700 bg-white border border-emerald-100 px-1.5 py-0.5 rounded transition-transform group-hover:scale-105">
+                                  {section.allocated_mins}m
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+            
+            {/* Sticky Close Button Footer with custom shadow highlight */}
+            <div className="border-t border-slate-100 p-4 shrink-0 flex justify-end bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.03)] z-10">
+              <button
+                onClick={() => setShowAnalysisModal(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-all shadow-sm hover:scale-[1.03] active:scale-[0.97]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create Modal ─────────────────────────────────────────────────── */}
+      {showCreateModal && (
+        <div className="ibot-overlay">
+          <div className="ibot-modal max-w-2xl max-h-[88vh]">
+            <div className="ibot-scrollbar overflow-y-auto animate-scaleIn">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start border-b border-slate-100 px-6 py-4">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
+                  <Sparkles className="h-4 w-4 text-emerald-500 animate-pulse" />
+                  New Campaign
+                </h2>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Configure details and upload the JD</p>
               </div>
-            </form>
+              <button
+                onClick={() => { setShowCreateModal(false); setCreateError(null); }}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors hover:scale-105 active:scale-95"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 flex flex-col gap-5">
+              {/* Error */}
+              {createError && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2 animate-slideDown">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                  <span>{createError}</span>
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleCreateAssessment} className="flex flex-col gap-4" id="create-campaign-form">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Title</label>
+                    <input
+                      required type="text" value={createTitle}
+                      onChange={(e) => setCreateTitle(e.target.value)}
+                      placeholder="e.g. Senior Node.js Hiring"
+                      className={inputStyles}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Role</label>
+                    <input
+                      required type="text" value={createRoleName}
+                      onChange={(e) => setCreateRoleName(e.target.value)}
+                      placeholder="e.g. Backend Developer"
+                      className={inputStyles}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Duration</label>
+                    <select
+                      value={createDuration}
+                      onChange={(e) => setCreateDuration(Number(e.target.value))}
+                      className={inputStyles}
+                    >
+                      <option value={5}>5 min</option>
+                      <option value={10}>10 min</option>
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>60 min</option>
+                      <option value={90}>90 min</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Start</label>
+                    <input required type="datetime-local" value={createWindowStart}
+                      onChange={(e) => setCreateWindowStart(e.target.value)}
+                      className={inputStyles}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">End</label>
+                    <input required type="datetime-local" value={createWindowEnd}
+                      onChange={(e) => setCreateWindowEnd(e.target.value)}
+                      className={inputStyles}
+                    />
+                  </div>
+                </div>
+
+                {/* Focus Area overrides */}
+                <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col gap-2">
+                  <div>
+                    <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Focus Overrides <span className="text-slate-400 font-normal lowercase">(optional)</span></h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text" value={newSkillOverride}
+                      onChange={(e) => setNewSkillOverride(e.target.value)}
+                      placeholder="e.g. Docker"
+                      className={`flex-1 ${inputStyles}`}
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="range" min="1" max="10"
+                        value={newWeightOverride}
+                        onChange={(e) => setNewWeightOverride(Number(e.target.value))}
+                        className="w-16 accent-emerald-600"
+                      />
+                      <span className="text-xs text-slate-800 font-bold w-4">{newWeightOverride}</span>
+                    </div>
+                    <button
+                      type="button" onClick={addFocusArea}
+                      className="rounded-lg bg-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-350 hover:scale-[1.03] active:scale-[0.97] transition-all font-bold"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {createFocusAreas.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {createFocusAreas.map((fa, index) => (
+                        <span key={index} className="inline-flex items-center gap-1 rounded-md bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] text-emerald-700 font-semibold transition-transform hover:scale-105 cursor-default">
+                          {fa.skill} ({fa.weight})
+                          <button type="button" onClick={() => removeFocusArea(index)} className="text-emerald-500 hover:text-emerald-700">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* JD Type */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Job Description</label>
+                  <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-slate-50 max-w-xs self-start">
+                    <button
+                      type="button" onClick={() => setCreateJdType('text')}
+                      className={`px-3 py-1.5 text-[11px] font-bold transition-all hover:bg-slate-100/50 ${
+                        createJdType === 'text' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Paste Text
+                    </button>
+                    <button
+                      type="button" onClick={() => setCreateJdType('file')}
+                      className={`px-3 py-1.5 text-[11px] font-bold transition-all hover:bg-slate-100/50 ${
+                        createJdType === 'file' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Upload PDF
+                    </button>
+                  </div>
+                </div>
+
+                {/* JD Input */}
+                {createJdType === 'text' ? (
+                  <textarea
+                    required value={createJdText}
+                    onChange={(e) => setCreateJdText(e.target.value)}
+                    placeholder="Paste the job requirements and qualifications…"
+                    rows={4}
+                    className={`${inputStyles} resize-none`}
+                  />
+                ) : (
+                  <div className="border border-dashed border-slate-300 bg-slate-50 p-5 rounded-lg flex flex-col items-center justify-center gap-1.5 text-center relative hover:border-emerald-400 hover:bg-emerald-50/20 transition-all duration-300">
+                    <FileText className="h-6 w-6 text-slate-400 animate-pulse" />
+                    {createJdFile ? (
+                      <span className="text-xs text-emerald-600 font-bold">{createJdFile.name}</span>
+                    ) : (
+                      <span className="text-[11px] text-slate-500 font-medium">Select PDF (max 10MB)</span>
+                    )}
+                    <input
+                      required type="file" accept=".pdf"
+                      onChange={(e) => setCreateJdFile(e.target.files?.[0] || null)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                )}
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-slate-100 px-6 py-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowCreateModal(false); setCreateError(null); }}
+                className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 hover:scale-[1.03] active:scale-[0.97] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="create-campaign-form"
+                disabled={createMutation.isPending}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50"
+              >
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Analyzing…
+                  </>
+                ) : (
+                  'Launch'
+                )}
+              </button>
+            </div>
+            
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── JD Modal ────────────────────────────────────────────────────── */}
+      {showJdModal && selectedAssessment && (
+        <div className="ibot-overlay">
+          <div className="ibot-modal max-w-2xl max-h-[85vh] animate-scaleIn">
+            <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
+                  <FileText className="h-4 w-4 text-emerald-500 animate-pulse" />
+                  Job Description: {selectedAssessment.title}
+                </h2>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-bold">Role: {selectedAssessment.role_name}</p>
+              </div>
+              <button
+                onClick={() => setShowJdModal(false)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="ibot-scrollbar p-6 overflow-y-auto space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                {selectedAssessment.jd_text}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 p-4 shrink-0 flex justify-end">
+              <button
+                onClick={() => setShowJdModal(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-all hover:scale-[1.03] active:scale-[0.97]"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

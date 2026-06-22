@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
@@ -6,9 +6,11 @@ import { LoginForm } from "../../features/auth/components/LoginForm";
 import { RegisterForm } from "../../features/auth/components/RegisterForm";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { MainLayout } from "../../components/layout/MainLayout";
+import { LandingPage } from "../../components/layout/LandingPage";
 import { DashboardPage } from "../../features/dashboard/components/DashboardPage";
 import { AssessmentsPage } from "../../features/dashboard/components/AssessmentsPage";
 import { CandidatesPage } from "../../features/dashboard/components/CandidatesPage";
+import { EvaluationsPage } from "../../features/dashboard/components/EvaluationsPage";
 import { InterviewPage } from "../../features/dashboard/components/InterviewPage";
 import { EvaluationReportPage } from "../../features/dashboard/components/EvaluationReportPage";
 import { Loader2 } from "lucide-react";
@@ -16,7 +18,6 @@ import { Loader2 } from "lucide-react";
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const { warning } = useToast();
-  const [view, setView] = useState<"login" | "register">("login");
 
   // Show a toast whenever the gateway signals that the session has expired.
   useEffect(() => {
@@ -34,13 +35,13 @@ export const AppRoutes: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
+      <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-slate-50">
         <div className="relative">
-          <div className="absolute -inset-3 rounded-full bg-indigo-100 blur-xl animate-pulse" />
-          <Loader2 className="h-9 w-9 animate-spin text-indigo-600 relative" />
+          <div className="absolute -inset-3 rounded-full bg-emerald-100 blur-xl animate-pulse" />
+          <Loader2 className="relative h-9 w-9 animate-spin text-emerald-600" />
         </div>
-        <p className="mt-4 text-sm font-medium text-gray-500">
-          Loading workspace...
+        <p className="mt-4 text-sm font-bold text-slate-500">
+        Loading...
         </p>
       </div>
     );
@@ -51,29 +52,56 @@ export const AppRoutes: React.FC = () => {
       {/* Public Interview Room for Candidates */}
       <Route path="interview" element={<InterviewPage />} />
 
-      {!isAuthenticated ? (
-        <Route
-          path="*"
-          element={
+      {/* Public Landing Page */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+        }
+      />
+
+      {/* Auth Pages */}
+      <Route
+        path="login"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
             <AuthLayout>
-              {view === "login" ? (
-                <LoginForm onToggleView={() => setView("register")} />
-              ) : (
-                <RegisterForm onToggleView={() => setView("login")} />
-              )}
+              <LoginForm />
             </AuthLayout>
-          }
-        />
-      ) : (
+          )
+        }
+      />
+      <Route
+        path="register"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <AuthLayout>
+              <RegisterForm />
+            </AuthLayout>
+          )
+        }
+      />
+
+      {/* Authenticated Application */}
+      {isAuthenticated ? (
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="assessments" element={<AssessmentsPage />} />
           <Route path="candidates" element={<CandidatesPage />} />
+          <Route path="evaluations" element={<EvaluationsPage />} />
           <Route path="candidates/:id/report" element={<EvaluationReportPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
+      ) : (
+        <Route path="*" element={<Navigate to="/" replace />} />
       )}
     </Routes>
   );
 };
+
+

@@ -5,8 +5,10 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
+  ClipboardCheck,
   LogOut,
-  Building,
+  Bot,
+  ChevronRight,
 } from 'lucide-react';
 
 export const MainLayout: React.FC = () => {
@@ -22,6 +24,7 @@ export const MainLayout: React.FC = () => {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/assessments', label: 'Assessments', icon: Briefcase },
     { to: '/candidates', label: 'Candidates', icon: Users },
+    { to: '/evaluations', label: 'Evaluations', icon: ClipboardCheck },
   ];
 
   const initials = (user?.full_name || 'R')
@@ -32,37 +35,33 @@ export const MainLayout: React.FC = () => {
     .toUpperCase();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden font-sans" style={{ background: '#f6f7fb' }}>
+    <div className="flex h-screen w-screen overflow-hidden bg-page font-sans text-slate-900 relative">
+      {/* Spacer to reserve space for collapsed sidebar */}
+      <div className="w-16 flex-shrink-0" />
 
       {/* Sidebar */}
-      <aside
-        className="w-64 flex-shrink-0 flex flex-col justify-between border-r border-gray-200/80 shadow-sm"
-        style={{ background: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 100%)' }}
-      >
+      <aside className="group absolute left-0 top-0 bottom-0 z-30 flex w-16 hover:w-[232px] flex-shrink-0 flex-col justify-between border-r border-slate-800 bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden">
+        {/* Logo */}
         <div>
-          {/* Logo */}
-          <div className="h-16 flex items-center px-5 border-b border-white/10">
-            <div className="flex items-center gap-2.5">
+          <div className="flex h-[76px] items-center px-3 border-b border-slate-800/60">
+            <div className="flex items-center gap-3 w-full">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-md"
-                style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white animate-fadeIn"
+                style={{ background: 'linear-gradient(135deg, #10b981, #0f766e)' }}
               >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <Bot className="h-5 w-5" />
               </div>
-              <div>
-                <span className="text-base font-extrabold text-white tracking-tight">iBot</span>
-                <span className="ml-1.5 text-[10px] font-semibold text-indigo-300 border border-indigo-400/40 rounded px-1.5 py-0.5 bg-indigo-500/15">Recruiter</span>
-              </div>
+              <span className="text-sm font-extrabold tracking-tight text-white font-display opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                iBot
+              </span>
+              <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                Pro
+              </span>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="p-3 space-y-1 mt-2">
-            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-indigo-400/60">Menu</p>
+          <nav className="mt-4 space-y-1.5 px-3">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -70,21 +69,31 @@ export const MainLayout: React.FC = () => {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group ${
+                    `group/item relative flex items-center rounded-lg py-1.5 transition-all duration-200 ${
                       isActive
-                        ? 'bg-white/15 text-white shadow-sm'
-                        : 'text-indigo-200/70 hover:bg-white/10 hover:text-white'
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <div className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all ${isActive ? 'bg-white/20 text-white' : 'text-indigo-300/70 group-hover:text-white'}`}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <span className="flex-1">{item.label}</span>
+                      {/* Active gradient left accent bar */}
                       {isActive && (
-                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-300 animate-pulse" />
+                        <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-gradient-to-b from-emerald-400 to-emerald-600 animate-fadeIn" />
+                      )}
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-all ${
+                        isActive
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'text-slate-500 group-hover/item:text-slate-300'
+                      }`}>
+                        <Icon className="h-4.5 w-4.5 group-hover/item:scale-105 transition-transform" />
+                      </div>
+                      <span className="ml-3 flex-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                        {item.label}
+                      </span>
+                      {isActive && (
+                        <ChevronRight className="mr-3 h-3.5 w-3.5 text-emerald-400 opacity-0 group-hover:opacity-60 transition-all group-hover:translate-x-0.5" />
                       )}
                     </>
                   )}
@@ -94,54 +103,59 @@ export const MainLayout: React.FC = () => {
           </nav>
         </div>
 
-        {/* User Footer */}
-        <div className="p-3 border-t border-white/10">
-          <div className="flex items-center gap-3 px-2 py-2 mb-2">
+        {/* User footer */}
+        <div className="border-t border-slate-800 p-3 bg-slate-900/50">
+          <div className="mb-2 flex items-center rounded-lg py-1.5 hover:bg-slate-800/40 transition-colors duration-200 group/user cursor-pointer">
             <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-xs font-extrabold shadow-sm"
-              style={{ background: 'linear-gradient(135deg, #818cf8, #a78bfa)' }}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white border border-emerald-500/20 transition-transform group-hover/user:scale-110 duration-200"
+              style={{ background: 'linear-gradient(135deg, #10b981, #14b8a6)' }}
             >
               {initials}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate">{user?.full_name || 'Recruiter'}</p>
-              <p className="text-[10px] text-indigo-300/70 truncate">{user?.email}</p>
+            <div className="ml-3 min-w-0 flex-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              <p className="truncate text-xs font-bold text-slate-200">{user?.full_name || 'Recruiter'}</p>
+              <p className="truncate text-[10px] text-slate-500 font-medium">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
             id="btn-logout"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-indigo-200 hover:text-white hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200"
+            className="flex items-center rounded-lg border border-slate-800 bg-slate-900/60 py-1.5 text-xs font-semibold text-slate-400 transition-all duration-250 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 w-full"
           >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign Out
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+              <LogOut className="h-4 w-4" />
+            </div>
+            <span className="ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              Sign Out
+            </span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Top Header */}
-        <header className="h-16 flex-shrink-0 border-b border-gray-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 shadow-sm">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Building className="h-4 w-4 text-gray-400" />
-            <span className="font-medium text-gray-400">Organization:</span>
-            <span className="font-bold text-gray-800">{user?.company_name || 'iBot Partner'}</span>
+      {/* Content area */}
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
+        {/* Top bar - minimal */}
+        <header className="z-10 flex h-[76px] flex-shrink-0 items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 backdrop-blur-xl">
+          <div className="flex items-center gap-4 flex-1">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0 select-none">
+              {user?.company_name || 'Workspace'}
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-700 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              System Online
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 rounded-full border border-emerald-200/70 bg-emerald-50/60 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 select-none">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Online
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 min-h-0 overflow-y-auto p-8 relative">
+        <main className="relative min-h-0 flex-1 overflow-hidden p-6 bg-page">
           <Outlet />
         </main>
       </div>
     </div>
   );
 };
+
+

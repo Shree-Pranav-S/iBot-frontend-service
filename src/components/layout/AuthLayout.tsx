@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import { Zap, ShieldCheck, BarChart3, Brain } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Zap, Scale, BarChart3, Brain, Bot } from 'lucide-react';
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -9,171 +10,130 @@ interface AuthLayoutProps {
 const features = [
   {
     icon: Brain,
-    title: 'Cut Hiring Time by 4×',
-    desc: 'Run hundreds of voice interviews simultaneously. No scheduling, no waiting — decisions in days, not weeks.',
-    color: 'bg-indigo-500/10 text-indigo-400 ring-indigo-500/20',
+    title: 'Structured interviews',
+    desc: 'Consistent, role-specific conversations.',
   },
   {
     icon: BarChart3,
-    title: 'Unbiased by Design',
-    desc: 'Every candidate faces the same interview, scored on the same criteria. Fair, consistent, and defensible.',
-    color: 'bg-violet-500/10 text-violet-400 ring-violet-500/20',
+    title: 'Comparable reports',
+    desc: 'Clear evaluation trail per interview.',
   },
   {
     icon: Zap,
-    title: 'Interviews at Any Scale',
-    desc: 'From 10 candidates to 10,000 — iBot handles them all at once, without any extra effort on your part.',
-    color: 'bg-sky-500/10 text-sky-400 ring-sky-500/20',
+    title: 'High throughput',
+    desc: 'Invite once, interview at scale.',
   },
   {
-    icon: ShieldCheck,
-    title: 'Comfortable for Candidates',
-    desc: 'Candidates interview on their own schedule, at their own pace — no pressure, no panel anxiety.',
-    color: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+    icon: Scale,
+    title: 'Unbiased evaluation',
+    desc: 'Fair, consistent scoring for all candidates.',
   },
 ];
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
+  const navigate = useNavigate();
+
   return (
-    <div className="relative min-h-screen overflow-hidden flex" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #24243e 100%)' }}>
+    <div className="theme-dark flex h-screen w-screen overflow-hidden bg-mesh-dark text-primary font-sans relative">
+      {/* ── Background Drifting Blobs ────────────────────────────────────── */}
+      <div className="absolute top-[10%] left-[-5%] w-[350px] h-[350px] rounded-full bg-emerald-500/10 blur-[100px] pointer-events-none blob-drift-1 z-0" />
+      <div className="absolute bottom-[10%] right-[10%] w-[350px] h-[350px] rounded-full bg-teal-400/10 blur-[100px] pointer-events-none blob-drift-2 z-0" />
 
-      {/* Animated orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute rounded-full opacity-20"
-          style={{
-            width: '600px', height: '600px',
-            top: '-200px', left: '-150px',
-            background: 'radial-gradient(circle, #6366f1, transparent 70%)',
-            animation: 'pulse 8s ease-in-out infinite',
-          }}
-        />
-        <div
-          className="absolute rounded-full opacity-15"
-          style={{
-            width: '500px', height: '500px',
-            bottom: '-150px', right: '-100px',
-            background: 'radial-gradient(circle, #8b5cf6, transparent 70%)',
-            animation: 'pulse 10s ease-in-out infinite 2s',
-          }}
-        />
-        <div
-          className="absolute rounded-full opacity-10"
-          style={{
-            width: '300px', height: '300px',
-            top: '40%', left: '35%',
-            background: 'radial-gradient(circle, #06b6d4, transparent 70%)',
-            animation: 'pulse 12s ease-in-out infinite 4s',
-          }}
-        />
-        {/* Grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-          }}
-        />
-      </div>
-
-      {/* Left Brand Panel */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] flex-col justify-between p-12 xl:p-16 relative">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+      {/* ── Left panel: Brand (Desktop Only) ──────────────────────────────── */}
+      <div className="hidden min-h-0 flex-1 flex-col justify-between overflow-hidden p-12 z-10 lg:flex">
+        {/* Logo Lockup */}
+        <div className="flex items-center gap-2.5 cursor-pointer self-start" onClick={() => navigate('/')}>
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+            style={{ background: 'linear-gradient(135deg, #10b981, #0f766e)' }}
+          >
+            <Bot className="h-4.5 w-4.5" />
           </div>
-          <span className="text-xl font-bold text-white tracking-tight">
-            iBot <span className="text-xs font-semibold text-indigo-300 border border-indigo-500/40 rounded px-1.5 py-0.5 ml-1 bg-indigo-500/10">Recruiter</span>
-          </span>
-        </div>
-
-        {/* Main headline */}
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-indigo-300 border border-indigo-500/30 bg-indigo-500/10">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
-              The Future of Hiring is Here
-            </div>
-            <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight leading-[1.1] text-white">
-              Hire the Best,<br />
-              <span style={{ background: 'linear-gradient(135deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Without the Bias
-              </span>
-            </h1>
-            <p className="text-lg text-slate-400 max-w-md leading-relaxed">
-              iBot conducts voice interviews for you — at any scale, any time. Get detailed, consistent candidate evaluations without spending hours in interview rooms.
-            </p>
-          </div>
-
-          {/* Feature grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {features.map((f) => {
-              const Icon = f.icon;
-              return (
-                <div
-                  key={f.title}
-                  className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:border-white/20 hover:-translate-y-0.5"
-                >
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl ring-1 mb-3 ${f.color}`}>
-                    <Icon className="h-4.5 w-4.5" />
-                  </div>
-                  <h3 className="text-sm font-bold text-white mb-1">{f.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">{f.desc}</p>
-                </div>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold tracking-tight text-white">iBot</span>
+            <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-300">
+              Recruiter
+            </span>
           </div>
         </div>
 
-        {/* Social proof footer */}
-        <div className="flex items-center gap-6">
-          <div className="flex -space-x-2">
-            {['T','A','R','M','S'].map((l, i) => (
+        {/* Hero Headline and Subtext */}
+        <div className="w-full max-w-xl animate-slideUp stagger-1 my-auto">
+          <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-white font-display">
+            Hire smarter with<br />
+            <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              AI-powered interviews
+            </span>
+          </h1>
+          <p className="mt-4 max-w-[480px] text-base leading-relaxed text-secondary">
+            Run structured interviews, monitor progress, and review candidate reports — all from one console.
+          </p>
+        </div>
+
+        {/* Features 2x2 Grid */}
+        <div className="grid grid-cols-2 gap-4">
+          {features.map((f, i) => {
+            const Icon = f.icon;
+            return (
               <div
-                key={i}
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-800 text-xs font-bold text-white"
-                style={{ background: `hsl(${i * 60 + 220}, 70%, 55%)` }}
+                key={f.title}
+                className="ibot-card border border-subtle bg-elevated/40 p-6 flex flex-col justify-between min-h-[140px] transition-all duration-300 hover:bg-elevated/60 hover:border-emphasis hover:-translate-y-1 group relative rounded-card"
+                style={{ animationDelay: `${0.2 + i * 0.06}s` }}
               >
-                {l}
+                {/* 1px top border highlight on hover */}
+                <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Icon Container */}
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 transition-transform group-hover:scale-105 duration-200">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">{f.title}</h3>
+                  <p className="mt-1 text-xs text-secondary leading-relaxed">{f.desc}</p>
+                </div>
               </div>
-            ))}
-          </div>
-          <div>
-            <p className="text-xs font-bold text-white">Trusted by 2,000+ recruiters</p>
-            <p className="text-[10px] text-slate-400">saving weeks of interview time, every month</p>
-          </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Right Form Panel */}
-      <div className="flex w-full lg:w-1/2 xl:w-[45%] items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-[420px]">
-          {/* Mobile logo */}
-          <div className="flex items-center justify-center gap-2.5 mb-8 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl text-white" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-              <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+      {/* ── Right panel: Form + Minimal Footer ────────────────────────────── */}
+      <div className="flex min-h-0 w-full items-center justify-center p-6 z-10 lg:w-[460px] xl:w-[500px]">
+        <div className="ibot-scrollbar max-h-full w-full max-w-[400px] overflow-y-auto py-6">
+          {/* Logo Lockup for Mobile View */}
+          <div className="mb-8 flex items-center justify-center gap-2.5 cursor-pointer lg:hidden" onClick={() => navigate('/')}>
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+              style={{ background: 'linear-gradient(135deg, #10b981, #0f766e)' }}
+            >
+              <Bot className="h-4.5 w-4.5" />
             </div>
-            <span className="text-xl font-bold text-white">iBot Recruiter</span>
+            <span className="text-xl font-bold tracking-tight text-white">iBot</span>
+            <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-300">
+              Recruiter
+            </span>
           </div>
+
           {children}
+
+          {/* Minimal Footer */}
+          <footer className="mt-12 text-center flex flex-col items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted">
+              <div
+                className="flex h-4 w-4 items-center justify-center rounded bg-emerald-500/20 text-emerald-400"
+              >
+                <Bot className="h-2 w-2" />
+              </div>
+              <span>© 2026 IBot</span>
+            </div>
+            <div className="flex gap-4 text-[11px] text-muted justify-center">
+              <a href="#" className="hover:text-white transition-colors">Privacy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <a href="#" className="hover:text-white transition-colors">Contact</a>
+            </div>
+          </footer>
         </div>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 0.15; }
-          50% { transform: scale(1.1); opacity: 0.25; }
-        }
-      `}</style>
     </div>
   );
 };

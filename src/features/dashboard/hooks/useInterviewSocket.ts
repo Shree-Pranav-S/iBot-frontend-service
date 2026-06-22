@@ -10,7 +10,7 @@
  *  - sendText       : send a typed message to the interview AI
  *  - startSession   : trigger session_start (fires LLM greeting)
  *  - stopSession    : send stop + close the socket
- *  - sendAudioChunk : forward a raw PCM/opus binary chunk to the server
+ *  - sendAudioChunk : forward a raw 16 kHz mono linear16 PCM chunk to the server
  *  - lastAudioBytes : the most recent TTS MP3 blob from the server (play it!)
  *  - interviewMeta  : section info, completion status, bot speaking state
  */
@@ -46,6 +46,7 @@ export function useInterviewSocket({
   const wsRef = useRef<WebSocket | null>(null);
   // Tracks whether next binary frame is expected TTS audio
   const expectAudioRef = useRef(false);
+  const activeCandidateMessageIdRef = useRef<string | null>(null);
 
   // ── internal helpers ────────────────────────────────────────────────────────
 
@@ -66,18 +67,39 @@ export function useInterviewSocket({
     [],
   );
 
-  const updateLastPartial = useCallback((text: string) => {
+
+  const updateActiveCandidateTranscript = useCallback((text: string) => {
+    const incoming = String(text ?? '').trim();
+    if (!incoming) return;
+
     setMessages((prev) => {
+      const activeId = activeCandidateMessageIdRef.current;
+      const activeIndex = activeId
+        ? prev.findIndex((msg) => msg.id === activeId && msg.role === 'user' && !msg.isFinal)
+        : -1;
+
+      if (activeIndex >= 0) {
+        return prev.map((msg, index) =>
+          index === activeIndex
+            ? { ...msg, text: incoming }
+            : msg,
+        );
+      }
+
       const last = prev[prev.length - 1];
       if (last && last.role === 'user' && !last.isFinal) {
-        return [...prev.slice(0, -1), { ...last, text }];
+        activeCandidateMessageIdRef.current = last.id;
+        return [...prev.slice(0, -1), { ...last, text: incoming }];
       }
+
+      const id = `partial-${Date.now()}`;
+      activeCandidateMessageIdRef.current = id;
       return [
         ...prev,
         {
-          id: `partial-${Date.now()}`,
+          id,
           role: 'user' as MessageRole,
-          text,
+          text: incoming,
           isFinal: false,
           timestamp: new Date(),
         },
@@ -95,6 +117,7 @@ export function useInterviewSocket({
 
     setStatus('connecting');
     setMessages([]);
+    activeCandidateMessageIdRef.current = null;
     setInterviewMeta({
       currentSection: null,
       isInterviewComplete: false,
@@ -131,25 +154,47 @@ export function useInterviewSocket({
             break;
 
           case 'partial_transcript':
-            updateLastPartial(payload.text ?? '');
+            updateActiveCandidateTranscript(payload.text ?? '');
             break;
 
           case 'final_transcript':
-            // Replace the partial with a final user message
             setMessages((prev) => {
+              const finalText = String(payload.text ?? '').trim();
+              const activeId = activeCandidateMessageIdRef.current;
+              activeCandidateMessageIdRef.current = null;
+
+              if (activeId) {
+                const activeIndex = prev.findIndex(
+                  (message) => message.id === activeId && message.role === 'user',
+                );
+                if (activeIndex >= 0) {
+                  return prev.map((message, index) =>
+                    index === activeIndex
+                      ? {
+                          ...message,
+                          text: finalText || message.text,
+                          isFinal: true,
+                          timestamp: new Date(),
+                        }
+                      : message,
+                  );
+                }
+              }
+
               const last = prev[prev.length - 1];
               if (last && last.role === 'user' && !last.isFinal) {
                 return [
                   ...prev.slice(0, -1),
-                  { ...last, text: payload.text ?? last.text, isFinal: true },
+                  { ...last, text: finalText || last.text, isFinal: true },
                 ];
               }
+
               return [
                 ...prev,
                 {
                   id: `final-${Date.now()}`,
                   role: 'user' as MessageRole,
-                  text: payload.text ?? '',
+                  text: finalText,
                   isFinal: true,
                   timestamp: new Date(),
                 },
@@ -244,7 +289,7 @@ export function useInterviewSocket({
       setStatus('closed');
       wsRef.current = null;
     };
-  }, [token, pushMessage, updateLastPartial]);
+  }, [token, pushMessage, updateActiveCandidateTranscript]);
 
   // ── public API ──────────────────────────────────────────────────────────────
 

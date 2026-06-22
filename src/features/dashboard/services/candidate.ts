@@ -5,12 +5,14 @@ import type {
   BulkUploadResponse,
   TokenValidationResponse,
   InterviewEvaluationResponse,
+  RecruiterDecisionResponse,
+  RecruiterEvaluationListItem,
   SingleCandidateResponse,
 } from '../../../types/candidate.types';
 
-export type { CandidateAssessmentListItem, BulkUploadResponse, TokenValidationResponse, InterviewEvaluationResponse, SingleCandidateResponse };
+export type { CandidateAssessmentListItem, BulkUploadResponse, TokenValidationResponse, InterviewEvaluationResponse, RecruiterDecisionResponse, RecruiterEvaluationListItem, SingleCandidateResponse };
 
-// ── Candidate service ─────────────────────────────────────────────────────────
+// Candidate service
 
 export const candidateService = {
   /**
@@ -84,6 +86,21 @@ export const candidateService = {
   },
 
   /**
+   * Fetch all candidate-assessment records for all assessments.
+   */
+  async getAllCandidates(): Promise<APIResponse<CandidateAssessmentListItem[]>> {
+    try {
+      const response = await api.get<APIResponse<CandidateAssessmentListItem[]>>(
+        `/candidates`
+      );
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
+
+  /**
    * Validate candidate token and retrieve details for the waiting room.
    */
   async validateCandidateToken(token: string): Promise<APIResponse<TokenValidationResponse>> {
@@ -101,6 +118,41 @@ export const candidateService = {
     }
   },
 
+
+  /**
+   * Fetch all evaluated interviews for the current recruiter.
+   */
+  async getRecruiterEvaluations(): Promise<APIResponse<RecruiterEvaluationListItem[]>> {
+    try {
+      const response = await api.get<APIResponse<RecruiterEvaluationListItem[]>>(
+        '/candidates/evaluations'
+      );
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
+
+  /**
+   * Persist recruiter hiring decision for a candidate assessment.
+   */
+  async updateCandidateDecision(
+    caId: string,
+    decision: 'APPROVED' | 'REJECTED',
+    feedback?: string
+  ): Promise<APIResponse<RecruiterDecisionResponse>> {
+    try {
+      const response = await api.post<APIResponse<RecruiterDecisionResponse>>(
+        `/candidates/${caId}/decision`,
+        { decision, feedback }
+      );
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
   /**
    * Fetch evaluation report for a candidate assessment.
    */
@@ -115,4 +167,20 @@ export const candidateService = {
       throw new Error(data?.message || err.message);
     }
   },
+
+  /**
+   * Delete a candidate registration from an assessment.
+   */
+  async deleteCandidate(caId: string): Promise<APIResponse<null>> {
+    try {
+      const response = await api.delete<APIResponse<null>>(`/candidates/${caId}`);
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
 };
+
+
+

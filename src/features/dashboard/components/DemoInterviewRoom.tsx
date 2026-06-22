@@ -1,108 +1,32 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from 'react';
 import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
   Mic,
   MicOff,
   PhoneOff,
+  Radio,
   Wifi,
   WifiOff,
-  Loader2,
-  Bot,
-  User,
-  Radio,
-  ChevronLeft,
-  Volume2,
-} from "lucide-react";
-import { useDemoInterviewSocket } from "../hooks/useDemoInterviewSocket";
-import type { ChatMessage } from "../../../types/socket.types";
+} from 'lucide-react';
+import { useDemoInterviewSocket } from '../hooks/useDemoInterviewSocket';
+import {
+  CompletionNotice,
+  Ibot3DAvatar,
+  StatusPill,
+  TranscriptPanel,
+} from './InterviewExperience';
 
 interface DemoInterviewRoomProps {
   token: string;
   onExit: () => void;
 }
 
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const config: Record<
-    string,
-    { color: string; label: string; pulse: boolean }
-  > = {
-    idle: { color: "bg-gray-400", label: "Not connected", pulse: false },
-    connecting: { color: "bg-amber-400", label: "Connecting…", pulse: true },
-    connected: { color: "bg-emerald-500", label: "Practice Live", pulse: true },
-    error: { color: "bg-red-500", label: "Error", pulse: false },
-    closed: { color: "bg-gray-400", label: "Ended", pulse: false },
-  };
-  const { color, label, pulse } = config[status] ?? config.idle;
-
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm">
-      <span
-        className={`h-2 w-2 rounded-full ${color} ${pulse ? "animate-pulse" : ""}`}
-      />
-      {label}
-    </span>
-  );
-};
-
-const MessageBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
-  const isAssistant = msg.role === "assistant";
-  const isSystem = msg.role === "system";
-
-  if (isSystem) {
-    return (
-      <div className="flex justify-center my-2">
-        <span className="rounded-full bg-gray-100 border border-gray-200 px-4 py-1.5 text-xs text-gray-500 italic">
-          {msg.text}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`flex items-end gap-3 ${isAssistant ? "justify-start" : "justify-end"}`}
-    >
-      {isAssistant && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 shadow-md shadow-indigo-200">
-          <Bot className="h-4 w-4 text-white" />
-        </div>
-      )}
-      <div
-        className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-          isAssistant
-            ? "rounded-bl-sm bg-white border border-gray-200 text-gray-900"
-            : `rounded-br-sm text-white ${msg.isFinal ? "bg-indigo-600" : "bg-indigo-400 italic"}`
-        }`}
-      >
-        {msg.text}
-        {!msg.isFinal && (
-          <span className="ml-1 inline-flex gap-0.5">
-            <span className="animate-bounce h-1 w-1 rounded-full bg-white/70" />
-            <span
-              className="animate-bounce h-1 w-1 rounded-full bg-white/70"
-              style={{ animationDelay: "0.1s" }}
-            />
-            <span
-              className="animate-bounce h-1 w-1 rounded-full bg-white/70"
-              style={{ animationDelay: "0.2s" }}
-            />
-          </span>
-        )}
-      </div>
-      {!isAssistant && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200">
-          <User className="h-4 w-4 text-gray-600" />
-        </div>
-      )}
-    </div>
-  );
-};
-
-export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
-  token,
-  onExit,
-}) => {
+export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onExit }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [isBotSpeaking, setIsBotSpeaking] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -118,19 +42,18 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
     stopSession,
   } = useDemoInterviewSocket({ token });
 
-  // Auto-scroll on new messages
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Play TTS audio whenever a new blob arrives
   useEffect(() => {
     if (!lastAudioBytes || !audioRef.current) return;
+
     const url = URL.createObjectURL(lastAudioBytes);
     audioRef.current.src = url;
-    audioRef.current.play().catch(() => {
-      /* autoplay may be blocked */
-    });
+    setIsBotSpeaking(true);
+    audioRef.current.play().catch(() => setIsBotSpeaking(false));
+
     return () => URL.revokeObjectURL(url);
   }, [lastAudioBytes]);
 
@@ -143,8 +66,6 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
     setSessionStarted(true);
   };
 
-
-
   const handleToggleMic = async () => {
     if (isRecording) {
       mediaRecRef.current?.stop();
@@ -154,10 +75,8 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const options: MediaRecorderOptions = MediaRecorder.isTypeSupported(
-        "audio/webm;codecs=opus",
-      )
-        ? { mimeType: "audio/webm;codecs=opus" }
+      const options: MediaRecorderOptions = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? { mimeType: 'audio/webm;codecs=opus' }
         : {};
       const recorder = new MediaRecorder(stream, options);
       recorder.ondataavailable = (e) => {
@@ -166,16 +85,14 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
         }
       };
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
         setIsRecording(false);
       };
-      recorder.start(250); // 250ms chunks
+      recorder.start(250);
       mediaRecRef.current = recorder;
       setIsRecording(true);
     } catch {
-      alert(
-        "Microphone access denied. Please allow microphone access and try again.",
-      );
+      alert('Microphone access denied. Please allow microphone access and try again.');
     }
   };
 
@@ -186,185 +103,143 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
     }
     stopSession();
     setSessionStarted(false);
+    setIsBotSpeaking(false);
   };
 
-  const isLive = status === "connected";
-  const isEnded = status === "closed" || status === "error";
+  const isLive = status === 'connected';
+  const isEnded = status === 'closed' || status === 'error';
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col h-screen w-screen overflow-hidden">
-      {/* Viewport Header */}
-      <header className="h-14 border-b border-gray-200 bg-white/80 backdrop-blur-md flex-shrink-0 flex items-center px-8 justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+    <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white text-slate-900">
+      <audio
+        ref={audioRef}
+        hidden
+        onPlay={() => setIsBotSpeaking(true)}
+        onEnded={() => setIsBotSpeaking(false)}
+        onPause={() => setIsBotSpeaking(false)}
+      />
+
+      <header className="z-20 flex min-h-16 items-center justify-between gap-4 border-b border-white/70 bg-white/78 px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-xl sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            onClick={onExit}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Exit
+          </button>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black text-slate-950">Practice Session</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Demo</p>
           </div>
-          <span className="text-sm font-bold text-gray-900">
-            iBot <span className="text-xs font-semibold text-indigo-600 border border-indigo-200 rounded px-1.5 py-0.5 ml-1 bg-indigo-50">Demo Practice Mode</span>
-          </span>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusPill status={status} isBotSpeaking={isBotSpeaking} />
+          <button
+            id="btn-toggle-demo-mic"
+            onClick={handleToggleMic}
+            disabled={!isLive || !sessionStarted}
+            title={isRecording ? 'Stop recording' : 'Start recording'}
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border text-sm shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 ${
+              isRecording
+                ? 'border-red-500 bg-red-500 text-white shadow-red-200/60'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
+            }`}
+          >
+            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </button>
+          {(isLive || isRecording) && (
+            <button
+              id="btn-end-demo-session"
+              onClick={handleStop}
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-red-200 bg-white px-3 text-[11px] font-black text-red-500 shadow-sm transition-all hover:border-red-500 hover:bg-red-500 hover:text-white active:scale-95"
+              title="End session"
+            >
+              <PhoneOff className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">End</span>
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 bg-gray-50 flex flex-col">
-        {/* Hidden audio element for TTS playback */}
-        <audio ref={audioRef} hidden />
+      <div className="ibot-interview-room-bg relative flex min-h-0 flex-1 flex-col">
+        <section className="relative flex min-h-[300px] flex-[1.05] items-center justify-center overflow-hidden px-4 py-6 sm:min-h-[360px]">
+          <div className="pointer-events-none absolute left-1/2 top-8 h-48 w-[78vw] max-w-4xl -translate-x-1/2 rounded-full bg-emerald-200/25 blur-3xl" />
+          <div className="relative z-10 flex w-full max-w-4xl flex-col items-center gap-4 text-center">
+            <Ibot3DAvatar isSpeaking={isBotSpeaking} />
 
-        {/* Room header */}
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onExit}
-              className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all shadow-sm"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Exit Demo
-            </button>
-            <div>
-              <h2 className="text-sm font-bold text-gray-900">
-                AI Demo Interview Session (Practice Mode)
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">This session does not record scores</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {lastAudioBytes && (
-              <span className="flex items-center gap-1.5 text-xs text-indigo-600 animate-pulse">
-                <Volume2 className="h-3.5 w-3.5" /> AI Speaking
-              </span>
-            )}
-            <StatusBadge status={status} />
-          </div>
-        </div>
-
-        {/* Chat area */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-          {status === "idle" && (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-200">
-                <Radio className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">
-                  Ready to Practice
-                </h3>
-                <p className="text-sm text-gray-500 max-w-xs">
-                  Connect to practice using STT and TTS without spending interview token limits.
-                </p>
-              </div>
+            {status === 'idle' && (
               <button
                 id="btn-connect-demo"
                 onClick={handleConnect}
-                className="mt-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-indigo-600 px-7 py-3 text-sm font-black text-white shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-emerald-500/25 active:translate-y-0 active:scale-95"
               >
-                Connect to Demo Room
-              </button>
-            </div>
-          )}
-
-          {status === "connecting" && (
-            <div className="flex flex-col items-center justify-center h-full gap-3 py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-              <p className="text-sm text-gray-500">
-                Connecting to practice service…
-              </p>
-            </div>
-          )}
-
-          {isLive && !sessionStarted && (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-20">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 ring-1 ring-emerald-200">
-                <Wifi className="h-7 w-7 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900 mb-1">
-                  Connected!
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Start the session to begin your practice.
-                </p>
-              </div>
-              <button
-                id="btn-start-demo-session"
-                onClick={handleStartSession}
-                className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200"
-              >
-                Start Practice Session
-              </button>
-            </div>
-          )}
-
-          {(!isLive || sessionStarted) &&
-            messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)}
-
-          {isEnded && messages.length > 0 && (
-            <div className="flex justify-center mt-4">
-              <span className="rounded-full border border-gray-200 bg-gray-100 px-4 py-1.5 text-xs text-gray-500">
-                Session ended
-              </span>
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Input bar */}
-        <div className="border-t border-gray-200 bg-white px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            {/* Microphone */}
-            <button
-              id="btn-toggle-demo-mic"
-              onClick={handleToggleMic}
-              disabled={!isLive || !sessionStarted}
-              title={isRecording ? "Stop recording" : "Start recording"}
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all ${
-                isRecording
-                  ? "bg-red-500 text-white animate-pulse shadow-md shadow-red-200"
-                  : "border border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-              }`}
-            >
-              {isRecording ? (
-                <MicOff className="h-5 w-5" />
-              ) : (
-                <Mic className="h-5 w-5" />
-              )}
-            </button>
-
-
-
-            {/* End session */}
-            {(isLive || isRecording) && (
-              <button
-                id="btn-end-demo-session"
-                onClick={handleStop}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 border border-red-200 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                title="End session"
-              >
-                <PhoneOff className="h-4 w-4" />
+                <Radio className="h-4 w-4" />
+                Connect
               </button>
             )}
 
-            {/* Reconnect */}
+            {status === 'connecting' && (
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-4 py-2 text-xs font-bold text-slate-600 shadow-sm backdrop-blur">
+                <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                Connecting...
+              </div>
+            )}
+
+            {isLive && !sessionStarted && (
+              <button
+                id="btn-start-demo-session"
+                onClick={handleStartSession}
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-indigo-600 px-7 py-3 text-sm font-black text-white shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-emerald-500/25 active:translate-y-0 active:scale-95"
+              >
+                <Wifi className="h-4 w-4" />
+                Start Practice
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+
             {isEnded && (
               <button
                 id="btn-reconnect-demo"
                 onClick={handleConnect}
-                className="flex h-11 items-center gap-2 px-4 rounded-xl bg-gray-100 border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-200 transition-all"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-5 py-2.5 text-xs font-black text-slate-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95"
               >
-                <WifiOff className="h-4 w-4" /> Reconnect
+                <WifiOff className="h-4 w-4" />
+                Reconnect
               </button>
             )}
           </div>
+        </section>
 
-          {isRecording && (
-            <p className="mt-2 text-center text-xs text-red-500 animate-pulse">
-              🔴 Recording — speak clearly into your microphone
-            </p>
-          )}
-        </div>
+        <section className="relative flex min-h-0 flex-[0.95] flex-col border-t border-white/75 bg-white/68 px-4 py-4 shadow-[0_-18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6">
+          <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Subtitles</p>
+              {isRecording && (
+                <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="flex h-3 items-end gap-[2px]">
+                    {[1, 2, 3, 4].map((i) => (
+                      <span
+                        key={i}
+                        className="w-[3px] rounded-full bg-emerald-500 animate-pulse"
+                        style={{ height: `${6 + i * 2}px`, animationDelay: `${i * 0.08}s` }}
+                      />
+                    ))}
+                  </span>
+                  Speak clearly
+                </div>
+              )}
+            </div>
+
+            <div className="min-h-0 flex-1">
+              <TranscriptPanel messages={messages} isBotSpeaking={isBotSpeaking} isRecording={isRecording} />
+              <div ref={bottomRef} />
+            </div>
+
+            {isEnded && messages.length > 0 && <CompletionNotice type="ended" />}
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -58,11 +58,11 @@ export interface RecruiterResponse {
 // ── Component prop types ─────────────────────────────────────────────────────
 
 export interface LoginFormProps {
-  onToggleView: () => void;
+  onToggleView?: () => void;
 }
 
 export interface RegisterFormProps {
-  onToggleView: () => void;
+  onToggleView?: () => void;
 }
 
 // Re-export so callers can import everything auth-related from one place

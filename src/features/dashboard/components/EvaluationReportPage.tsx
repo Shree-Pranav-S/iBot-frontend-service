@@ -25,26 +25,26 @@ export const EvaluationReportPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex h-full min-h-[500px] flex-col items-center justify-center">
-        <Loader2 className="h-10 w-10 text-indigo-500 animate-spin mb-3" />
-        <p className="text-sm text-gray-500 font-medium">Analyzing interview report...</p>
+        <Loader2 className="h-8 w-8 text-emerald-500 animate-spin mb-3" />
+        <p className="text-sm text-slate-400 font-medium">Loading report…</p>
       </div>
     );
   }
 
   if (isError || !evaluation) {
     return (
-      <div className="flex h-full min-h-[500px] flex-col items-center justify-center text-center">
-        <ShieldAlert className="h-12 w-12 text-red-400 mb-3" />
-        <p className="font-bold text-gray-800 text-lg">Evaluation Not Found</p>
-        <p className="text-sm text-gray-500 mt-1 max-w-md">
-          This candidate may not have completed their interview or the AI evaluation is still processing.
+      <div className="flex h-full min-h-[500px] flex-col items-center justify-center text-center animate-fadeIn">
+        <ShieldAlert className="h-10 w-10 text-red-400 mb-3" />
+        <p className="font-bold text-slate-800 text-base">Report Not Available</p>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm">
+          The interview may still be in progress or the evaluation hasn't completed yet.
         </p>
         <button
           onClick={() => navigate('/dashboard/candidates')}
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-all"
+          className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-all"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Candidates
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
         </button>
       </div>
     );
@@ -63,7 +63,7 @@ export const EvaluationReportPage: React.FC = () => {
       case 'NO_HIRE':
         return 'bg-red-50 text-red-700 border-red-200';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   };
 
@@ -82,70 +82,69 @@ export const EvaluationReportPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-12">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden animate-fadeIn">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm flex-shrink-0 animate-slideDown">
         <button
           onClick={() => navigate('/dashboard/candidates')}
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-emerald-600"
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Candidates
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
         </button>
-        <span className="text-xs text-gray-400 font-medium">
-          Generated at: {new Date(evaluation.generated_at).toLocaleString()}
+        <span className="text-[10px] text-slate-400 font-medium">
+          {new Date(evaluation.generated_at).toLocaleString()}
         </span>
       </div>
 
+      <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
       {/* Hero Section */}
-      <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm mb-8 flex flex-col md:flex-row gap-8 items-start relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-32 bg-indigo-50 rounded-full blur-[100px] -mr-16 -mt-16 opacity-50 pointer-events-none" />
-        
+      <div className="mb-3 flex flex-col items-start gap-5 overflow-hidden ibot-card p-5 md:flex-row animate-slideUp">
         <div className="flex-1 z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <span className={`px-4 py-1.5 rounded-full text-xs font-bold border tracking-wide ${getRecommendationStyle(evaluation.hiring_recommendation)}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`px-3 py-1 rounded-full text-[10px] font-bold border tracking-wide ${getRecommendationStyle(evaluation.hiring_recommendation)}`}>
               {evaluation.hiring_recommendation.replace('_', ' ')}
             </span>
             {evaluation.recommendation_override_reason && (
-              <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Manually Overridden
+              <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                <AlertTriangle className="h-3 w-3" />
+                Override
               </span>
             )}
           </div>
           
-          <h1 className="text-3xl font-black text-gray-900 mb-4 leading-tight">
-            Comprehensive Evaluation Report
+          <h1 className="text-xl font-bold text-slate-900 mb-3">
+            Evaluation Report
           </h1>
-          <p className="text-gray-600 leading-relaxed max-w-2xl text-sm mb-6 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+          <p className="text-slate-600 leading-relaxed max-w-2xl text-xs bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
             {evaluation.overall_narrative}
           </p>
 
-          <div className="grid grid-cols-2 gap-4 max-w-md">
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Rank</p>
-              <p className="text-xl font-black text-gray-900">
+          <div className="grid grid-cols-2 gap-3 max-w-sm mt-4">
+            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Rank</p>
+              <p className="text-lg font-bold text-slate-900">
                 {evaluation.rank_in_assessment ? `#${evaluation.rank_in_assessment}` : 'N/A'}
-                <span className="text-sm font-medium text-gray-400 ml-1">/ {evaluation.total_candidates_evaluated || 1}</span>
+                <span className="text-xs font-medium text-slate-400 ml-1">/ {evaluation.total_candidates_evaluated || 1}</span>
               </p>
             </div>
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Percentile</p>
-              <p className="text-xl font-black text-gray-900">
+            <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Percentile</p>
+              <p className="text-lg font-bold text-slate-900">
                 {evaluation.percentile_in_assessment ? `Top ${100 - evaluation.percentile_in_assessment}%` : 'N/A'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Overall Score Dial */}
-        <div className="w-full md:w-64 flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-[0_0_40px_-10px_rgba(0,0,0,0.05)] z-10">
-          <div className="relative w-32 h-32 flex items-center justify-center mb-3">
+        {/* Score Dial */}
+        <div className="w-full md:w-52 flex flex-col items-center justify-center p-5 bg-white rounded-xl border border-slate-100 shadow-sm z-10">
+          <div className="relative w-28 h-28 flex items-center justify-center mb-2">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle
                 cx="50" cy="50" r="40"
                 fill="none"
-                stroke="#f3f4f6"
+                stroke="#f1f5f9"
                 strokeWidth="8"
               />
               <circle
@@ -153,110 +152,95 @@ export const EvaluationReportPage: React.FC = () => {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="8"
+                strokeLinecap="round"
                 strokeDasharray={`${(evaluation.overall_score / 100) * 251.2} 251.2`}
                 className={`transition-all duration-1000 ease-out ${getScoreColor(evaluation.overall_score)}`}
               />
             </svg>
             <div className="absolute flex flex-col items-center justify-center">
-              <span className={`text-4xl font-black tracking-tighter ${getScoreColor(evaluation.overall_score)}`}>
+              <span className={`text-3xl font-bold tracking-tight ${getScoreColor(evaluation.overall_score)}`}>
                 {Math.round(evaluation.overall_score)}
               </span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">/ 100</span>
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">/ 100</span>
             </div>
           </div>
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Overall Score</p>
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Overall</p>
         </div>
       </div>
 
       {/* Dimension Scores */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <DimensionCard
-          title="Technical"
-          icon={<BrainCircuit className="h-5 w-5" />}
-          score={evaluation.technical_dimension_score}
-        />
-        <DimensionCard
-          title="Problem Solving"
-          icon={<Lightbulb className="h-5 w-5" />}
-          score={evaluation.problem_solving_score}
-        />
-        <DimensionCard
-          title="Communication"
-          icon={<MessageSquare className="h-5 w-5" />}
-          score={evaluation.communication_score}
-        />
-        <DimensionCard
-          title="Behavioral"
-          icon={<Users className="h-5 w-5" />}
-          score={evaluation.behavioural_score}
-        />
+      <div className="grid grid-cols-4 gap-3 mb-3">
+        <DimensionCard title="Technical" icon={<BrainCircuit className="h-4 w-4" />} score={evaluation.technical_dimension_score} />
+        <DimensionCard title="Problem Solving" icon={<Lightbulb className="h-4 w-4" />} score={evaluation.problem_solving_score} />
+        <DimensionCard title="Communication" icon={<MessageSquare className="h-4 w-4" />} score={evaluation.communication_score} />
+        <DimensionCard title="Behavioral" icon={<Users className="h-4 w-4" />} score={evaluation.behavioural_score} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Left Column - Strengths & Concerns */}
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+        {/* Left Column */}
+        <div className="lg:col-span-2 space-y-3">
           
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <ThumbsUp className="h-5 w-5 text-emerald-500" />
-              <h2 className="text-lg font-bold text-gray-900">Key Strengths</h2>
+          <div className="ibot-card p-4">
+            <div className="flex items-center gap-1.5 mb-4">
+              <ThumbsUp className="h-4 w-4 text-emerald-500" />
+              <h2 className="text-sm font-bold text-slate-800">Strengths</h2>
             </div>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {evaluation.strengths.map((s, i) => (
-                <li key={i} className="flex items-start gap-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/50">
-                  <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                  <span className="text-sm text-emerald-900 leading-relaxed font-medium">{s}</span>
+                <li key={i} className="flex items-start gap-2.5 bg-emerald-50/40 p-2.5 rounded-lg border border-emerald-100/50 animate-slideUp" style={{ animationDelay: `${i * 0.05}s` }}>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span className="text-xs text-emerald-800 leading-relaxed">{s}</span>
                 </li>
               ))}
               {evaluation.strengths.length === 0 && (
-                <p className="text-sm text-gray-400 italic">No notable strengths identified.</p>
+                <p className="text-xs text-slate-400 italic">None identified</p>
               )}
             </ul>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <ThumbsDown className="h-5 w-5 text-amber-500" />
-              <h2 className="text-lg font-bold text-gray-900">Areas for Improvement</h2>
+          <div className="ibot-card p-4">
+            <div className="flex items-center gap-1.5 mb-4">
+              <ThumbsDown className="h-4 w-4 text-amber-500" />
+              <h2 className="text-sm font-bold text-slate-800">Areas to Improve</h2>
             </div>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {evaluation.concerns.map((c, i) => (
-                <li key={i} className="flex items-start gap-3 bg-amber-50/50 p-3 rounded-xl border border-amber-100/50">
-                  <TrendingUp className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                  <span className="text-sm text-amber-900 leading-relaxed font-medium">{c}</span>
+                <li key={i} className="flex items-start gap-2.5 bg-amber-50/40 p-2.5 rounded-lg border border-amber-100/50 animate-slideUp" style={{ animationDelay: `${i * 0.05}s` }}>
+                  <TrendingUp className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-xs text-amber-800 leading-relaxed">{c}</span>
                 </li>
               ))}
               {evaluation.concerns.length === 0 && (
-                <p className="text-sm text-gray-400 italic">No significant concerns identified.</p>
+                <p className="text-xs text-slate-400 italic">None identified</p>
               )}
             </ul>
           </div>
 
         </div>
 
-        {/* Right Column - Skill Breakdown */}
-        <div className="space-y-8">
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <Award className="h-5 w-5 text-indigo-500" />
-              <h2 className="text-lg font-bold text-gray-900">Skill Breakdown</h2>
+        {/* Right Column */}
+        <div className="space-y-3">
+          <div className="ibot-card p-4">
+            <div className="flex items-center gap-1.5 mb-4">
+              <Award className="h-4 w-4 text-emerald-500" />
+              <h2 className="text-sm font-bold text-slate-800">Skill Breakdown</h2>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4">
               {Object.entries(evaluation.skill_scores).map(([skill, data]) => (
                 <div key={skill}>
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-sm font-bold text-gray-800">{skill}</span>
-                    <span className={`text-xs font-black ${getScoreColor(data.weighted_score)}`}>
+                  <div className="flex justify-between items-end mb-1">
+                    <span className="text-xs font-semibold text-slate-700">{skill}</span>
+                    <span className={`text-[10px] font-bold ${getScoreColor(data.weighted_score)}`}>
                       {Math.round(data.weighted_score)}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${getScoreBg(data.weighted_score)}`}
+                      className={`h-full rounded-full ${getScoreBg(data.weighted_score)} transition-all duration-700`}
                       style={{ width: `${data.weighted_score}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1.5 font-medium leading-relaxed">
+                  <p className="text-[9px] text-slate-400 mt-1 leading-relaxed line-clamp-2">
                     {data.summary}
                   </p>
                 </div>
@@ -265,20 +249,18 @@ export const EvaluationReportPage: React.FC = () => {
           </div>
           
           {evaluation.red_flags.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <ShieldAlert className="h-5 w-5 text-red-600" />
-                <h2 className="text-lg font-bold text-red-900">Red Flags</h2>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <ShieldAlert className="h-4 w-4 text-red-600" />
+                <h2 className="text-sm font-bold text-red-900">Red Flags</h2>
               </div>
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {evaluation.red_flags.map((flag, i) => (
-                  <li key={i} className="flex flex-col gap-1 bg-white/50 p-3 rounded-xl border border-red-100">
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-bold uppercase tracking-wider text-red-700">
-                        {flag.severity}
-                      </span>
-                    </div>
-                    <span className="text-sm text-red-900 leading-relaxed">{flag.description}</span>
+                  <li key={i} className="flex flex-col gap-0.5 bg-white/50 p-2.5 rounded-lg border border-red-100">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-red-600">
+                      {flag.severity}
+                    </span>
+                    <span className="text-xs text-red-800 leading-relaxed">{flag.description}</span>
                   </li>
                 ))}
               </ul>
@@ -288,40 +270,40 @@ export const EvaluationReportPage: React.FC = () => {
       </div>
 
       {/* Best and Weakest Answers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 gap-3 pb-1">
         {evaluation.best_answer && (
-          <div className="bg-white border border-emerald-200 rounded-3xl p-6 shadow-[0_4px_20px_-10px_rgba(16,185,129,0.1)]">
-             <div className="flex items-center gap-2 mb-4">
-              <Award className="h-5 w-5 text-emerald-500" />
-              <h2 className="text-base font-bold text-gray-900">Highlight Answer</h2>
+          <div className="ibot-card p-4 border-emerald-200/50">
+             <div className="flex items-center gap-1.5 mb-3">
+              <Award className="h-4 w-4 text-emerald-500" />
+              <h2 className="text-sm font-bold text-slate-800">Best Answer</h2>
             </div>
-            <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl mb-4">
-              <p className="text-xs font-bold text-emerald-700 mb-1">Question (Turn {evaluation.best_answer.turn_number})</p>
-              <p className="text-sm text-emerald-900 font-medium leading-relaxed">{evaluation.best_answer.question}</p>
+            <div className="bg-emerald-50/40 border border-emerald-100 p-3 rounded-lg mb-3">
+              <p className="text-[10px] font-semibold text-emerald-600 mb-0.5">Turn {evaluation.best_answer.turn_number}</p>
+              <p className="text-xs text-emerald-800 leading-relaxed">{evaluation.best_answer.question}</p>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              <span className="font-bold text-gray-800">Why it stood out:</span> {evaluation.best_answer.reason}
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-700">Why: </span>{evaluation.best_answer.reason}
             </p>
           </div>
         )}
 
         {evaluation.weakest_answer && (
-          <div className="bg-white border border-red-200 rounded-3xl p-6 shadow-[0_4px_20px_-10px_rgba(239,68,68,0.1)]">
-             <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-red-500 transform rotate-180" />
-              <h2 className="text-base font-bold text-gray-900">Weakest Answer</h2>
+          <div className="ibot-card p-4 border-red-200/50">
+             <div className="flex items-center gap-1.5 mb-3">
+              <TrendingUp className="h-4 w-4 text-red-500 transform rotate-180" />
+              <h2 className="text-sm font-bold text-slate-800">Weakest Answer</h2>
             </div>
-            <div className="bg-red-50/50 border border-red-100 p-4 rounded-2xl mb-4">
-              <p className="text-xs font-bold text-red-700 mb-1">Question (Turn {evaluation.weakest_answer.turn_number})</p>
-              <p className="text-sm text-red-900 font-medium leading-relaxed">{evaluation.weakest_answer.question}</p>
+            <div className="bg-red-50/40 border border-red-100 p-3 rounded-lg mb-3">
+              <p className="text-[10px] font-semibold text-red-600 mb-0.5">Turn {evaluation.weakest_answer.turn_number}</p>
+              <p className="text-xs text-red-800 leading-relaxed">{evaluation.weakest_answer.question}</p>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              <span className="font-bold text-gray-800">Why it struggled:</span> {evaluation.weakest_answer.reason}
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-700">Why: </span>{evaluation.weakest_answer.reason}
             </p>
           </div>
         )}
       </div>
-
+      </div>
     </div>
   );
 };
@@ -335,14 +317,14 @@ const DimensionCard: React.FC<{ title: string; icon: React.ReactNode; score: num
   };
 
   return (
-    <div className={`rounded-3xl border p-5 flex flex-col justify-between h-32 ${getColor(score)}`}>
-      <div className="flex items-center gap-2">
+    <div className={`rounded-xl border p-4 flex flex-col justify-between h-28 transition-all hover:shadow-sm ${getColor(score)}`}>
+      <div className="flex items-center gap-1.5">
         {icon}
-        <h3 className="font-bold text-sm tracking-wide">{title}</h3>
+        <h3 className="font-semibold text-xs">{title}</h3>
       </div>
-      <div className="flex items-baseline gap-1 mt-auto">
-        <span className="text-3xl font-black">{Math.round(score)}</span>
-        <span className="text-xs font-bold opacity-50">/100</span>
+      <div className="flex items-baseline gap-0.5 mt-auto">
+        <span className="text-2xl font-bold">{Math.round(score)}</span>
+        <span className="text-[10px] font-semibold opacity-40">/100</span>
       </div>
     </div>
   );

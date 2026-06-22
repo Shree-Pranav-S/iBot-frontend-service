@@ -1,4 +1,4 @@
-﻿/**
+/**
  * candidate.types.ts
  *
  * Types for candidates and candidate assessments.
@@ -105,12 +105,8 @@ export interface InterviewEvaluationResponse {
   
   // Dimensions
   technical_dimension_score: number;
-  problem_solving_score: number;
-  problem_solving_evidence: string[];
-  problem_solving_summary: string;
-  communication_score: number;
-  communication_evidence: string[];
-  communication_summary: string;
+  score_evidence: string[];
+  score_summary: string;
   behavioural_score: number;
   behavioural_evidence: string[];
   behavioural_summary: string;
@@ -126,14 +122,12 @@ export interface InterviewEvaluationResponse {
   // Overall
   overall_score: number;
   hiring_recommendation: string;
-  recommendation_override_reason: string | null;
   overall_narrative: string;
   recommendation_reasoning: string;
   
   // Highlights & Flags
   strengths: string[];
   concerns: string[];
-  red_flags: RedFlag[];
   violation_summary: ViolationSummary | null;
   best_answer: HighlightAnswer | null;
   weakest_answer: HighlightAnswer | null;

@@ -9,7 +9,7 @@
  *  - status         : 'idle' | 'connecting' | 'connected' | 'error' | 'closed'
  *  - sendText       : send a typed message to the interview AI
  *  - startSession   : trigger session_start (fires LLM greeting)
- *  - stopSession    : send stop + close the socket
+ *  - stopSession    : ask the server to end the interview and wait for evaluation
  *  - sendAudioChunk : forward a raw 16 kHz mono linear16 PCM chunk to the server
  *  - lastAudioBytes : the most recent TTS MP3 blob from the server (play it!)
  *  - interviewMeta  : section info, completion status, bot speaking state
@@ -47,6 +47,7 @@ export function useInterviewSocket({
   // Tracks whether next binary frame is expected TTS audio
   const expectAudioRef = useRef(false);
   const activeCandidateMessageIdRef = useRef<string | null>(null);
+  const stopFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── internal helpers ────────────────────────────────────────────────────────
 
@@ -244,6 +245,10 @@ export function useInterviewSocket({
             break;
 
           case 'interview_complete':
+            if (stopFallbackTimerRef.current) {
+              clearTimeout(stopFallbackTimerRef.current);
+              stopFallbackTimerRef.current = null;
+            }
             setInterviewMeta((prev) => ({
               ...prev,
               isInterviewComplete: true,
@@ -252,6 +257,10 @@ export function useInterviewSocket({
             break;
 
           case 'session_terminated':
+            if (stopFallbackTimerRef.current) {
+              clearTimeout(stopFallbackTimerRef.current);
+              stopFallbackTimerRef.current = null;
+            }
             setInterviewMeta((prev) => ({
               ...prev,
               isTerminated: true,
@@ -286,6 +295,10 @@ export function useInterviewSocket({
     };
 
     ws.onclose = () => {
+      if (stopFallbackTimerRef.current) {
+        clearTimeout(stopFallbackTimerRef.current);
+        stopFallbackTimerRef.current = null;
+      }
       setStatus('closed');
       wsRef.current = null;
     };
@@ -316,10 +329,21 @@ export function useInterviewSocket({
   }, []);
 
   const stopSession = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'stop', payload: {} }));
-      wsRef.current.close(1000, 'Session ended by user');
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    ws.send(JSON.stringify({ type: 'stop', payload: {} }));
+
+    if (stopFallbackTimerRef.current) {
+      clearTimeout(stopFallbackTimerRef.current);
     }
+
+    stopFallbackTimerRef.current = setTimeout(() => {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close(1000, 'Session end acknowledgement timed out');
+      }
+      stopFallbackTimerRef.current = null;
+    }, 10000);
   }, []);
 
   // ── auto-connect ─────────────────────────────────────────────────────────────
@@ -327,6 +351,10 @@ export function useInterviewSocket({
   useEffect(() => {
     if (autoConnect) connect();
     return () => {
+      if (stopFallbackTimerRef.current) {
+        clearTimeout(stopFallbackTimerRef.current);
+        stopFallbackTimerRef.current = null;
+      }
       wsRef.current?.close(1000, 'Component unmounted');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

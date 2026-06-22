@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import {
   AlertTriangle,
   Bot,
@@ -123,6 +123,20 @@ export const TranscriptPanel: React.FC<{
   isRecording?: boolean;
 }> = ({ messages, isBotSpeaking, isRecording = false }) => {
   const visibleMessages = messages.filter((message) => message.text?.trim());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollKey = visibleMessages
+    .map((message) => `${message.id}:${message.text.length}:${message.isFinal ? 'final' : 'partial'}`)
+    .join('|');
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    scrollEl.scrollTo({
+      top: scrollEl.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [scrollKey]);
 
   if (visibleMessages.length === 0) {
     return (
@@ -135,7 +149,7 @@ export const TranscriptPanel: React.FC<{
   }
 
   return (
-    <div className="ibot-scrollbar h-full min-h-0 space-y-3 overflow-y-auto pr-1">
+    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 space-y-3 overflow-y-auto pr-1">
       {visibleMessages.map((message) => {
         const isAssistant = message.role === 'assistant';
         const isSystem = message.role === 'system';
@@ -255,5 +269,6 @@ export const TimerPill: React.FC<{ value: string }> = ({ value }) => (
     <span className="font-mono">{value}</span>
   </span>
 );
+
 
 

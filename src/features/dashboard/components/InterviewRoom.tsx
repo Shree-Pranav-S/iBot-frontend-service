@@ -1,195 +1,373 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import '@livekit/components-styles/index.css';
 import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  useConnectionState,
+  useLocalParticipant,
+  useRoomContext,
+  useTranscriptions,
+  useVoiceAssistant,
+} from '@livekit/components-react';
+import { ConnectionState } from 'livekit-client';
+import {
+  AudioLines,
   ChevronRight,
   Loader2,
   Mic,
   PhoneOff,
-  Radio,
+  ShieldCheck,
   Sparkles,
   Wifi,
-  WifiOff,
 } from 'lucide-react';
-import { useInterviewSocket } from '../hooks/useInterviewSocket';
-import { PcmAudioStreamer } from '../utils/pcmAudioStreamer';
+import { useLiveKitInterviewToken } from '../hooks/useLiveKitInterviewToken';
+import type { ChatMessage } from '../../../types/socket.types';
 import {
-  CompletionNotice,
   Ibot3DAvatar,
-  SectionProgress,
   StatusPill,
   TimerPill,
   TranscriptPanel,
 } from './InterviewExperience';
 
+const TRANSCRIPTION_FINAL_ATTRIBUTE = 'lk.transcription_final';
+const TRANSCRIPTION_SEGMENT_ATTRIBUTE = 'lk.segment_id';
+const TURN_GROUP_GAP_MS = 12_000;
+
+type LiveTranscription = ReturnType<typeof useTranscriptions>[number];
+
+const normalizeTimestampMs = (timestamp: number | undefined) => {
+  const value = Number(timestamp || Date.now());
+  return value < 1_000_000_000_000 ? value * 1000 : value;
+};
+
+const isFinalTranscription = (transcription: LiveTranscription) => {
+  const raw = transcription.streamInfo.attributes?.[TRANSCRIPTION_FINAL_ATTRIBUTE] as unknown;
+
+  if (raw === true || raw === 'true') return true;
+  if (raw === false || raw === 'false') return false;
+
+  return false;
+};
+
+const appendTranscriptText = (current: string, next: string) => {
+  const existing = current.trim();
+  const incoming = next.trim();
+  if (!existing) return incoming;
+  if (!incoming || existing.endsWith(incoming)) return existing;
+  if (incoming.startsWith(existing)) return incoming;
+  return `${existing} ${incoming}`;
+};
+
+const mergeLiveSegmentText = (current: string, next: string) => {
+  const existing = current.trim();
+  const incoming = next.trim();
+
+  if (!incoming) return existing;
+  if (!existing) return incoming;
+  if (incoming.startsWith(existing)) return incoming;
+  if (existing.includes(incoming)) return existing;
+
+  return `${existing} ${incoming}`;
+};
+
+const isAssistantIdentity = (identity: string, localIdentity: string) => {
+  const normalized = identity.toLowerCase();
+  const local = localIdentity.toLowerCase();
+
+  if (normalized === local) return false;
+
+  return (
+    normalized.startsWith('interview-bot') ||
+    normalized.includes('agent') ||
+    normalized.includes('bot')
+  );
+};
+
+const buildTurnMessages = (
+  transcriptions: LiveTranscription[],
+  localIdentity: string,
+): ChatMessage[] => {
+  const grouped: Array<
+    ChatMessage & {
+      participantIdentity: string;
+      segmentIds: Set<string>;
+      lastTimestampMs: number;
+    }
+  > = [];
+
+  const sorted = [...transcriptions]
+    .filter((transcription) => transcription.text?.trim())
+    .sort(
+      (a, b) =>
+        normalizeTimestampMs(a.streamInfo.timestamp) -
+        normalizeTimestampMs(b.streamInfo.timestamp),
+    );
+
+  for (const transcription of sorted) {
+    const identity = transcription.participantInfo.identity;
+    const role = isAssistantIdentity(identity, localIdentity) ? 'assistant' : 'user';
+    const timestampMs = normalizeTimestampMs(transcription.streamInfo.timestamp);
+    const rawSegmentId =
+      transcription.streamInfo.attributes?.[TRANSCRIPTION_SEGMENT_ATTRIBUTE] ||
+      transcription.streamInfo.id ||
+      `${identity}-${timestampMs}`;
+    const segmentId = String(rawSegmentId);
+    const isFinal = isFinalTranscription(transcription);
+    const last = grouped[grouped.length - 1];
+    const canMerge =
+      last &&
+      last.role === role &&
+      last.participantIdentity === identity &&
+      timestampMs - last.lastTimestampMs <= TURN_GROUP_GAP_MS;
+
+    if (canMerge) {
+      if (last.segmentIds.has(segmentId)) {
+        last.text = mergeLiveSegmentText(last.text, transcription.text);
+      } else {
+        last.segmentIds.add(segmentId);
+        last.text = appendTranscriptText(last.text, transcription.text);
+      }
+      last.isFinal = Boolean(last.isFinal && isFinal);
+      last.lastTimestampMs = Math.max(last.lastTimestampMs, timestampMs);
+      continue;
+    }
+
+    grouped.push({
+      id: `${identity}-${segmentId}`,
+      role,
+      text: transcription.text.trim(),
+      isFinal,
+      timestamp: new Date(timestampMs),
+      participantIdentity: identity,
+      segmentIds: new Set([segmentId]),
+      lastTimestampMs: timestampMs,
+    });
+  }
+
+  return grouped.map((message) => ({
+    id: message.id,
+    role: message.role,
+    text: message.text,
+    isFinal: message.isFinal,
+    timestamp: message.timestamp,
+    replyType: message.replyType,
+  }));
+};
+
 interface InterviewRoomProps {
   token: string;
+  durationMins?: number;
   onExit?: () => void;
 }
 
-export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token }) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [sessionStarted, setSessionStarted] = useState(false);
-  const [elapsedSecs, setElapsedSecs] = useState(0);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMins, onExit }) => {
+  const { data, loading, error, createToken } = useLiveKitInterviewToken(token);
+  const [connect, setConnect] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const audioStreamerRef = useRef<PcmAudioStreamer | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const {
-    messages,
-    status,
-    lastAudioBytes,
-    interviewMeta,
-    connect,
-    startSession,
-    sendAudioChunk,
-    stopSession,
-  } = useInterviewSocket({ token });
-
-  const stopMicrophone = useCallback(() => {
-    audioStreamerRef.current?.stop();
-    audioStreamerRef.current = null;
-    setIsRecording(false);
-  }, []);
-
-  const startMicrophone = useCallback(async () => {
-    if (audioStreamerRef.current) return;
-
-    const streamer = new PcmAudioStreamer({ onChunk: sendAudioChunk });
-
-    try {
-      await streamer.start();
-      audioStreamerRef.current = streamer;
-      setIsRecording(true);
-    } catch (error) {
-      streamer.stop();
-      throw error;
+  const startInterview = async () => {
+    const tokenData = await createToken();
+    if (tokenData) {
+      setConnect(true);
     }
-  }, [sendAudioChunk]);
-
-  useEffect(() => {
-    return () => stopMicrophone();
-  }, [stopMicrophone]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    if (!lastAudioBytes || !audioRef.current) return;
-
-    const url = URL.createObjectURL(lastAudioBytes);
-    audioRef.current.src = url;
-    setIsAudioPlaying(true);
-    audioRef.current.play().catch(() => setIsAudioPlaying(false));
-
-    return () => URL.revokeObjectURL(url);
-  }, [lastAudioBytes]);
-
-  useEffect(() => {
-    const latestUserMessage = messages.filter((msg) => msg.role === 'user').at(-1);
-    if (!latestUserMessage || latestUserMessage.isFinal || !audioRef.current) return;
-
-    audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-    setIsAudioPlaying(false);
-  }, [messages]);
-
-  useEffect(() => {
-    if (sessionStarted && status === 'connected') {
-      timerRef.current = setInterval(() => {
-        setElapsedSecs((prev) => prev + 1);
-      }, 1000);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [sessionStarted, status]);
-
-  const handleConnect = useCallback(() => {
-    connect();
-  }, [connect]);
-
-  const handleStartSession = useCallback(async () => {
-    startSession();
-    setSessionStarted(true);
-
-    try {
-      await startMicrophone();
-    } catch {
-      alert('Microphone access denied or unavailable. Please allow microphone access and try again.');
-    }
-  }, [startSession, startMicrophone]);
-
-  const handleStop = useCallback(() => {
-    if (isRecording) {
-      stopMicrophone();
-    }
-    stopSession();
-    setSessionStarted(false);
-    setIsAudioPlaying(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-  }, [isRecording, stopMicrophone, stopSession]);
-
-  const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const isLive = status === 'connected';
-  const isEnded = status === 'closed' || status === 'error';
-  const { currentSection, isInterviewComplete, isTerminated, isBotSpeaking } = interviewMeta;
-  const botIsActive = isBotSpeaking || isAudioPlaying;
+  if (!data) {
+    return (
+      <div className="ibot-interview-room-bg relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden p-6 text-slate-900">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-emerald-200/30 to-transparent" />
+        <div className="relative w-full max-w-xl rounded-3xl border border-white/80 bg-white/80 p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/20">
+            <Sparkles className="h-9 w-9" />
+          </div>
+
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-700">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Secure live room
+          </div>
+          <h1 className="font-display text-3xl font-black text-slate-950">AI interview setup</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm font-medium leading-relaxed text-slate-600">
+            Connect when you are ready. Your microphone will be enabled for a live, voice-first interview.
+          </p>
+
+          {error && (
+            <p className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+              {error}
+            </p>
+          )}
+
+          <button
+            onClick={startInterview}
+            disabled={loading}
+            className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-8 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98] disabled:opacity-60"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              <>
+                <Wifi className="h-4 w-4" />
+                Start Interview
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="ibot-interview-room-bg relative flex h-full min-h-0 flex-col overflow-hidden text-slate-900">
-      <audio
-        ref={audioRef}
-        hidden
-        onPlay={() => setIsAudioPlaying(true)}
-        onEnded={() => setIsAudioPlaying(false)}
-        onPause={() => setIsAudioPlaying(false)}
-      />
+    <LiveKitRoom
+      token={data.token}
+      serverUrl={data.livekit_url}
+      connect={connect}
+      audio={{
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }}
+      video={false}
+      options={{
+        adaptiveStream: true,
+        dynacast: true,
+      }}
+      className="flex h-full flex-col"
+    >
+      <InterviewStage durationMins={durationMins} onExit={onExit} />
+      <RoomAudioRenderer />
+    </LiveKitRoom>
+  );
+};
 
-      <div className="z-20 flex min-h-16 items-center justify-between gap-4 border-b border-white/70 bg-white/72 px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-xl sm:px-6">
+function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExit?: () => void }) {
+  const room = useRoomContext();
+  const connectionState = useConnectionState();
+  const { isMicrophoneEnabled, lastMicrophoneError, localParticipant, microphoneTrack } = useLocalParticipant();
+  const { agent, state: agentState } = useVoiceAssistant();
+  const transcriptions = useTranscriptions();
+
+  const [elapsedSecs, setElapsedSecs] = useState(0);
+  const [micError, setMicError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (connectionState === ConnectionState.Connected) {
+      const id = window.setInterval(() => {
+        setElapsedSecs((value) => value + 1);
+      }, 1000);
+      return () => window.clearInterval(id);
+    }
+  }, [connectionState]);
+
+  useEffect(() => {
+    if (connectionState !== ConnectionState.Connected || isMicrophoneEnabled) return;
+
+    let cancelled = false;
+    localParticipant
+      .setMicrophoneEnabled(true, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      })
+      .then((publication) => {
+        if (cancelled) return;
+        setMicError(publication ? null : 'Microphone was not published to the room.');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setMicError(err instanceof Error ? err.message : 'Unable to enable microphone.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionState, isMicrophoneEnabled, localParticipant]);
+
+  const timerText = useMemo(() => {
+    if (!durationMins) {
+      const minutes = Math.floor(elapsedSecs / 60);
+      const seconds = elapsedSecs % 60;
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    const totalSeconds = durationMins * 60;
+    const remaining = Math.max(0, totalSeconds - elapsedSecs);
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, [elapsedSecs, durationMins]);
+
+  const endSession = () => {
+    room.disconnect();
+    if (onExit) onExit();
+  };
+
+  const isLive = connectionState === ConnectionState.Connected;
+  const botIsActive = agentState === 'speaking' || agentState === 'thinking';
+  const micIsPublished = Boolean(microphoneTrack) && isMicrophoneEnabled;
+  const agentIsReady = Boolean(agent) && agentState !== 'connecting' && agentState !== 'disconnected';
+  const isRecording = isLive && micIsPublished && agentState === 'listening';
+  const displayedMicError = micError || lastMicrophoneError?.message || null;
+  const readinessText = (() => {
+    if (connectionState === ConnectionState.Connecting) return 'Connecting to LiveKit';
+    if (!isLive) return 'Connection closed';
+    if (!agent) return 'Starting interviewer';
+    if (!agentIsReady) return 'Preparing interviewer';
+    if (!micIsPublished) return 'Connecting microphone';
+    if (agentState === 'speaking') return 'iBot is speaking';
+    if (agentState === 'thinking') return 'Processing your response';
+    return 'Ready for your response';
+  })();
+
+  const messages = useMemo(
+    () => buildTurnMessages(transcriptions, room.localParticipant.identity),
+    [room.localParticipant.identity, transcriptions],
+  );
+
+  let statusStr: 'idle' | 'connecting' | 'connected' | 'error' | 'closed' = 'idle';
+  if (connectionState === ConnectionState.Connected && agentIsReady) statusStr = 'connected';
+  else if (connectionState === ConnectionState.Connected) statusStr = 'connecting';
+  else if (connectionState === ConnectionState.Connecting) statusStr = 'connecting';
+  else if (connectionState === ConnectionState.Disconnected) statusStr = 'closed';
+
+  return (
+    <div className="ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
+      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/75 px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
         <div className="min-w-0 flex-1">
-          {currentSection ? (
-            <SectionProgress
-              sectionName={currentSection.sectionName}
-              sectionNumber={currentSection.sectionNumber}
-              totalSections={currentSection.totalSections}
-              skill={currentSection.skill}
-            />
-          ) : (
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-indigo-500 text-white shadow-md shadow-emerald-200/50">
-                <Sparkles className="h-3.5 w-3.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black text-slate-950">AI Interview</p>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Interview Room</p>
-              </div>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
+              <Sparkles className="h-5 w-5" />
             </div>
-          )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-slate-950">AI Interview</p>
+              <p className="truncate text-[10px] font-black uppercase text-emerald-700">Live voice room</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {sessionStarted && <TimerPill value={formatTime(elapsedSecs)} />}
-          <StatusPill status={status} isBotSpeaking={botIsActive} />
+          {isLive && <TimerPill value={timerText} />}
+          <StatusPill status={statusStr} isBotSpeaking={botIsActive} />
           {isRecording && (
-            <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-700 sm:inline-flex">
-              <Mic className="h-3 w-3" />
+            <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 sm:inline-flex">
+              <AudioLines className="h-3.5 w-3.5" />
               Listening
             </span>
           )}
-          {(isLive || isRecording) && !isInterviewComplete && (
+          {isLive && !micIsPublished && (
+            <span
+              className="hidden items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black text-amber-700 sm:inline-flex"
+              title={displayedMicError || 'Publishing microphone'}
+            >
+              <Mic className="h-3.5 w-3.5" />
+              Mic connecting
+            </span>
+          )}
+          {isLive && (
             <button
-              id="btn-end-session"
-              onClick={handleStop}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-red-200 bg-white px-3 text-[11px] font-black text-red-500 shadow-sm transition-all hover:border-red-500 hover:bg-red-500 hover:text-white active:scale-95"
+              onClick={endSession}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-3 text-[11px] font-black text-red-500 shadow-sm transition-all hover:border-red-500 hover:bg-red-500 hover:text-white active:scale-[0.96]"
               title="End session"
             >
               <PhoneOff className="h-3.5 w-3.5" />
@@ -197,65 +375,57 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token }) => {
             </button>
           )}
         </div>
-      </div>
+      </header>
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <section className="relative flex min-h-[300px] flex-[1.05] items-center justify-center overflow-hidden px-4 py-6 sm:min-h-[360px]">
-          <div className="pointer-events-none absolute left-1/2 top-8 h-48 w-[78vw] max-w-4xl -translate-x-1/2 rounded-full bg-emerald-200/25 blur-3xl" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
+      <main className="min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
+        <div className="mx-auto grid h-full min-h-0 w-full max-w-7xl grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(390px,0.72fr)]">
+          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/80 p-6 shadow-2xl shadow-slate-900/10">
+            <div className="pointer-events-none absolute inset-x-10 top-8 h-56 rounded-full bg-emerald-300/20 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 left-1/2 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
 
-          <div className="relative z-10 flex w-full max-w-4xl flex-col items-center gap-4 text-center">
-            <Ibot3DAvatar isSpeaking={botIsActive} />
+            <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
+              <Ibot3DAvatar isSpeaking={botIsActive} />
 
-            {status === 'idle' && (
-              <button
-                id="btn-connect-interview"
-                onClick={handleConnect}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-indigo-600 px-7 py-3 text-sm font-black text-white shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-emerald-500/25 active:translate-y-0 active:scale-95"
-              >
-                <Radio className="h-4 w-4" />
-                Connect
-              </button>
-            )}
-
-            {status === 'connecting' && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-4 py-2 text-xs font-bold text-slate-600 shadow-sm backdrop-blur">
-                <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                Connecting...
+              <div className="rounded-2xl border border-white/80 bg-white/80 px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+                <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
+                  <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                  Session state
+                </div>
+                <p className="text-lg font-black text-slate-950">{readinessText}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  Speak naturally. Captions and transcript updates appear in the panel.
+                </p>
               </div>
-            )}
 
-            {isLive && !sessionStarted && (
-              <button
-                id="btn-start-session"
-                onClick={handleStartSession}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-indigo-600 px-7 py-3 text-sm font-black text-white shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-emerald-500/25 active:translate-y-0 active:scale-95"
-              >
-                <Wifi className="h-4 w-4" />
-                Start Interview
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
+              {connectionState === ConnectionState.Connecting && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-4 py-2 text-xs font-black text-slate-600 shadow-sm backdrop-blur">
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                  Connecting...
+                </div>
+              )}
 
-            {isEnded && !isInterviewComplete && (
-              <button
-                id="btn-reconnect"
-                onClick={handleConnect}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-5 py-2.5 text-xs font-black text-slate-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95"
-              >
-                <WifiOff className="h-4 w-4" />
-                Reconnect
-              </button>
-            )}
-          </div>
-        </section>
+              {statusStr === 'closed' && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-5 py-2.5 text-xs font-black text-slate-600 shadow-sm">
+                  Interview concluded
+                </div>
+              )}
 
-        <section className="relative flex min-h-0 flex-[0.95] flex-col border-t border-white/75 bg-white/68 px-4 py-4 shadow-[0_-18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6">
-          <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Subtitles</p>
-              {isRecording && (
-                <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+              {displayedMicError && isLive && (
+                <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 shadow-sm">
+                  Microphone issue: {displayedMicError}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/75 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div>
+                <p className="text-[10px] font-black uppercase text-emerald-700">Live subtitles</p>
+                <h2 className="mt-1 text-sm font-black text-slate-950">Conversation captions</h2>
+              </div>
+              {isRecording ? (
+                <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-100">
                   <span className="flex h-3 items-end gap-[2px]">
                     {[1, 2, 3, 4].map((i) => (
                       <span
@@ -267,22 +437,19 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token }) => {
                   </span>
                   Speak clearly
                 </div>
+              ) : (
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-500">
+                  Auto scroll
+                </span>
               )}
             </div>
 
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 flex-1 p-4">
               <TranscriptPanel messages={messages} isBotSpeaking={botIsActive} isRecording={isRecording} />
-              <div ref={bottomRef} />
             </div>
-
-            {isInterviewComplete && <CompletionNotice type="complete" />}
-            {isTerminated && <CompletionNotice type="terminated" />}
-            {isEnded && !isInterviewComplete && !isTerminated && messages.length > 0 && (
-              <CompletionNotice type="ended" />
-            )}
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
-};
+}

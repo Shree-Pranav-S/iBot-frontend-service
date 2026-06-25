@@ -58,11 +58,27 @@ export interface TokenValidationResponse {
   sections_overview: string[];
 }
 
+export interface TranscriptEvidence {
+  turn_number: number | null;
+  section: string | null;
+  skill: string | null;
+  quote: string;
+  interpretation: string;
+}
+
 export interface EvaluationSkillBreakdown {
-  priority_score: number;
+  priority_score: number | null;
+  depth_required?: string | null;
   weighted_score: number;
-  raw_score: number;
-  difficulty_reached: number;
+  raw_score: number | null;
+  weight_share?: number | null;
+  weighted_contribution?: number | null;
+  difficulty_reached: string | number | null;
+  questions_asked?: number | null;
+  assessed?: boolean | null;
+  similar_skill_credit?: boolean;
+  similar_skills_considered?: string[];
+  transcript_evidence?: TranscriptEvidence[];
   signals_demonstrated: string[];
   signals_missing: string[];
   summary: string;
@@ -70,16 +86,17 @@ export interface EvaluationSkillBreakdown {
 
 export interface EvaluationSectionSummary {
   summary: string;
-  avg_score: number;
-  difficulty_reached: number;
-  questions_asked: number;
+  avg_score: number | null;
+  difficulty_reached: string | number | null;
+  questions_asked: number | null;
+  evidence?: TranscriptEvidence[];
 }
 
 export interface HighlightAnswer {
   question: string;
   turn_number: number;
-  section: string;
-  difficulty_at_time: number;
+  section: string | null;
+  difficulty_at_time: string | number | null;
   reason: string;
 }
 
@@ -99,6 +116,12 @@ export interface InterviewEvaluationResponse {
   id: string;
   candidate_assessment_id: string;
   session_id: string;
+  candidate_name?: string | null;
+  candidate_email?: string | null;
+  assessment_title?: string | null;
+  role_name?: string | null;
+  recruiter_decision?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  recruiter_feedback?: string | null;
   
   // Skills
   skill_scores: Record<string, EvaluationSkillBreakdown>;

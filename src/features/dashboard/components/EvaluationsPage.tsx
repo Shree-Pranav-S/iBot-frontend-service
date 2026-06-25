@@ -60,7 +60,11 @@ const formatRecommendation = (recommendation: string) => recommendation.replace(
 
 const topSkills = (evaluation: RecruiterEvaluationListItem) =>
   Object.entries(evaluation.skill_scores ?? {})
-    .sort(([, a], [, b]) => (b.weighted_score ?? 0) - (a.weighted_score ?? 0))
+    .sort(([, a], [, b]) => {
+      const priorityDelta = (b.priority_score ?? 0) - (a.priority_score ?? 0);
+      if (priorityDelta !== 0) return priorityDelta;
+      return (b.weighted_score ?? 0) - (a.weighted_score ?? 0);
+    })
     .slice(0, 4);
 
 export const EvaluationsPage: React.FC = () => {
@@ -92,7 +96,7 @@ export const EvaluationsPage: React.FC = () => {
         candidateId: evaluation.candidate_assessment_id,
         decision,
       });
-      success('Decision Saved', `${evaluation.candidate_name} marked as ${decision.toLowerCase()}.`);
+      success('Decision Saved', `${evaluation.candidate_name} marked as ${decision.toLowerCase()} and notification queued.`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save decision.';
       toastError('Decision Failed', message);
@@ -286,6 +290,10 @@ export const EvaluationsPage: React.FC = () => {
                           />
                         </div>
                         <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-relaxed text-slate-500">{data.summary}</p>
+                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                          Priority {data.priority_score ?? 'N/A'}
+                          {typeof data.weight_share === 'number' ? ` - Weight ${data.weight_share.toFixed(1)}%` : ''}
+                        </p>
                       </div>
                     ))}
                   </div>

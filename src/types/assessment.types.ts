@@ -1,11 +1,11 @@
-/**
+﻿/**
  * assessment.types.ts
  *
  * Types and interfaces for assessment campaigns, JD analysis,
  * interview plans, and focus area overrides.
  */
 
-// ── JD Analysis ───────────────────────────────────────────────────────────────
+// â”€â”€ JD Analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface SkillPriority {
   skill: string;
@@ -22,13 +22,14 @@ export interface JDAnalysis {
   behavioural_signals: string[];
 }
 
-// ── Interview Plan ────────────────────────────────────────────────────────────
+// â”€â”€ Interview Plan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface InterviewSection {
   section_name: string;
   skill: string | null;
   allocated_mins: number;
   priority_score: number | null;
+  expected_signals?: string[];
 }
 
 export interface InterviewPlan {
@@ -36,14 +37,14 @@ export interface InterviewPlan {
   sections: InterviewSection[];
 }
 
-// ── Focus Areas ───────────────────────────────────────────────────────────────
+// â”€â”€ Focus Areas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface FocusAreaOverride {
   skill: string;
   weight_override: number;
 }
 
-// ── Assessment Responses ──────────────────────────────────────────────────────
+// â”€â”€ Assessment Responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AssessmentStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
 
@@ -75,3 +76,5 @@ export interface AssessmentSummaryResponse {
   window_end: string;
   created_at: string;
 }
+
+

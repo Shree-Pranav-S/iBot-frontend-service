@@ -1,199 +1,348 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAssessments } from '../../../hooks/queries';
-import { NavLink } from 'react-router-dom';
 import {
-  Briefcase,
-  Users,
-  TrendingUp,
+  Activity,
   ArrowRight,
-  Clock,
+  Briefcase,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
   FileSpreadsheet,
   Plus,
+  Radio,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
+import type { AssessmentSummaryResponse } from '../../../types/assessment.types';
+
+const formatDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+
+const daysUntil = (dateStr: string) => {
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+const statusClasses = (status: AssessmentSummaryResponse['status']) => {
+  if (status === 'ACTIVE') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  }
+  if (status === 'DRAFT') {
+    return 'border-amber-200 bg-amber-50 text-amber-700';
+  }
+  return 'border-slate-200 bg-slate-50 text-slate-600';
+};
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const { data: assessments, isLoading } = useAssessments();
-
-  const activeCount = assessments?.filter(a => a.status === 'ACTIVE').length ?? 0;
-  const totalCount = assessments?.length ?? 0;
-  const draftCount = assessments?.filter(a => a.status === 'DRAFT').length ?? 0;
+  const { data: assessments = [], isLoading } = useAssessments();
 
   const firstName = user?.full_name?.split(' ')[0] || 'there';
+  const activeCount = assessments.filter((a) => a.status === 'ACTIVE').length;
+  const totalCount = assessments.length;
+  const draftCount = assessments.filter((a) => a.status === 'DRAFT').length;
+  const closedCount = assessments.filter((a) => a.status === 'CLOSED').length;
+  const closingSoon = assessments.filter((a) => a.status === 'ACTIVE' && daysUntil(a.window_end) <= 3).length;
+  const avgDuration = totalCount
+    ? Math.round(assessments.reduce((sum, a) => sum + a.interview_duration_mins, 0) / totalCount)
+    : 0;
+
+  const recentAssessments = [...assessments]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 4);
+
+  const activeAssessments = assessments
+    .filter((a) => a.status === 'ACTIVE')
+    .sort((a, b) => new Date(a.window_end).getTime() - new Date(b.window_end).getTime())
+    .slice(0, 3);
 
   const stats = [
     {
-      label: 'Campaigns',
+      label: 'Total Campaigns',
       value: totalCount,
+      helper: `${closedCount} closed`,
       icon: Briefcase,
-      borderClass: 'border-t-2 border-t-emerald-500/40',
-      trend: '+3 this month',
+      tone: 'emerald',
     },
     {
-      label: 'Active',
+      label: 'Live Now',
       value: activeCount,
-      icon: TrendingUp,
-      borderClass: 'border-t-2 border-t-emerald-500',
-      trend: '+2 this week',
+      helper: closingSoon ? `${closingSoon} closing soon` : 'No urgent deadlines',
+      icon: Radio,
+      tone: 'teal',
     },
     {
       label: 'Drafts',
       value: draftCount,
-      icon: Clock,
-      borderClass: 'border-t-2 border-t-slate-400',
-      trend: '0 pending',
+      helper: 'Ready to tune',
+      icon: Clock3,
+      tone: 'amber',
+    },
+    {
+      label: 'Avg Duration',
+      value: avgDuration,
+      suffix: 'm',
+      helper: 'Interview length',
+      icon: Activity,
+      tone: 'cyan',
     },
   ];
 
   const quickActions = [
     {
       to: '/assessments',
-      icon: Briefcase,
-      title: 'New Campaign',
-      desc: 'Create a role and publish candidate invites.',
+      icon: Sparkles,
+      title: 'Launch Campaign',
+      desc: 'Create a role, upload a JD, and generate an interview plan.',
+      cta: 'Build assessment',
     },
     {
       to: '/candidates',
       icon: FileSpreadsheet,
       title: 'Import Candidates',
-      desc: 'Upload CSV or add candidates manually.',
+      desc: 'Invite a batch from CSV or add candidates one by one.',
+      cta: 'Open pipeline',
     },
     {
-      to: '/candidates',
-      icon: Users,
-      title: 'Review Results',
-      desc: 'Compare evaluations and make decisions.',
+      to: '/evaluations',
+      icon: Target,
+      title: 'Review Decisions',
+      desc: 'Compare scores, narratives, strengths, and concerns.',
+      cta: 'Review outcomes',
     },
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-5 overflow-y-auto pr-1 ibot-scrollbar animate-fadeIn select-none">
-      {/* ── Greeting + Actions ───────────────────────────────────────────── */}
-      <div className="flex items-center justify-between flex-shrink-0 animate-slideDown">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-display">
-            Hey, {firstName}
-          </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Here's your hiring overview
-          </p>
-        </div>
-        <NavLink
-          to="/assessments"
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95 duration-150"
-        >
-          <Plus className="h-4 w-4" />
-          New Campaign
-        </NavLink>
-      </div>
+    <div className="ibot-scrollbar flex h-full min-h-0 flex-col gap-5 overflow-y-auto pr-1 animate-fadeIn">
+      <section className="ibot-hero-panel relative overflow-hidden rounded-2xl border border-white/80 p-5 shadow-xl shadow-slate-200/50 sm:p-6">
+        <div className="pointer-events-none absolute right-8 top-4 hidden h-32 w-32 rounded-full bg-emerald-300/20 blur-3xl lg:block" />
+        <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Hiring command center
+            </div>
+            <h1 className="font-display text-3xl font-black text-slate-950 sm:text-4xl">
+              Hey, {firstName}. Your interview pipeline is ready.
+            </h1>
+            <p className="mt-3 max-w-xl text-sm font-medium leading-relaxed text-slate-600">
+              Track active assessments, keep candidate invites moving, and jump straight into the work that needs attention.
+            </p>
+          </div>
 
-      {/* ── Stat Cards ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-shrink-0">
-        {stats.map((s, i) => {
-          const Icon = s.icon;
+          <div className="flex flex-wrap gap-3">
+            <NavLink
+              to="/candidates"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:text-emerald-700 hover:shadow-md active:translate-y-0 active:scale-[0.98]"
+            >
+              <Users className="h-4 w-4" />
+              Candidates
+            </NavLink>
+            <NavLink
+              to="/assessments"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98]"
+            >
+              <Plus className="h-4 w-4" />
+              New Campaign
+            </NavLink>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
           return (
             <div
-              key={s.label}
-              className={`ibot-card p-5 animate-slideUp transition-all duration-300 hover:scale-[1.02] hover:border-emerald-300 hover:shadow-md cursor-default ${s.borderClass}`}
-              style={{ animationDelay: `${i * 0.06}s` }}
+              key={stat.label}
+              className={`ibot-metric-card ibot-metric-${stat.tone} animate-slideUp`}
+              style={{ animationDelay: `${index * 0.05}s` }}
             >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {s.label}
-                </p>
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-500/10 text-emerald-600">
-                  <Icon className="h-4 w-4" />
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">{stat.label}</p>
+                  {isLoading ? (
+                    <div className="mt-3 h-9 w-20 rounded-lg ibot-shimmer" />
+                  ) : (
+                    <p className="mt-2 font-display text-4xl font-black text-slate-950">
+                      {stat.value}
+                      {stat.suffix && <span className="text-base text-slate-400">{stat.suffix}</span>}
+                    </p>
+                  )}
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100">
+                  <Icon className="h-5 w-5" />
                 </div>
               </div>
-              {isLoading ? (
-                <div className="h-8 w-14 rounded-md ibot-shimmer" />
-              ) : (
-                <div>
-                  <p className="font-bold tracking-tight text-slate-900 font-display text-3xl">
-                    {s.value}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-medium mt-1">
-                    {s.trend}
-                  </p>
-                </div>
-              )}
+              <p className="mt-4 text-xs font-bold text-slate-500">{stat.helper}</p>
             </div>
           );
         })}
-      </div>
+      </section>
 
-      {/* ── Quick Actions (High Interactivity) ────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-shrink-0">
-        {quickActions.map((a, i) => {
-          const Icon = a.icon;
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        {quickActions.map((action, index) => {
+          const Icon = action.icon;
           return (
             <NavLink
-              key={a.title}
-              to={a.to}
-              className="group ibot-card p-5 flex flex-col justify-between hover:border-emerald-500/30 hover:scale-[1.03] hover:shadow-glow-emerald/5 active:scale-[0.98] transition-all duration-300"
-              style={{ animationDelay: `${0.15 + i * 0.06}s` }}
+              key={action.title}
+              to={action.to}
+              className="group ibot-action-card animate-slideUp"
+              style={{ animationDelay: `${0.12 + index * 0.05}s` }}
             >
-              <div>
-                {/* Icon Container: scales and rotates on group hover */}
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-500/10 text-emerald-600 transition-all group-hover:scale-110 group-hover:rotate-6 duration-300">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">{a.title}</h3>
-                <p className="mt-1.5 text-xs text-slate-500 leading-relaxed font-medium">
-                  {a.desc}
-                </p>
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:rotate-3 group-hover:bg-emerald-600 group-hover:text-white">
+                <Icon className="h-5 w-5" />
               </div>
-              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                Open <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+              <h2 className="text-base font-black text-slate-950">{action.title}</h2>
+              <p className="mt-2 min-h-[42px] text-sm font-medium leading-relaxed text-slate-500">
+                {action.desc}
+              </p>
+              <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                <span className="text-xs font-black text-emerald-700">{action.cta}</span>
+                <ArrowRight className="h-4 w-4 text-emerald-700 transition-transform duration-200 group-hover:translate-x-1" />
               </div>
             </NavLink>
           );
         })}
-      </div>
+      </section>
 
-      {/* ── Recent Activity ──────────────────────────────────────────────── */}
-      <div className="ibot-card p-5 animate-slideUp stagger-4 flex-shrink-0">
-        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
-          <Clock className="h-4 w-4 text-emerald-500" />
-          Recent Activity
-        </h3>
-        <div className="divide-y divide-slate-100 text-xs font-semibold">
-          <div className="py-3 flex items-center justify-between group hover:bg-slate-100/50 hover:pl-2 rounded transition-all duration-200 cursor-default">
-            <div className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-[10px] transition-transform group-hover:scale-110">
-                JT
-              </div>
-              <p className="text-slate-600">
-                <span className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">Jeet Thakur</span> completed an interview for <span className="font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">Senior Node.js Developer</span>
+      <section className="grid min-h-[330px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
+        <div className="ibot-panel flex min-h-0 flex-col overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <div>
+              <h2 className="text-sm font-black text-slate-950">Active Campaigns</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                Upcoming windows sorted by closest deadline.
               </p>
             </div>
-            <span className="text-[10px] text-slate-400 pr-2 group-hover:text-slate-600">2h ago</span>
+            <NavLink
+              to="/assessments"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              View all
+            </NavLink>
           </div>
-          <div className="py-3 flex items-center justify-between group hover:bg-slate-100/50 hover:pl-2 rounded transition-all duration-200 cursor-default">
-            <div className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-full bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center font-bold text-[10px] transition-transform group-hover:scale-110">
-                SC
+
+          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+            {isLoading ? (
+              <div className="grid gap-3">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className="h-24 rounded-xl ibot-shimmer" />
+                ))}
               </div>
-              <p className="text-slate-600">
-                <span className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">Sarah Connor</span> completed an interview for <span className="font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">Security Analyst</span>
-              </p>
-            </div>
-            <span className="text-[10px] text-slate-400 pr-2 group-hover:text-slate-600">5h ago</span>
-          </div>
-          <div className="py-3 flex items-center justify-between group hover:bg-slate-100/50 hover:pl-2 rounded transition-all duration-200 cursor-default">
-            <div className="flex items-center gap-2.5">
-              <div className="h-6 w-6 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-[10px] transition-transform group-hover:scale-110">
-                iB
+            ) : activeAssessments.length === 0 ? (
+              <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
+                <Briefcase className="mb-3 h-9 w-9 text-slate-300" />
+                <p className="text-sm font-black text-slate-800">No active campaigns yet</p>
+                <p className="mt-1 max-w-sm text-xs font-medium text-slate-500">
+                  Launch a campaign when you are ready to start inviting candidates.
+                </p>
               </div>
-              <p className="text-slate-600">
-                Campaign <span className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">Senior Node.js Developer</span> was launched
-              </p>
-            </div>
-            <span className="text-[10px] text-slate-400 pr-2 group-hover:text-slate-600">1d ago</span>
+            ) : (
+              <div className="grid gap-3">
+                {activeAssessments.map((assessment) => {
+                  const remaining = daysUntil(assessment.window_end);
+                  return (
+                    <NavLink
+                      key={assessment.id}
+                      to="/assessments"
+                      className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-slate-950 group-hover:text-emerald-700">
+                            {assessment.title}
+                          </p>
+                          <p className="mt-1 truncate text-xs font-semibold text-slate-500">
+                            {assessment.role_name}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
+                          Live
+                        </span>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                        <div className="rounded-lg bg-slate-50 p-3">
+                          <p className="font-black text-slate-400">Duration</p>
+                          <p className="mt-1 font-black text-slate-800">{assessment.interview_duration_mins}m</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-3">
+                          <p className="font-black text-slate-400">Closes</p>
+                          <p className="mt-1 font-black text-slate-800">{formatDate(assessment.window_end)}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-3">
+                          <p className="font-black text-slate-400">Window</p>
+                          <p className={`mt-1 font-black ${remaining <= 1 ? 'text-red-600' : 'text-emerald-700'}`}>
+                            {remaining <= 0 ? 'Today' : `${remaining}d`}
+                          </p>
+                        </div>
+                      </div>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+
+        <div className="ibot-panel flex min-h-0 flex-col overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="text-sm font-black text-slate-950">Recent Campaign Activity</h2>
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              A quick pulse of the latest assessment records.
+            </p>
+          </div>
+          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2, 3].map((item) => (
+                  <div key={item} className="h-16 rounded-xl ibot-shimmer" />
+                ))}
+              </div>
+            ) : recentAssessments.length === 0 ? (
+              <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
+                <CalendarDays className="mb-3 h-9 w-9 text-slate-300" />
+                <p className="text-sm font-black text-slate-800">Nothing to show yet</p>
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  New campaigns will appear here as they are created.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentAssessments.map((assessment) => (
+                  <div
+                    key={assessment.id}
+                    className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:shadow-md"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-emerald-300 transition-all duration-200 group-hover:bg-emerald-600 group-hover:text-white">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-xs font-black text-slate-900">{assessment.title}</p>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black ${statusClasses(assessment.status)}`}>
+                          {assessment.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">
+                        {assessment.role_name} - closes {formatDate(assessment.window_end)}
+                      </p>
+                    </div>
+                    <TrendingUp className="h-4 w-4 text-slate-300 transition-all group-hover:text-emerald-600" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

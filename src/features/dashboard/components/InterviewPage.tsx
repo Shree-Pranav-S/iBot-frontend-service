@@ -3,12 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { InterviewRoom } from './InterviewRoom';
 import { WaitingRoom } from './WaitingRoom';
 import { DemoInterviewRoom } from './DemoInterviewRoom';
-import { ShieldAlert, AlertTriangle, Bot } from 'lucide-react';
+import { ShieldAlert, AlertTriangle } from 'lucide-react';
 
 export const InterviewPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token')?.trim() || null;
   const [view, setView] = useState<'waiting_room' | 'interview' | 'demo'>('waiting_room');
+  const [durationMins, setDurationMins] = useState<number>(30);
 
   if (token) {
     if (view === 'waiting_room') {
@@ -17,6 +18,7 @@ export const InterviewPage: React.FC = () => {
           token={token}
           onStartInterview={() => setView('interview')}
           onStartDemo={() => setView('demo')}
+          onDetailsLoaded={(details) => setDurationMins(details.interview_duration_mins)}
         />
       );
     }
@@ -31,44 +33,30 @@ export const InterviewPage: React.FC = () => {
     }
 
     return (
-      <div className="fixed inset-0 z-50 bg-white flex flex-col h-screen w-screen overflow-hidden">
-        <header className="h-14 border-b border-slate-200 bg-white/90 backdrop-blur-md flex-shrink-0 flex items-center px-6 justify-between shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white shadow-sm"
-              style={{ background: 'linear-gradient(135deg, #10b981, #0f766e)' }}
-            >
-              <Bot className="h-4 w-4" />
-            </div>
-            <span className="text-sm font-black text-slate-950">
-              iBot <span className="text-xs font-bold text-emerald-700 border border-emerald-200 rounded px-1.5 py-0.5 ml-1 bg-emerald-50">Interview Room</span>
-            </span>
-          </div>
-        </header>
-
-        <div className="flex-1 min-h-0 bg-slate-100 flex flex-col">
-          <InterviewRoom token={token} />
-        </div>
+      <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white">
+        <InterviewRoom token={token} durationMins={durationMins} />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto mt-20 max-w-md space-y-4 rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 border border-red-200 text-red-600 mx-auto">
+    <div className="ibot-waiting-room-bg flex h-screen items-center justify-center p-6">
+      <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/80 bg-white/90 p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600">
         <AlertTriangle className="h-6 w-6" />
       </div>
       <div className="space-y-2">
-        <h2 className="text-lg font-bold text-gray-950">Invalid Invitation Link</h2>
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <h2 className="text-lg font-black text-slate-950">Invalid invitation link</h2>
+        <p className="text-xs leading-relaxed text-slate-500">
           We could not find an interview invitation token in your link. Please use the complete URL provided in your invitation email.
         </p>
       </div>
-      <div className="flex gap-3 text-[10px] text-gray-500 border border-gray-100 bg-gray-50 rounded-xl p-4 text-left">
-        <ShieldAlert className="h-4.5 w-4.5 text-gray-400 shrink-0 mt-0.5" />
+      <div className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-left text-[10px] text-slate-500">
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
         <p className="leading-relaxed">
           If you believe this is an error, please reach out to your recruiter to get a fresh invitation link.
         </p>
+      </div>
       </div>
     </div>
   );

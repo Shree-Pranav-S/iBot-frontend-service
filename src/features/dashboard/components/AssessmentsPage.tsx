@@ -82,6 +82,10 @@ export const AssessmentsPage: React.FC = () => {
     e.preventDefault();
     setCreateError(null);
     try {
+      if (!Number.isFinite(createDuration) || createDuration < 2) {
+        throw new Error('Interview duration must be at least 2 minutes.');
+      }
+
       const fd = new FormData();
       fd.append('title', createTitle);
       fd.append('role_name', createRoleName);
@@ -161,7 +165,7 @@ export const AssessmentsPage: React.FC = () => {
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden gap-5 animate-fadeIn select-none">
-      {/* ── Left: Campaign List ──────────────────────────────────────────── */}
+      {/* â”€â”€ Left: Campaign List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="w-80 flex-shrink-0 flex flex-col h-full gap-4">
         <div className="flex justify-between items-center flex-shrink-0">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
@@ -181,7 +185,7 @@ export const AssessmentsPage: React.FC = () => {
         {loadingAssessments ? (
           <div className="flex-1 flex flex-col items-center justify-center ibot-card">
             <Loader2 className="h-6 w-6 text-emerald-500 animate-spin mb-2" />
-            <p className="text-[11px] text-slate-400 font-semibold">Loading…</p>
+            <p className="text-[11px] text-slate-400 font-semibold">Loadingâ€¦</p>
           </div>
         ) : assessments.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-5 text-center ibot-card border-dashed">
@@ -234,12 +238,12 @@ export const AssessmentsPage: React.FC = () => {
         )}
       </div>
 
-      {/* ── Right: Detail View ───────────────────────────────────────────── */}
+      {/* â”€â”€ Right: Detail View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 h-full min-w-0">
         {loadingDetails ? (
           <div className="flex flex-col items-center justify-center h-full ibot-card">
             <Loader2 className="h-8 w-8 text-emerald-500 animate-spin mb-3" />
-            <p className="text-xs text-slate-400 font-semibold">Loading details…</p>
+            <p className="text-xs text-slate-400 font-semibold">Loading detailsâ€¦</p>
           </div>
         ) : selectedAssessment ? (
           <div className="h-full ibot-card flex flex-col overflow-hidden animate-scaleIn">
@@ -251,15 +255,15 @@ export const AssessmentsPage: React.FC = () => {
                   <h2 className="text-lg font-extrabold text-slate-900 mb-1 font-display">{selectedAssessment.title}</h2>
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 font-medium">
                     <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 text-[10px]">{selectedAssessment.role_name}</span>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-300">Â·</span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5 text-slate-400" />
                       {selectedAssessment.interview_duration_mins}m
                     </span>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-300">Â·</span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      {new Date(selectedAssessment.window_start).toLocaleDateString()} – {new Date(selectedAssessment.window_end).toLocaleDateString()}
+                      {new Date(selectedAssessment.window_start).toLocaleDateString()} â€“ {new Date(selectedAssessment.window_end).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -297,7 +301,7 @@ export const AssessmentsPage: React.FC = () => {
                     <div>
                       <h3 className="text-xs font-bold text-slate-800">AI Analysis & Timeline</h3>
                       <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                        {selectedAssessment.jd_analysis?.skills?.length ?? 3} skills tracked · Plan generated
+                        {selectedAssessment.jd_analysis?.skills?.length ?? 3} skills tracked Â· Plan generated
                       </p>
                     </div>
                   </div>
@@ -466,7 +470,7 @@ export const AssessmentsPage: React.FC = () => {
         )}
       </div>
 
-      {/* ── Analysis Modal ───────────────────────────────────────────────── */}
+      {/* â”€â”€ Analysis Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showAnalysisModal && selectedAssessment && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-3xl max-h-[85vh] relative flex flex-col bg-white">
@@ -577,53 +581,36 @@ export const AssessmentsPage: React.FC = () => {
                   
                   {(() => {
                     const totalAllocated = selectedAssessment.interview_plan.sections.reduce((sum, s) => sum + s.allocated_mins, 0) || 1;
-                    const colors = [
-                      'bg-emerald-500',
-                      'bg-teal-500',
-                      'bg-cyan-500',
-                      'bg-indigo-500',
-                      'bg-slate-500',
-                    ];
                     return (
-                      <div className="space-y-4">
-                        {/* Segmented Horizontal Stacked Bar */}
-                        <div className="flex h-3.5 w-full rounded-full overflow-hidden bg-slate-100 border border-slate-200/20 shadow-inner group">
-                          {selectedAssessment.interview_plan.sections.map((section, idx) => {
-                            const pct = (section.allocated_mins / totalAllocated) * 100;
-                            const color = colors[idx % colors.length];
-                            return (
-                              <div
-                                key={idx}
-                                className={`${color} h-full transition-all duration-200 hover:opacity-85 hover:scale-y-110 cursor-pointer`}
-                                style={{ width: `${pct}%` }}
-                                title={`${section.section_name}: ${section.allocated_mins}m`}
-                              />
-                            );
-                          })}
-                        </div>
-
-                        {/* Legend row with swatches */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-                          {selectedAssessment.interview_plan.sections.map((section, idx) => {
-                            const color = colors[idx % colors.length];
-                            return (
-                              <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200/50 bg-slate-50/50 text-[11px] font-medium text-slate-700 transition-all hover:scale-[1.03] hover:bg-slate-100/50 cursor-default group">
-                                <span className={`h-2.5 w-2.5 rounded-full shrink-0 transition-transform group-hover:scale-110 ${color}`} />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate capitalize font-semibold leading-none mb-0.5 group-hover:text-emerald-700 transition-colors">
-                                    {section.section_name === 'self_intro' ? 'Introduction' : section.section_name.replace('_', ' ')}
-                                  </p>
-                                  {section.skill && (
-                                    <p className="text-[9px] text-slate-400 font-normal truncate">({section.skill})</p>
-                                  )}
+                      <div className="flex flex-col gap-2.5">
+                        {selectedAssessment.interview_plan.sections.map((section, idx) => {
+                          const pct = Math.round((section.allocated_mins / totalAllocated) * 100);
+                          return (
+                            <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white shadow-sm hover:border-emerald-200 hover:shadow-md transition-all">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <p className="text-xs font-bold text-slate-800 capitalize">
+                                      {section.section_name === 'self_intro' ? 'Introduction' : section.section_name.replace(/_/g, ' ')}
+                                    </p>
+                                    {section.skill && (
+                                      <p className="text-[10px] text-slate-400 font-medium mt-0.5 truncate">{section.skill}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded shadow-sm shrink-0">
+                                    {section.allocated_mins} min
+                                  </span>
                                 </div>
-                                <span className="text-[10px] font-bold text-emerald-700 bg-white border border-emerald-100 px-1.5 py-0.5 rounded transition-transform group-hover:scale-105">
-                                  {section.allocated_mins}m
-                                </span>
+                                <div className="flex items-center gap-3">
+                                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-slate-400 w-8 text-right">{pct}%</span>
+                                </div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()}
@@ -644,7 +631,7 @@ export const AssessmentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── Create Modal ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Create Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showCreateModal && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-2xl max-h-[88vh]">
@@ -702,19 +689,16 @@ export const AssessmentsPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Duration</label>
-                    <select
+                    <input
+                      required
+                      type="number"
+                      min={2}
+                      max={180}
+                      step={1}
                       value={createDuration}
                       onChange={(e) => setCreateDuration(Number(e.target.value))}
                       className={inputStyles}
-                    >
-                      <option value={5}>5 min</option>
-                      <option value={10}>10 min</option>
-                      <option value={15}>15 min</option>
-                      <option value={30}>30 min</option>
-                      <option value={45}>45 min</option>
-                      <option value={60}>60 min</option>
-                      <option value={90}>90 min</option>
-                    </select>
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Start</label>
@@ -802,7 +786,7 @@ export const AssessmentsPage: React.FC = () => {
                   <textarea
                     required value={createJdText}
                     onChange={(e) => setCreateJdText(e.target.value)}
-                    placeholder="Paste the job requirements and qualifications…"
+                    placeholder="Paste the job requirements and qualificationsâ€¦"
                     rows={4}
                     className={`${inputStyles} resize-none`}
                   />
@@ -842,7 +826,7 @@ export const AssessmentsPage: React.FC = () => {
                 {createMutation.isPending ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Analyzing…
+                    Analyzingâ€¦
                   </>
                 ) : (
                   'Launch'
@@ -855,7 +839,7 @@ export const AssessmentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── JD Modal ────────────────────────────────────────────────────── */}
+      {/* â”€â”€ JD Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showJdModal && selectedAssessment && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-2xl max-h-[85vh] animate-scaleIn">
@@ -895,3 +879,5 @@ export const AssessmentsPage: React.FC = () => {
     </div>
   );
 };
+
+

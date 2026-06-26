@@ -62,6 +62,8 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const testAudioRef = useRef<HTMLAudioElement | null>(null);
   const onDetailsLoadedRef = useRef(onDetailsLoaded);
+  const lastVolumeUpdateRef = useRef(0);
+  const lastVolumeRef = useRef(0);
 
   useEffect(() => {
     onDetailsLoadedRef.current = onDetailsLoaded;
@@ -162,6 +164,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
       source.connect(analyser);
 
       const bufferLength = analyser.frequencyBinCount;
@@ -175,7 +178,17 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
         }
         const average = sum / bufferLength;
         const mapped = Math.min(100, Math.round((average / 80) * 100));
-        setMicVolume(mapped);
+        const now = performance.now();
+
+        if (
+          now - lastVolumeUpdateRef.current >= 100 &&
+          Math.abs(mapped - lastVolumeRef.current) >= 2
+        ) {
+          lastVolumeUpdateRef.current = now;
+          lastVolumeRef.current = mapped;
+          setMicVolume(mapped);
+        }
+
         animationRef.current = requestAnimationFrame(updateVolume);
       };
 
@@ -199,6 +212,8 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    lastVolumeUpdateRef.current = 0;
+    lastVolumeRef.current = 0;
   };
 
   useEffect(() => {
@@ -335,7 +350,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
     <div className="ibot-waiting-room-bg flex h-screen flex-col overflow-hidden text-slate-900">
       <audio ref={testAudioRef} onEnded={() => setIsPlayingTest(false)} className="hidden" />
 
-      <header className="z-20 flex h-[76px] shrink-0 items-center justify-between border-b border-white/80 bg-white/80 px-4 shadow-sm shadow-slate-200/60 backdrop-blur-2xl sm:px-6">
+      <header className="z-20 flex h-[76px] shrink-0 items-center justify-between border-b border-white/80 bg-white/[0.96] px-4 shadow-sm shadow-slate-200/60 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
             <Shield className="h-5 w-5" />

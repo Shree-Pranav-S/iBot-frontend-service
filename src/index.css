@@ -142,9 +142,7 @@
   }
 
   .ibot-glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(255, 255, 255, 0.9);
   }
 
   /* Dark mesh background treatment */
@@ -582,8 +580,6 @@
     background:
       linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.82)),
       linear-gradient(90deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05));
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 
   .ibot-command-panel {
@@ -593,8 +589,6 @@
       linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
       linear-gradient(90deg, rgba(16, 185, 129, 0.08), rgba(79, 70, 229, 0.05));
     box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
-    backdrop-filter: blur(22px) saturate(170%);
-    -webkit-backdrop-filter: blur(22px) saturate(170%);
   }
 
   .ibot-panel {
@@ -602,8 +596,6 @@
     border: 1px solid rgba(226, 232, 240, 0.92);
     background: rgba(255, 255, 255, 0.92);
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.07);
-    backdrop-filter: blur(22px) saturate(175%);
-    -webkit-backdrop-filter: blur(22px) saturate(175%);
   }
 
   .ibot-action-card {
@@ -688,8 +680,6 @@
     background:
       linear-gradient(135deg, rgba(236, 253, 245, 0.92), rgba(240, 253, 250, 0.86)),
       radial-gradient(circle at 90% 20%, rgba(16, 185, 129, 0.2), transparent 28%);
-    backdrop-filter: blur(18px) saturate(170%);
-    -webkit-backdrop-filter: blur(18px) saturate(170%);
   }
 
   .ibot-stage-panel {
@@ -697,8 +687,6 @@
       linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.56)),
       radial-gradient(circle at 50% 12%, rgba(16, 185, 129, 0.14), transparent 36%),
       radial-gradient(circle at 82% 70%, rgba(6, 182, 212, 0.09), transparent 24%);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 
   .ibot-caption-panel {
@@ -1009,15 +997,11 @@
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(248, 250, 252, 0.68)),
       linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(79, 70, 229, 0.04));
-    backdrop-filter: blur(24px) saturate(170%);
-    -webkit-backdrop-filter: blur(24px) saturate(170%);
   }
 
   .ibot-caption-panel {
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.86));
-    backdrop-filter: blur(22px) saturate(165%);
-    -webkit-backdrop-filter: blur(22px) saturate(165%);
   }
 
   .ibot-agent-avatar {
@@ -1030,6 +1014,7 @@
     place-items: center;
     isolation: isolate;
     perspective: 1000px;
+    contain: layout paint style;
   }
 
   .ibot-agent-avatar-sm {
@@ -1061,6 +1046,7 @@
     opacity: 0.42;
     transform: rotateX(64deg) translateY(42px) scale(var(--agent-scale));
     transition: opacity 180ms ease, border-color 180ms ease;
+    will-change: transform, opacity;
   }
 
   .ibot-agent-ring.ring-one {
@@ -1086,12 +1072,11 @@
     justify-items: center;
     transform: scale(var(--agent-scale)) translateZ(0);
     transform-style: preserve-3d;
-    animation: ibot-agent-idle 5.2s ease-in-out infinite;
-    filter: drop-shadow(0 28px 34px rgba(15, 23, 42, 0.16));
+    will-change: transform;
   }
 
   .ibot-agent-avatar.is-speaking .ibot-agent-core {
-    animation: ibot-agent-idle 5.2s ease-in-out infinite, ibot-agent-speak 170ms linear infinite;
+    animation: ibot-agent-speaking 760ms ease-in-out infinite;
   }
 
   .ibot-agent-device {
@@ -1138,6 +1123,7 @@
     inset: 0;
     background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.14) 18%, transparent 36%);
     transform: translateX(-120%);
+    will-change: transform;
   }
 
   .ibot-agent-avatar.is-speaking .ibot-agent-face::after {
@@ -1176,12 +1162,15 @@
 
   .ibot-agent-waveform i {
     width: 4px;
-    height: 7px;
+    height: 12px;
     border-radius: 999px;
     background: #9fffd7;
     opacity: 0.7;
     box-shadow: 0 0 9px rgba(52, 211, 153, 0.48);
-    transition: height 180ms ease, opacity 180ms ease;
+    transform: scaleY(0.58);
+    transform-origin: center;
+    transition: transform 180ms ease, opacity 180ms ease;
+    will-change: transform;
   }
 
   .ibot-agent-avatar.is-speaking .ibot-agent-waveform i {
@@ -1238,26 +1227,18 @@
     width: calc(220px * var(--agent-scale));
     height: calc(34px * var(--agent-scale));
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.14);
-    filter: blur(12px);
+    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.02) 66%, transparent 74%);
     transform: rotateX(68deg);
   }
 
-  @keyframes ibot-agent-idle {
-    0%, 100% { transform: scale(var(--agent-scale)) translateY(0) rotateY(-5deg); }
-    50% { transform: scale(var(--agent-scale)) translateY(-6px) rotateY(5deg); }
-  }
-
-  @keyframes ibot-agent-speak {
-    0%, 100% { margin-left: 0; margin-top: 0; }
-    25% { margin-left: -1px; margin-top: 0.5px; }
-    50% { margin-left: 1px; margin-top: -0.5px; }
-    75% { margin-left: -0.5px; margin-top: -0.5px; }
+  @keyframes ibot-agent-speaking {
+    0%, 100% { transform: scale(var(--agent-scale)) translateY(0) rotateY(-4deg); }
+    50% { transform: scale(var(--agent-scale)) translateY(-3px) rotateY(4deg); }
   }
 
   @keyframes ibot-agent-wave {
-    0%, 100% { height: 7px; }
-    50% { height: 22px; }
+    0%, 100% { transform: scaleY(0.6); }
+    50% { transform: scaleY(1.65); }
   }
 
   @keyframes ibot-agent-ring-pulse {

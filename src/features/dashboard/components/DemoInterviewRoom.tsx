@@ -125,7 +125,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
         onPause={() => setIsBotSpeaking(false)}
       />
 
-      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.86] px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
+      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.96] px-4 py-3 shadow-sm shadow-slate-200/50 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onExit}
@@ -180,7 +180,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
             <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
               <Ibot3DAvatar isSpeaking={isBotSpeaking} />
 
-              <div className="rounded-lg border border-white/80 bg-white/[0.86] px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+              <div className="rounded-lg border border-white/80 bg-white/[0.9] px-5 py-4 shadow-lg shadow-slate-200/60">
                 <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
                   <span className={`h-2 w-2 rounded-full ${isRecording || isBotSpeaking ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
                   Practice status
@@ -233,7 +233,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
             </div>
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.86] shadow-xl shadow-slate-900/10 backdrop-blur-2xl">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.92] shadow-xl shadow-slate-900/10">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div>
                 <p className="text-[10px] font-black uppercase text-emerald-700">Practice room</p>

@@ -62,6 +62,7 @@ export interface TranscriptEvidence {
   turn_number: number | null;
   section: string | null;
   skill: string | null;
+  question?: string | null;
   quote: string;
   interpretation: string;
 }
@@ -90,6 +91,9 @@ export interface EvaluationSectionSummary {
   difficulty_reached: string | number | null;
   questions_asked: number | null;
   evidence?: TranscriptEvidence[];
+  signals_demonstrated?: string[];
+  signals_missing?: string[];
+  score_basis?: string | null;
 }
 
 export interface HighlightAnswer {
@@ -105,11 +109,18 @@ export interface RedFlag {
   severity: 'critical' | 'minor';
 }
 
+export interface ViolationEntry {
+  turn_number?: number | null;
+  violation_type?: string | null;
+  severity?: string | null;
+  [key: string]: unknown;
+}
+
 export interface ViolationSummary {
   total_irrelevant: number;
   total_silences: number;
   terminated_early: boolean;
-  entries: any[];
+  entries: ViolationEntry[];
 }
 
 export interface InterviewEvaluationResponse {
@@ -137,7 +148,7 @@ export interface InterviewEvaluationResponse {
   cultural_fit_evidence: string[];
   cultural_fit_summary: string;
   tone_classification_score: number | null;
-  tone_distribution: any[] | null;
+  tone_distribution: Record<string, unknown>[] | null;
   
   // Section summaries
   section_summaries: Record<string, EvaluationSectionSummary>;

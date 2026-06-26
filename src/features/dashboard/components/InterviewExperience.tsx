@@ -78,6 +78,12 @@ export const StatusPill: React.FC<{ status: string; isBotSpeaking: boolean }> = 
       pulse: true,
       shell: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     },
+    complete: {
+      color: 'bg-emerald-500',
+      label: 'Complete',
+      pulse: false,
+      shell: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    },
     error: {
       color: 'bg-red-500',
       label: 'Error',
@@ -101,9 +107,9 @@ export const StatusPill: React.FC<{ status: string; isBotSpeaking: boolean }> = 
   );
 };
 
-export const Ibot3DAvatar: React.FC<{ isSpeaking: boolean; compact?: boolean }> = ({
-  isSpeaking,
-  compact = false,
+export const Ibot3DAvatar = React.memo(({ isSpeaking, compact = false }: {
+  isSpeaking: boolean;
+  compact?: boolean;
 }) => (
   <div
     className={`ibot-agent-avatar ${compact ? 'ibot-agent-avatar-sm' : ''} ${
@@ -138,17 +144,22 @@ export const Ibot3DAvatar: React.FC<{ isSpeaking: boolean; compact?: boolean }> 
 
     <div className="ibot-agent-shadow" aria-hidden="true" />
   </div>
-);
+));
 
 const formatTime = (date: Date) =>
   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-const CaptionCard: React.FC<{
+const CaptionCard = React.memo(({
+  message,
+  isActive = false,
+  isBotSpeaking,
+  isRecording,
+}: {
   message: ChatMessage;
   isActive?: boolean;
   isBotSpeaking: boolean;
   isRecording: boolean;
-}> = ({ message, isActive = false, isBotSpeaking, isRecording }) => {
+}) => {
   const isAssistant = message.role === 'assistant';
   const showLiveDots =
     !message.isFinal && (isAssistant ? isBotSpeaking : isRecording);
@@ -190,7 +201,7 @@ const CaptionCard: React.FC<{
               {formatTime(message.timestamp)}
             </p>
           </div>
-          {isAssistant && isBotSpeaking && (
+          {isActive && isAssistant && isBotSpeaking && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700">
               <Volume2 className="h-2.5 w-2.5" />
               Live
@@ -226,29 +237,33 @@ const CaptionCard: React.FC<{
       </p>
     </div>
   );
-};
+});
 
-export const TranscriptPanel: React.FC<{
+export const TranscriptPanel = React.memo(({
+  messages,
+  isBotSpeaking,
+  isRecording = false,
+}: {
   messages: ChatMessage[];
   isBotSpeaking: boolean;
   isRecording?: boolean;
-}> = ({ messages, isBotSpeaking, isRecording = false }) => {
+}) => {
   const visibleMessages = messages.filter((message) => message.text?.trim());
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollKey = visibleMessages
-    .map((message) => `${message.id}:${message.text.length}:${message.isFinal ? 'final' : 'partial'}`)
-    .join('|');
+  const activeMessage = visibleMessages[visibleMessages.length - 1];
+  const scrollKey = activeMessage
+    ? `${activeMessage.id}:${activeMessage.text.length}:${activeMessage.isFinal ? 'final' : 'partial'}`
+    : '';
 
   useEffect(() => {
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
 
-    window.requestAnimationFrame(() => {
-      scrollEl.scrollTo({
-        top: scrollEl.scrollHeight,
-        behavior: 'smooth',
-      });
+    const frame = window.requestAnimationFrame(() => {
+      scrollEl.scrollTop = scrollEl.scrollHeight;
     });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [scrollKey]);
 
   if (visibleMessages.length === 0) {
@@ -264,11 +279,10 @@ export const TranscriptPanel: React.FC<{
     );
   }
 
-  const activeMessage = visibleMessages[visibleMessages.length - 1];
   const history = visibleMessages.slice(Math.max(0, visibleMessages.length - 6), -1);
 
   return (
-    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 scroll-smooth overflow-y-auto pr-1">
+    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 overflow-y-auto pr-1">
       <div className="space-y-3 pb-1">
         {history.map((message) => {
           if (message.role === 'system') {
@@ -308,7 +322,7 @@ export const TranscriptPanel: React.FC<{
       </div>
     </div>
   );
-};
+});
 
 export const CompletionNotice: React.FC<{ type: 'complete' | 'terminated' | 'ended' }> = ({
   type,
@@ -352,9 +366,9 @@ export const CompletionNotice: React.FC<{ type: 'complete' | 'terminated' | 'end
   );
 };
 
-export const TimerPill: React.FC<{ value: string }> = ({ value }) => (
+export const TimerPill = React.memo(({ value }: { value: string }) => (
   <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-black text-slate-700 shadow-sm backdrop-blur">
     <Clock className="h-3.5 w-3.5 text-emerald-600" />
     <span className="font-mono">{value}</span>
   </span>
-);
+));

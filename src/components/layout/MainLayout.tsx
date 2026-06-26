@@ -202,7 +202,7 @@ export const MainLayout: React.FC = () => {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-10 flex h-[84px] shrink-0 items-center justify-between border-b border-white/70 bg-white/[0.78] px-4 shadow-sm shadow-slate-200/40 backdrop-blur-2xl sm:px-6 lg:px-8">
+        <header className="z-10 flex h-[84px] shrink-0 items-center justify-between border-b border-white/70 bg-white/[0.96] px-4 shadow-sm shadow-slate-200/40 sm:px-6 lg:px-8">
           <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
               {user?.company_name || currentCopy.eyebrow}

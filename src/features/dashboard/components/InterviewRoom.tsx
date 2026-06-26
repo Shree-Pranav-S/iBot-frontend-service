@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import '@livekit/components-styles/index.css';
 import {
   LiveKitRoom,
@@ -23,6 +23,7 @@ import {
 import { useLiveKitInterviewToken } from '../hooks/useLiveKitInterviewToken';
 import type { ChatMessage } from '../../../types/socket.types';
 import {
+  CompletionNotice,
   Ibot3DAvatar,
   StatusPill,
   TimerPill,
@@ -32,6 +33,14 @@ import {
 const TRANSCRIPTION_FINAL_ATTRIBUTE = 'lk.transcription_final';
 const TRANSCRIPTION_SEGMENT_ATTRIBUTE = 'lk.segment_id';
 const TURN_GROUP_GAP_MS = 12_000;
+const MAX_RENDERED_TRANSCRIPTION_SEGMENTS = 96;
+const CLOSING_MESSAGE_MARKERS = [
+  'thank you for completing the interview',
+  'thank you for completing it',
+  'next step will be handled after this session',
+  'i have enough information from this interview',
+  'i have captured your responses',
+];
 
 type LiveTranscription = ReturnType<typeof useTranscriptions>[number];
 
@@ -83,6 +92,13 @@ const isAssistantIdentity = (identity: string, localIdentity: string) => {
   );
 };
 
+const isClosingInterviewMessage = (message: ChatMessage) => {
+  if (message.role !== 'assistant') return false;
+
+  const text = message.text.toLowerCase().replace(/\s+/g, ' ').trim();
+  return CLOSING_MESSAGE_MARKERS.some((marker) => text.includes(marker));
+};
+
 const buildTurnMessages = (
   transcriptions: LiveTranscription[],
   localIdentity: string,
@@ -95,7 +111,12 @@ const buildTurnMessages = (
     }
   > = [];
 
-  const sorted = [...transcriptions]
+  const recentTranscriptions =
+    transcriptions.length > MAX_RENDERED_TRANSCRIPTION_SEGMENTS
+      ? transcriptions.slice(-MAX_RENDERED_TRANSCRIPTION_SEGMENTS)
+      : transcriptions;
+
+  const sorted = [...recentTranscriptions]
     .filter((transcription) => transcription.text?.trim())
     .sort(
       (a, b) =>
@@ -153,6 +174,46 @@ const buildTurnMessages = (
     replyType: message.replyType,
   }));
 };
+
+const InterviewTimer = React.memo(function InterviewTimer({
+  durationMins,
+  startedAtMs,
+  isRunning,
+}: {
+  durationMins?: number;
+  startedAtMs: number;
+  isRunning: boolean;
+}) {
+  const [elapsedSecs, setElapsedSecs] = useState(0);
+
+  useEffect(() => {
+    const updateElapsed = () => {
+      setElapsedSecs(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
+    };
+
+    updateElapsed();
+    if (!isRunning) return;
+
+    const intervalId = window.setInterval(updateElapsed, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [isRunning, startedAtMs]);
+
+  const timerText = useMemo(() => {
+    if (!durationMins) {
+      const minutes = Math.floor(elapsedSecs / 60);
+      const seconds = elapsedSecs % 60;
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    const totalSeconds = durationMins * 60;
+    const remaining = Math.max(0, totalSeconds - elapsedSecs);
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, [durationMins, elapsedSecs]);
+
+  return <TimerPill value={timerText} />;
+});
 
 interface InterviewRoomProps {
   token: string;
@@ -247,17 +308,11 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
   const { agent, state: agentState } = useVoiceAssistant();
   const transcriptions = useTranscriptions();
 
-  const [elapsedSecs, setElapsedSecs] = useState(0);
   const [micError, setMicError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (connectionState === ConnectionState.Connected) {
-      const id = window.setInterval(() => {
-        setElapsedSecs((value) => value + 1);
-      }, 1000);
-      return () => window.clearInterval(id);
-    }
-  }, [connectionState]);
+  const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
+  const [sessionPhase, setSessionPhase] = useState<'active' | 'complete' | 'ended'>('active');
+  const hasConnectedRef = useRef(false);
+  const hasAutoDisconnectedRef = useRef(false);
 
   useEffect(() => {
     if (connectionState !== ConnectionState.Connected || isMicrophoneEnabled) return;
@@ -283,21 +338,8 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
     };
   }, [connectionState, isMicrophoneEnabled, localParticipant]);
 
-  const timerText = useMemo(() => {
-    if (!durationMins) {
-      const minutes = Math.floor(elapsedSecs / 60);
-      const seconds = elapsedSecs % 60;
-      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    const totalSeconds = durationMins * 60;
-    const remaining = Math.max(0, totalSeconds - elapsedSecs);
-    const minutes = Math.floor(remaining / 60);
-    const seconds = remaining % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }, [elapsedSecs, durationMins]);
-
   const endSession = () => {
+    setSessionPhase('ended');
     room.disconnect();
     if (onExit) onExit();
   };
@@ -324,16 +366,68 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
     () => buildTurnMessages(transcriptions, room.localParticipant.identity),
     [room.localParticipant.identity, transcriptions],
   );
+  const closingMessageDetected = useMemo(
+    () => messages.some(isClosingInterviewMessage),
+    [messages],
+  );
 
-  let statusStr: 'idle' | 'connecting' | 'connected' | 'error' | 'closed' = 'idle';
-  if (connectionState === ConnectionState.Connected && agentIsReady) statusStr = 'connected';
+  useEffect(() => {
+    if (connectionState === ConnectionState.Connected) {
+      hasConnectedRef.current = true;
+    }
+  }, [connectionState]);
+
+  useEffect(() => {
+    if (timerStartedAtMs !== null || agentState !== 'speaking') return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setTimerStartedAtMs(Date.now());
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [agentState, timerStartedAtMs]);
+
+  useEffect(() => {
+    if (!closingMessageDetected || botIsSpeaking || sessionPhase !== 'active') return;
+
+    const closeTimer = window.setTimeout(() => {
+      setSessionPhase('complete');
+
+      if (
+        !hasAutoDisconnectedRef.current &&
+        connectionState !== ConnectionState.Disconnected
+      ) {
+        hasAutoDisconnectedRef.current = true;
+        room.disconnect();
+      }
+    }, 400);
+
+    return () => window.clearTimeout(closeTimer);
+  }, [botIsSpeaking, closingMessageDetected, connectionState, room, sessionPhase]);
+
+  useEffect(() => {
+    if (
+      connectionState !== ConnectionState.Disconnected ||
+      !hasConnectedRef.current ||
+      sessionPhase !== 'active'
+    ) {
+      return;
+    }
+
+    setSessionPhase(closingMessageDetected ? 'complete' : 'ended');
+  }, [closingMessageDetected, connectionState, sessionPhase]);
+
+  let statusStr: 'idle' | 'connecting' | 'connected' | 'complete' | 'error' | 'closed' = 'idle';
+  if (sessionPhase === 'complete') statusStr = 'complete';
+  else if (sessionPhase === 'ended') statusStr = 'closed';
+  else if (connectionState === ConnectionState.Connected && agentIsReady) statusStr = 'connected';
   else if (connectionState === ConnectionState.Connected) statusStr = 'connecting';
   else if (connectionState === ConnectionState.Connecting) statusStr = 'connecting';
   else if (connectionState === ConnectionState.Disconnected) statusStr = 'closed';
 
   return (
     <div className="ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
-      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.86] px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
+      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.96] px-4 py-3 shadow-sm shadow-slate-200/50 sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
@@ -347,7 +441,13 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {isLive && <TimerPill value={timerText} />}
+          {timerStartedAtMs !== null && sessionPhase === 'active' && (
+            <InterviewTimer
+              durationMins={durationMins}
+              startedAtMs={timerStartedAtMs}
+              isRunning={isLive}
+            />
+          )}
           <StatusPill status={statusStr} isBotSpeaking={botIsSpeaking} />
           {isRecording && (
             <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 sm:inline-flex">
@@ -364,7 +464,7 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
               Mic connecting
             </span>
           )}
-          {isLive && (
+          {isLive && sessionPhase === 'active' && (
             <button
               onClick={endSession}
               className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-3 text-[11px] font-black text-red-500 shadow-sm transition-all hover:border-red-500 hover:bg-red-500 hover:text-white active:scale-[0.96]"
@@ -383,39 +483,45 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
             <div className="pointer-events-none absolute bottom-0 left-1/2 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
 
-            <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
-              <Ibot3DAvatar isSpeaking={botIsSpeaking} />
+            {sessionPhase === 'active' ? (
+              <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
+                <Ibot3DAvatar isSpeaking={botIsSpeaking} />
 
-              <div className="rounded-lg border border-white/80 bg-white/[0.86] px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
-                <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
-                  <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                  Session state
+                <div className="rounded-lg border border-white/80 bg-white/[0.9] px-5 py-4 shadow-lg shadow-slate-200/60">
+                  <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
+                    <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                    Session state
+                  </div>
+                  <p className="text-lg font-black text-slate-950">{readinessText}</p>
                 </div>
-                <p className="text-lg font-black text-slate-950">{readinessText}</p>
+
+                {connectionState === ConnectionState.Connecting && (
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-4 py-2 text-xs font-black text-slate-600 shadow-sm">
+                    <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                    Connecting...
+                  </div>
+                )}
+
+                {displayedMicError && isLive && (
+                  <div className="max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 shadow-sm">
+                    Microphone issue: {displayedMicError}
+                  </div>
+                )}
               </div>
+            ) : (
+              <div className="relative z-10 flex max-w-md flex-col items-center text-center" aria-live="polite">
+                <CompletionNotice type={sessionPhase === 'complete' ? 'complete' : 'ended'} />
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                  {sessionPhase === 'complete'
+                    ? 'Your interview has been submitted and the room is now closed.'
+                    : 'This interview room is no longer active.'}
+                </p>
+              </div>
+            )}
 
-              {connectionState === ConnectionState.Connecting && (
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-4 py-2 text-xs font-black text-slate-600 shadow-sm backdrop-blur">
-                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                  Connecting...
-                </div>
-              )}
-
-              {statusStr === 'closed' && (
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-5 py-2.5 text-xs font-black text-slate-600 shadow-sm">
-                  Interview concluded
-                </div>
-              )}
-
-              {displayedMicError && isLive && (
-                <div className="max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 shadow-sm">
-                  Microphone issue: {displayedMicError}
-                </div>
-              )}
-            </div>
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.86] shadow-xl shadow-slate-900/10 backdrop-blur-2xl">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.92] shadow-xl shadow-slate-900/10">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div>
                 <p className="text-[10px] font-black uppercase text-emerald-700">Live room</p>
@@ -444,6 +550,12 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
             <div className="min-h-0 flex-1 p-4">
               <TranscriptPanel messages={messages} isBotSpeaking={botIsSpeaking} isRecording={isRecording} />
             </div>
+
+            {sessionPhase !== 'active' && (
+              <div className="border-t border-slate-100 bg-white/70 px-4 py-3">
+                <CompletionNotice type={sessionPhase === 'complete' ? 'complete' : 'ended'} />
+              </div>
+            )}
           </section>
         </div>
       </main>

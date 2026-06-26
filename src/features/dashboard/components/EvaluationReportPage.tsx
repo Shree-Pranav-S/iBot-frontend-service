@@ -147,7 +147,7 @@ export const EvaluationReportPage: React.FC = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden animate-fadeIn">
-      <div className="mb-3 flex shrink-0 items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm animate-slideDown">
+      <div className="ibot-command-panel mb-3 flex shrink-0 items-center justify-between px-4 py-3 animate-slideDown">
         <button
           onClick={() => navigate('/evaluations')}
           className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 transition-colors hover:text-emerald-600"
@@ -162,7 +162,7 @@ export const EvaluationReportPage: React.FC = () => {
 
       <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="mb-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
-          <section className="ibot-card overflow-hidden p-5">
+          <section className="ibot-panel overflow-hidden p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-wide ${recommendationStyle(evaluation.hiring_recommendation)}`}>
@@ -200,7 +200,7 @@ export const EvaluationReportPage: React.FC = () => {
               {evaluation.role_name || 'Role'} - {evaluation.assessment_title || 'Assessment'}
               {evaluation.candidate_email ? ` - ${evaluation.candidate_email}` : ''}
             </p>
-            <p className="mt-3 max-w-4xl rounded-lg border border-emerald-100 bg-emerald-50/45 p-3 text-sm font-medium leading-relaxed text-slate-700">
+            <p className="mt-3 max-w-4xl rounded-lg border border-emerald-100 bg-emerald-50/[0.45] p-3 text-sm font-medium leading-relaxed text-slate-700">
               {evaluation.overall_narrative}
             </p>
             <p className="mt-3 text-xs font-medium leading-relaxed text-slate-500">
@@ -209,7 +209,7 @@ export const EvaluationReportPage: React.FC = () => {
             </p>
           </section>
 
-          <section className="ibot-card flex flex-col items-center justify-center p-5">
+          <section className="ibot-panel flex flex-col items-center justify-center p-5">
             <ScoreDial score={evaluation.overall_score} />
             <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Overall Score</p>
             <div className="mt-4 grid w-full grid-cols-2 gap-2 text-center">
@@ -282,7 +282,7 @@ export const EvaluationReportPage: React.FC = () => {
                 {Object.entries(evaluation.section_summaries ?? {}).map(([section, summary]) => {
                   const avg = scoreValue(summary.avg_score);
                   return (
-                    <div key={section} className="rounded-lg border border-slate-200 bg-slate-50/55 p-3">
+                    <div key={section} className="rounded-lg border border-slate-200 bg-slate-50/[0.55] p-3">
                       <div className="mb-1 flex items-end justify-between gap-3">
                         <p className="text-xs font-black capitalize text-slate-800">{section.replace(/_/g, ' ')}</p>
                         <p className="text-[10px] font-black text-slate-500">{avg === null ? 'N/A' : `${avg.toFixed(1)}/10`}</p>
@@ -380,7 +380,7 @@ const EvidencePanel: React.FC<{
 );
 
 const SignalList: React.FC<{ title: string; icon: React.ReactNode; items: string[]; tone: 'emerald' | 'amber' }> = ({ title, icon, items, tone }) => {
-  const classes = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50/45 text-emerald-800' : 'border-amber-100 bg-amber-50/55 text-amber-800';
+  const classes = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50/[0.45] text-emerald-800' : 'border-amber-100 bg-amber-50/[0.55] text-amber-800';
   return (
     <div className="ibot-card p-4">
       <div className="mb-3 flex items-center gap-2">
@@ -398,7 +398,7 @@ const SignalList: React.FC<{ title: string; icon: React.ReactNode; items: string
 };
 
 const AnswerHighlight: React.FC<{ title: string; answer: HighlightAnswer | null; tone: 'emerald' | 'red' }> = ({ title, answer, tone }) => {
-  const box = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50/45 text-emerald-800' : 'border-red-100 bg-red-50/45 text-red-800';
+  const box = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50/[0.45] text-emerald-800' : 'border-red-100 bg-red-50/[0.45] text-red-800';
   return (
     <div className="ibot-card p-4">
       <div className="mb-3 flex items-center gap-2">

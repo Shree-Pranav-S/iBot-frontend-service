@@ -137,8 +137,8 @@ export const EvaluationsPage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden animate-fadeIn select-none">
-      <div className="flex flex-col gap-3 animate-slideDown md:flex-row md:items-center md:justify-between">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden animate-fadeIn">
+      <div className="ibot-command-panel flex flex-col gap-3 p-4 animate-slideDown md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="font-display text-2xl font-black tracking-tight text-slate-950">Evaluations</h1>
           <p className="mt-0.5 text-sm font-medium text-slate-500">
@@ -156,8 +156,8 @@ export const EvaluationsPage: React.FC = () => {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[390px_minmax(0,1fr)]">
-        <div className="ibot-card flex min-h-0 flex-col overflow-hidden">
-          <div className="border-b border-slate-100 px-4 py-3">
+        <div className="ibot-panel flex min-h-0 flex-col overflow-hidden">
+          <div className="border-b border-slate-200/70 px-4 py-3">
             <p className="text-xs font-black uppercase tracking-wider text-slate-500">Completed Interviews</p>
           </div>
           <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
@@ -167,8 +167,8 @@ export const EvaluationsPage: React.FC = () => {
                 <button
                   key={evaluation.candidate_assessment_id}
                   onClick={() => setSelectedId(evaluation.candidate_assessment_id)}
-                  className={`mb-2 w-full rounded-xl border p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/35 ${
-                    active ? 'border-emerald-300 bg-emerald-50/70 shadow-sm' : 'border-slate-200 bg-white'
+                  className={`mb-2 w-full rounded-xl border p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/[0.35] ${
+                    active ? 'border-emerald-300 bg-white shadow-md shadow-emerald-900/5' : 'border-slate-200 bg-white'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -204,8 +204,8 @@ export const EvaluationsPage: React.FC = () => {
         </div>
 
         <div className="ibot-scrollbar min-h-0 overflow-y-auto pr-1">
-          <div className="ibot-card overflow-hidden">
-            <div className="border-b border-slate-100 bg-white p-5">
+          <div className="ibot-panel overflow-hidden">
+            <div className="border-b border-slate-200/70 bg-white/90 p-5">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -258,7 +258,7 @@ export const EvaluationsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-4 bg-slate-50/40 p-5">
+            <div className="space-y-4 bg-slate-50/[0.55] p-5">
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                 <ScoreCard label="Overall" score={selected.overall_score} icon={<Award className="h-4 w-4" />} />
                 <ScoreCard label="Technical" score={selected.technical_dimension_score} icon={<BrainCircuit className="h-4 w-4" />} />
@@ -345,7 +345,7 @@ const MetricCard: React.FC<{ label: string; value: number; suffix?: string; icon
   suffix = '',
   icon,
 }) => (
-  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
     <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
       {icon}
     </div>
@@ -359,7 +359,7 @@ const MetricCard: React.FC<{ label: string; value: number; suffix?: string; icon
 const ScoreCard: React.FC<{ label: string; score: number | null; icon: React.ReactNode }> = ({ label, score, icon }) => {
   const displayScore = score ?? 0;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${scoreColor(displayScore)} bg-slate-50 ring-1 ring-slate-100`}>
         {icon}
       </div>
@@ -379,11 +379,11 @@ const SignalList: React.FC<{
   tone: 'emerald' | 'amber';
 }> = ({ title, icon, items, tone }) => {
   const classes = tone === 'emerald'
-    ? 'border-emerald-100 bg-emerald-50/45 text-emerald-800'
-    : 'border-amber-100 bg-amber-50/55 text-amber-800';
+    ? 'border-emerald-100 bg-emerald-50/[0.45] text-emerald-800'
+    : 'border-amber-100 bg-amber-50/[0.55] text-amber-800';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       <div className="mb-3 flex items-center gap-2">
         {icon}
         <h3 className="text-sm font-black text-slate-900">{title}</h3>

@@ -240,9 +240,9 @@ export const CandidatesPage: React.FC = () => {
   });
 
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden animate-fadeIn select-none">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden animate-fadeIn">
       {/* ── Header Bar & Toolbar ─────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 flex-shrink-0 animate-slideDown">
+      <div className="ibot-command-panel flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 flex-shrink-0 p-3 animate-slideDown">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
             <Users className="h-4 w-4 text-emerald-500 animate-pulse" />
@@ -254,7 +254,7 @@ export const CandidatesPage: React.FC = () => {
             <select
               value={selectedCampaignId}
               onChange={(e) => setSelectedCampaignId(e.target.value)}
-              className="pl-2.5 pr-7 py-1.5 border border-slate-200 rounded-lg bg-white text-xs font-semibold text-slate-600 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all appearance-none cursor-pointer hover:border-emerald-300"
+              className="pl-3 pr-8 py-2 border border-slate-200 rounded-lg bg-white text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all appearance-none cursor-pointer hover:border-emerald-300 shadow-sm"
             >
               {loadingCampaigns ? (
                 <option>Loading…</option>
@@ -289,7 +289,7 @@ export const CandidatesPage: React.FC = () => {
               }
               setShowManualModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-emerald-200 px-3.5 py-2 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm hover:scale-[1.03] active:scale-[0.97]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-[11px] font-bold text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           >
             <Plus className="h-3.5 w-3.5" />
             Add
@@ -302,7 +302,7 @@ export const CandidatesPage: React.FC = () => {
               }
               setShowUploadModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-[11px] font-bold text-white hover:bg-emerald-700 transition-all shadow-sm hover:scale-[1.03] active:scale-[0.97]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 py-2 text-[11px] font-bold text-white hover:bg-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
             id="upload-csv-btn"
           >
             <Upload className="h-3.5 w-3.5" />
@@ -312,7 +312,7 @@ export const CandidatesPage: React.FC = () => {
       </div>
 
       {/* ── Table Container ──────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 ibot-card overflow-hidden flex flex-col bg-white">
+      <div className="flex-1 min-h-0 ibot-panel overflow-hidden flex flex-col bg-white">
         {loadingCandidates ? (
           <div className="flex-1 flex flex-col items-center justify-center">
             <Loader2 className="h-7 w-7 text-emerald-500 animate-spin mb-2" />
@@ -340,8 +340,8 @@ export const CandidatesPage: React.FC = () => {
         ) : (
           <div className="ibot-scrollbar flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-sm border-b border-slate-100 z-10">
-                <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none">
+              <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200 z-10">
+                <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   <th className="px-4 py-3 cursor-pointer hover:text-slate-700 transition-colors">
                     Candidate <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
                   </th>
@@ -368,7 +368,7 @@ export const CandidatesPage: React.FC = () => {
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2.5 transition-transform duration-200 group-hover:translate-x-0.5">
                         {/* Avatar container with 2px ring highlight on hover */}
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200/50 text-emerald-600 font-bold text-[11px] shrink-0 group-hover:ring-2 group-hover:ring-emerald-300 transition-all duration-250">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200/50 text-emerald-600 font-bold text-[11px] shrink-0 group-hover:ring-2 group-hover:ring-emerald-300 transition-all duration-300">
                           {c.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -453,7 +453,7 @@ export const CandidatesPage: React.FC = () => {
                         <button
                           onClick={() => handleDeleteCandidate(c.id)}
                           disabled={deleteMutation.isPending}
-                          className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-red-500 hover:bg-red-50 disabled:opacity-30 transition-colors shadow-none hover:text-red-650 hover:scale-110 active:scale-90"
+                          className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-red-500 hover:bg-red-50 disabled:opacity-30 transition-colors shadow-none hover:text-red-600 hover:scale-110 active:scale-90"
                           title="Delete Candidate"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -468,7 +468,7 @@ export const CandidatesPage: React.FC = () => {
         )}
 
         {/* Table Footer with Pagination Controls */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-100 flex-shrink-0 text-xs font-semibold text-slate-500 select-none">
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-500">
           <div>
             Showing {filteredCandidates.length} of {candidates.length} candidates
           </div>

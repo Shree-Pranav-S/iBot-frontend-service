@@ -8,16 +8,16 @@
   :root {
     /* Color - Light (App: Dashboard / Assessments / Candidates) */
     /* Replaced stark white with matte cool slate colors */
-    --bg-page: #EEF2F7;
+    --bg-page: #F3F6FB;
     --bg-surface: #FFFFFF;
     
     /* Fallback inside components mapped to standard background classes */
-    --bg-base: #EEF2F7;
+    --bg-base: #F3F6FB;
     --bg-elevated: #F8FAFC;
-    --bg-elevated-2: #E2E8F0;
+    --bg-elevated-2: #E4EAF2;
 
-    --border-default: #E2E8F0;
-    --border-subtle: #E5EAF1;
+    --border-default: #DDE5F0;
+    --border-subtle: #E7EDF5;
     --border-emphasis: #10B981;
     --accent-secondary: #4F46E5;
     --accent-secondary-soft: #EEF2FF;
@@ -37,7 +37,7 @@
     /* Radius scale */
     --radius-input-btn: 10px;
     --radius-pill: 9999px;
-    --radius-card: 14px;
+    --radius-card: 12px;
     --radius-modal: 20px;
     --radius-avatar: 9999px;
 
@@ -572,56 +572,87 @@
 
   .ibot-workspace-bg {
     background:
-      radial-gradient(circle at 8% 10%, rgba(16, 185, 129, 0.14), transparent 28%),
-      radial-gradient(circle at 88% 8%, rgba(20, 184, 166, 0.12), transparent 24%),
-      linear-gradient(135deg, #f8fbff 0%, #eef4f8 48%, #e8f2ef 100%);
+      linear-gradient(135deg, rgba(15, 23, 42, 0.035) 0 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.026) 0 1px, transparent 1px),
+      linear-gradient(135deg, #f8fbff 0%, #f3f6fb 48%, #edf4f6 100%);
+    background-size: 34px 34px, 34px 34px, auto;
   }
 
   .ibot-hero-panel {
     background:
-      linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.78)),
-      radial-gradient(circle at 12% 18%, rgba(16, 185, 129, 0.14), transparent 34%),
-      radial-gradient(circle at 86% 20%, rgba(20, 184, 166, 0.11), transparent 30%);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.82)),
+      linear-gradient(90deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05));
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 
+  .ibot-command-panel {
+    border-radius: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+      linear-gradient(90deg, rgba(16, 185, 129, 0.08), rgba(79, 70, 229, 0.05));
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.07);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+  }
+
   .ibot-panel {
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.82);
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
+    border-radius: 14px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.07);
     backdrop-filter: blur(22px) saturate(175%);
     -webkit-backdrop-filter: blur(22px) saturate(175%);
   }
 
   .ibot-action-card {
     display: flex;
-    min-height: 230px;
+    min-height: 210px;
     flex-direction: column;
-    border-radius: 20px;
+    border-radius: 14px;
     border: 1px solid rgba(226, 232, 240, 0.9);
-    background: rgba(255, 255, 255, 0.9);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 252, 0.94));
     padding: 20px;
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
     transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
   }
 
   .ibot-action-card:hover {
     border-color: rgba(16, 185, 129, 0.34);
     background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 22px 48px rgba(15, 23, 42, 0.1);
+    box-shadow: 0 22px 46px rgba(15, 23, 42, 0.1);
     transform: translateY(-3px);
+  }
+
+  .ibot-action-emerald:hover {
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+
+  .ibot-action-cyan:hover {
+    border-color: rgba(6, 182, 212, 0.42);
+  }
+
+  .ibot-action-indigo:hover {
+    border-color: rgba(79, 70, 229, 0.36);
   }
 
   .ibot-metric-card {
     position: relative;
     overflow: hidden;
-    border-radius: 20px;
+    border-radius: 14px;
     border: 1px solid rgba(226, 232, 240, 0.86);
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.94);
     padding: 20px;
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .ibot-metric-card:hover {
+    border-color: rgba(148, 163, 184, 0.46);
+    box-shadow: 0 20px 44px rgba(15, 23, 42, 0.09);
+    transform: translateY(-2px);
   }
 
   .ibot-metric-card::after {
@@ -630,7 +661,7 @@
     inset: auto 16px 0;
     height: 3px;
     border-radius: 999px 999px 0 0;
-    background: linear-gradient(90deg, rgba(16, 185, 129, 0.85), rgba(20, 184, 166, 0.75));
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.85), rgba(79, 70, 229, 0.55));
   }
 
   .ibot-metric-teal::after {
@@ -966,6 +997,279 @@
     100% { transform: scale(1.24); opacity: 0; }
   }
 
+  .ibot-interview-room-bg {
+    background:
+      linear-gradient(rgba(15, 23, 42, 0.024) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.024) 1px, transparent 1px),
+      linear-gradient(135deg, #f8fafc 0%, #f1f5f9 48%, #e7edf5 100%);
+    background-size: 36px 36px, 36px 36px, auto;
+  }
+
+  .ibot-stage-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(248, 250, 252, 0.68)),
+      linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(79, 70, 229, 0.04));
+    backdrop-filter: blur(24px) saturate(170%);
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
+  }
+
+  .ibot-caption-panel {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.86));
+    backdrop-filter: blur(22px) saturate(165%);
+    -webkit-backdrop-filter: blur(22px) saturate(165%);
+  }
+
+  .ibot-agent-avatar {
+    --agent-scale: 1;
+    position: relative;
+    display: grid;
+    width: min(360px, 70vw);
+    height: min(350px, 45vh);
+    min-height: 250px;
+    place-items: center;
+    isolation: isolate;
+    perspective: 1000px;
+  }
+
+  .ibot-agent-avatar-sm {
+    --agent-scale: 0.72;
+    width: min(260px, 68vw);
+    height: 240px;
+    min-height: 210px;
+  }
+
+  .ibot-agent-grid {
+    position: absolute;
+    inset: 20% 10% 11%;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 999px;
+    background-image:
+      linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+    background-size: 22px 22px;
+    opacity: 0.52;
+    mask-image: linear-gradient(90deg, transparent, black 22%, black 78%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 22%, black 78%, transparent);
+    transform: rotateX(66deg) translateY(46px) scale(var(--agent-scale));
+  }
+
+  .ibot-agent-ring {
+    position: absolute;
+    border-radius: 999px;
+    border: 1px solid rgba(16, 185, 129, 0.24);
+    opacity: 0.42;
+    transform: rotateX(64deg) translateY(42px) scale(var(--agent-scale));
+    transition: opacity 180ms ease, border-color 180ms ease;
+  }
+
+  .ibot-agent-ring.ring-one {
+    width: 270px;
+    height: 270px;
+  }
+
+  .ibot-agent-ring.ring-two {
+    width: 200px;
+    height: 200px;
+    border-color: rgba(6, 182, 212, 0.22);
+  }
+
+  .ibot-agent-avatar.is-speaking .ibot-agent-ring {
+    opacity: 0.82;
+    animation: ibot-agent-ring-pulse 1.45s ease-out infinite;
+  }
+
+  .ibot-agent-core {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    justify-items: center;
+    transform: scale(var(--agent-scale)) translateZ(0);
+    transform-style: preserve-3d;
+    animation: ibot-agent-idle 5.2s ease-in-out infinite;
+    filter: drop-shadow(0 28px 34px rgba(15, 23, 42, 0.16));
+  }
+
+  .ibot-agent-avatar.is-speaking .ibot-agent-core {
+    animation: ibot-agent-idle 5.2s ease-in-out infinite, ibot-agent-speak 170ms linear infinite;
+  }
+
+  .ibot-agent-device {
+    position: relative;
+    width: 218px;
+    height: 146px;
+    border-radius: 34px;
+    background:
+      linear-gradient(145deg, #ffffff 0%, #eef4f5 56%, #cfd9dd 100%);
+    box-shadow:
+      inset 14px 16px 28px rgba(255, 255, 255, 0.9),
+      inset -16px -18px 28px rgba(71, 85, 105, 0.18),
+      0 24px 46px rgba(15, 23, 42, 0.12);
+    transform: rotateX(2deg) rotateY(-6deg);
+  }
+
+  .ibot-agent-led {
+    position: absolute;
+    left: 50%;
+    top: -7px;
+    width: 92px;
+    height: 9px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #10b981, #06b6d4);
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.24);
+    transform: translateX(-50%);
+  }
+
+  .ibot-agent-face {
+    position: absolute;
+    inset: 34px 28px 38px;
+    overflow: hidden;
+    border-radius: 24px;
+    background:
+      linear-gradient(145deg, #06121c 0%, #0b1823 56%, #07111a 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      inset 0 -18px 26px rgba(0, 0, 0, 0.28);
+  }
+
+  .ibot-agent-face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.14) 18%, transparent 36%);
+    transform: translateX(-120%);
+  }
+
+  .ibot-agent-avatar.is-speaking .ibot-agent-face::after {
+    animation: ibot-agent-sheen 1.7s ease-in-out infinite;
+  }
+
+  .ibot-agent-eye {
+    position: absolute;
+    top: 27px;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: #77f8c7;
+    box-shadow: 0 0 18px rgba(52, 211, 153, 0.58);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .ibot-agent-eye.eye-left { left: 37px; }
+  .ibot-agent-eye.eye-right { right: 37px; }
+
+  .ibot-agent-avatar.is-speaking .ibot-agent-eye {
+    box-shadow: 0 0 24px rgba(52, 211, 153, 0.82);
+    transform: scaleY(1.08);
+  }
+
+  .ibot-agent-waveform {
+    position: absolute;
+    left: 50%;
+    bottom: 21px;
+    display: flex;
+    height: 22px;
+    align-items: center;
+    gap: 4px;
+    transform: translateX(-50%);
+  }
+
+  .ibot-agent-waveform i {
+    width: 4px;
+    height: 7px;
+    border-radius: 999px;
+    background: #9fffd7;
+    opacity: 0.7;
+    box-shadow: 0 0 9px rgba(52, 211, 153, 0.48);
+    transition: height 180ms ease, opacity 180ms ease;
+  }
+
+  .ibot-agent-avatar.is-speaking .ibot-agent-waveform i {
+    opacity: 1;
+    animation: ibot-agent-wave 620ms ease-in-out infinite;
+  }
+
+  .ibot-agent-stem {
+    width: 56px;
+    height: 24px;
+    margin-top: -3px;
+    border-radius: 0 0 16px 16px;
+    background: linear-gradient(180deg, #dbe6e8, #6b7d86);
+    box-shadow: inset 0 8px 10px rgba(255, 255, 255, 0.38);
+  }
+
+  .ibot-agent-base {
+    position: relative;
+    width: 160px;
+    height: 96px;
+    margin-top: -1px;
+    border-radius: 30px 30px 24px 24px;
+    background:
+      linear-gradient(145deg, #ffffff 0%, #e9f1f2 58%, #bdcbd0 100%);
+    box-shadow:
+      inset 12px 14px 22px rgba(255, 255, 255, 0.84),
+      inset -14px -16px 24px rgba(71, 85, 105, 0.18);
+  }
+
+  .ibot-agent-chip {
+    position: absolute;
+    left: 50%;
+    top: 27px;
+    display: flex;
+    width: 50px;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    color: white;
+    background: linear-gradient(145deg, #10b981, #0f766e);
+    box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.25), 0 14px 28px rgba(15, 118, 110, 0.26);
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .ibot-agent-chip svg {
+    transform: rotate(-45deg);
+  }
+
+  .ibot-agent-shadow {
+    position: absolute;
+    bottom: 34px;
+    z-index: 1;
+    width: calc(220px * var(--agent-scale));
+    height: calc(34px * var(--agent-scale));
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.14);
+    filter: blur(12px);
+    transform: rotateX(68deg);
+  }
+
+  @keyframes ibot-agent-idle {
+    0%, 100% { transform: scale(var(--agent-scale)) translateY(0) rotateY(-5deg); }
+    50% { transform: scale(var(--agent-scale)) translateY(-6px) rotateY(5deg); }
+  }
+
+  @keyframes ibot-agent-speak {
+    0%, 100% { margin-left: 0; margin-top: 0; }
+    25% { margin-left: -1px; margin-top: 0.5px; }
+    50% { margin-left: 1px; margin-top: -0.5px; }
+    75% { margin-left: -0.5px; margin-top: -0.5px; }
+  }
+
+  @keyframes ibot-agent-wave {
+    0%, 100% { height: 7px; }
+    50% { height: 22px; }
+  }
+
+  @keyframes ibot-agent-ring-pulse {
+    0% { transform: rotateX(64deg) translateY(42px) scale(var(--agent-scale)); opacity: 0.75; }
+    100% { transform: rotateX(64deg) translateY(42px) scale(var(--agent-scale)); opacity: 0; }
+  }
+
+  @keyframes ibot-agent-sheen {
+    0%, 30% { transform: translateX(-120%); }
+    70%, 100% { transform: translateX(120%); }
+  }
+
   .animate-scroll-mouse {
     animation: scroll-mouse 1.5s ease-in-out infinite;
   }
@@ -973,6 +1277,10 @@
   
   .ibot-card {
     @apply rounded-card border border-default bg-surface shadow-sm transition-all duration-200;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055);
+  }
+  .ibot-card:hover {
+    border-color: rgba(148, 163, 184, 0.45);
   }
   .ibot-card-clickable {
     @apply cursor-pointer;

@@ -174,9 +174,8 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
   if (!data) {
     return (
       <div className="ibot-interview-room-bg relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden p-6 text-slate-900">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-emerald-200/30 to-transparent" />
-        <div className="relative w-full max-w-xl rounded-3xl border border-white/80 bg-white/80 p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/20">
+        <div className="relative w-full max-w-xl rounded-lg border border-white/80 bg-white/[0.86] p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/20">
             <Sparkles className="h-9 w-9" />
           </div>
 
@@ -198,7 +197,7 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
           <button
             onClick={startInterview}
             disabled={loading}
-            className="mt-7 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-8 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98] disabled:opacity-60"
+            className="mt-7 inline-flex items-center gap-2 rounded-lg bg-slate-950 px-8 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -304,7 +303,8 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
   };
 
   const isLive = connectionState === ConnectionState.Connected;
-  const botIsActive = agentState === 'speaking' || agentState === 'thinking';
+  const botIsSpeaking = agentState === 'speaking';
+  const botIsProcessing = agentState === 'thinking';
   const micIsPublished = Boolean(microphoneTrack) && isMicrophoneEnabled;
   const agentIsReady = Boolean(agent) && agentState !== 'connecting' && agentState !== 'disconnected';
   const isRecording = isLive && micIsPublished && agentState === 'listening';
@@ -333,10 +333,10 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
 
   return (
     <div className="ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
-      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/75 px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
+      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.86] px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -348,7 +348,7 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
 
         <div className="flex shrink-0 items-center gap-2">
           {isLive && <TimerPill value={timerText} />}
-          <StatusPill status={statusStr} isBotSpeaking={botIsActive} />
+          <StatusPill status={statusStr} isBotSpeaking={botIsSpeaking} />
           {isRecording && (
             <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 sm:inline-flex">
               <AudioLines className="h-3.5 w-3.5" />
@@ -378,23 +378,20 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
       </header>
 
       <main className="min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-7xl grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(390px,0.72fr)]">
-          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/80 p-6 shadow-2xl shadow-slate-900/10">
-            <div className="pointer-events-none absolute inset-x-10 top-8 h-56 rounded-full bg-emerald-300/20 blur-3xl" />
+        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
+          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-lg border border-white/80 p-6 shadow-xl shadow-slate-900/10">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
             <div className="pointer-events-none absolute bottom-0 left-1/2 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
 
             <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
-              <Ibot3DAvatar isSpeaking={botIsActive} />
+              <Ibot3DAvatar isSpeaking={botIsSpeaking} />
 
-              <div className="rounded-2xl border border-white/80 bg-white/80 px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+              <div className="rounded-lg border border-white/80 bg-white/[0.86] px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
                 <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
-                  <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                  <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
                   Session state
                 </div>
                 <p className="text-lg font-black text-slate-950">{readinessText}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Speak naturally. Captions and transcript updates appear in the panel.
-                </p>
               </div>
 
               {connectionState === ConnectionState.Connecting && (
@@ -411,18 +408,18 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
               )}
 
               {displayedMicError && isLive && (
-                <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 shadow-sm">
+                <div className="max-w-md rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 shadow-sm">
                   Microphone issue: {displayedMicError}
                 </div>
               )}
             </div>
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/75 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.86] shadow-xl shadow-slate-900/10 backdrop-blur-2xl">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div>
-                <p className="text-[10px] font-black uppercase text-emerald-700">Live subtitles</p>
-                <h2 className="mt-1 text-sm font-black text-slate-950">Conversation captions</h2>
+                <p className="text-[10px] font-black uppercase text-emerald-700">Live room</p>
+                <h2 className="mt-1 text-sm font-black text-slate-950">Transcript</h2>
               </div>
               {isRecording ? (
                 <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-100">
@@ -445,7 +442,7 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
             </div>
 
             <div className="min-h-0 flex-1 p-4">
-              <TranscriptPanel messages={messages} isBotSpeaking={botIsActive} isRecording={isRecording} />
+              <TranscriptPanel messages={messages} isBotSpeaking={botIsSpeaking} isRecording={isRecording} />
             </div>
           </section>
         </div>

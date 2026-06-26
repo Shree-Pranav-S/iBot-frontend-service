@@ -125,7 +125,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
         onPause={() => setIsBotSpeaking(false)}
       />
 
-      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/75 px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
+      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.86] px-4 py-3 shadow-sm shadow-slate-200/50 backdrop-blur-2xl sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onExit}
@@ -134,7 +134,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
             <ChevronLeft className="h-3.5 w-3.5" />
             Exit
           </button>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -173,22 +173,19 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
       </header>
 
       <main className="ibot-interview-room-bg min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-7xl grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(390px,0.72fr)]">
-          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/80 p-6 shadow-2xl shadow-slate-900/10">
-            <div className="pointer-events-none absolute inset-x-10 top-8 h-56 rounded-full bg-emerald-300/20 blur-3xl" />
+        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
+          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-lg border border-white/80 p-6 shadow-xl shadow-slate-900/10">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
 
             <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
               <Ibot3DAvatar isSpeaking={isBotSpeaking} />
 
-              <div className="rounded-2xl border border-white/80 bg-white/80 px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+              <div className="rounded-lg border border-white/80 bg-white/[0.86] px-5 py-4 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
                 <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
                   <span className={`h-2 w-2 rounded-full ${isRecording || isBotSpeaking ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
                   Practice status
                 </div>
                 <p className="text-lg font-black text-slate-950">{statusCopy}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Use this space to check pacing, mic comfort, and answer flow.
-                </p>
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-3">
@@ -196,7 +193,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
                   <button
                     id="btn-connect-demo"
                     onClick={handleConnect}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-7 py-3 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98]"
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-7 py-3 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98]"
                   >
                     <Radio className="h-4 w-4" />
                     Connect
@@ -214,7 +211,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
                   <button
                     id="btn-start-demo-session"
                     onClick={handleStartSession}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-7 py-3 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98]"
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-7 py-3 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98]"
                   >
                     <Wifi className="h-4 w-4" />
                     Start Practice
@@ -226,7 +223,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
                   <button
                     id="btn-reconnect-demo"
                     onClick={handleConnect}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 text-xs font-black text-slate-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.98]"
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/90 px-5 py-3 text-xs font-black text-slate-600 shadow-sm transition-all hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.98]"
                   >
                     <WifiOff className="h-4 w-4" />
                     Reconnect
@@ -236,11 +233,11 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({ token, onE
             </div>
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/75 shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.86] shadow-xl shadow-slate-900/10 backdrop-blur-2xl">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div>
-                <p className="text-[10px] font-black uppercase text-emerald-700">Practice subtitles</p>
-                <h2 className="mt-1 text-sm font-black text-slate-950">Conversation captions</h2>
+                <p className="text-[10px] font-black uppercase text-emerald-700">Practice room</p>
+                <h2 className="mt-1 text-sm font-black text-slate-950">Transcript</h2>
               </div>
               {isRecording && (
                 <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-100">

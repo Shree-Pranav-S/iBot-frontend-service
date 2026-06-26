@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 import {
   Bot,
   Briefcase,
@@ -8,9 +7,11 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   LogOut,
+  Radio,
   Sparkles,
   Users,
 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
   {
@@ -39,24 +40,29 @@ const navItems = [
   },
 ];
 
-const pageCopy: Record<string, { title: string; subtitle: string }> = {
-  '/dashboard': {
-    title: 'Recruiter Dashboard',
-    subtitle: 'Monitor campaigns, candidate flow, and interview readiness.',
-  },
-  '/assessments': {
-    title: 'Assessment Studio',
-    subtitle: 'Create roles, tune interview plans, and manage campaign status.',
-  },
-  '/candidates': {
-    title: 'Candidate Pipeline',
-    subtitle: 'Invite candidates, review resumes, and track interview progress.',
-  },
-  '/evaluations': {
-    title: 'Evaluation Review',
-    subtitle: 'Compare interview outcomes and finalize decisions.',
-  },
-};
+const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: string }> =
+  {
+    '/dashboard': {
+      eyebrow: 'Recruiting ops',
+      title: 'Recruiter Dashboard',
+      subtitle: 'Monitor campaigns, candidate flow, and interview readiness.',
+    },
+    '/assessments': {
+      eyebrow: 'Assessment studio',
+      title: 'Assessment Studio',
+      subtitle: 'Create roles, tune interview plans, and manage campaign status.',
+    },
+    '/candidates': {
+      eyebrow: 'Pipeline',
+      title: 'Candidate Pipeline',
+      subtitle: 'Invite candidates, review resumes, and track interview progress.',
+    },
+    '/evaluations': {
+      eyebrow: 'Decisions',
+      title: 'Evaluation Review',
+      subtitle: 'Compare interview outcomes and finalize decisions.',
+    },
+  };
 
 export const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -70,49 +76,52 @@ export const MainLayout: React.FC = () => {
 
   const initials = (user?.full_name || 'R')
     .split(' ')
-    .map((n) => n[0])
+    .map((name) => name[0])
     .slice(0, 2)
     .join('')
     .toUpperCase();
 
   const currentCopy = pageCopy[location.pathname] ?? {
+    eyebrow: 'Workspace',
     title: 'iBot Workspace',
     subtitle: 'Manage interviews and candidate decisions.',
   };
 
   return (
-    <div className="ibot-workspace-bg flex h-screen w-screen overflow-hidden font-sans text-slate-900">
-      <aside className="relative z-30 flex w-[82px] shrink-0 flex-col border-r border-white/80 bg-white/80 shadow-[12px_0_36px_rgba(15,23,42,0.06)] backdrop-blur-2xl transition-all duration-300 lg:w-[286px]">
-        <div className="flex h-[86px] items-center gap-3 border-b border-slate-200/70 px-4 lg:px-5">
-          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
+    <div className="ibot-workspace-bg flex h-screen w-screen overflow-hidden font-sans text-slate-950">
+      <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 flex-col overflow-hidden border-r border-white/70 bg-slate-950 text-white shadow-[18px_0_48px_rgba(15,23,42,0.16)] transition-[width] duration-300 ease-out hover:w-[304px] focus-within:w-[304px] sm:flex">
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-500/[0.18] via-cyan-500/10 to-transparent" />
+
+        <div className="relative flex h-[84px] items-center gap-3 border-b border-white/10 px-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20">
             <Bot className="h-6 w-6" />
-            <span className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400" />
           </div>
-          <div className="hidden min-w-0 lg:block">
+          <div className="min-w-[180px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
             <div className="flex items-center gap-2">
-              <p className="font-display text-lg font-black text-slate-950">iBot</p>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-700">
+              <p className="font-display text-lg font-black">iBot</p>
+              <span className="rounded-full border border-emerald-300/[0.35] bg-emerald-300/[0.12] px-2 py-0.5 text-[10px] font-black uppercase text-emerald-200">
                 Pro
               </span>
             </div>
-            <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+            <p className="mt-0.5 truncate text-xs font-semibold text-slate-400">
               Interview intelligence suite
             </p>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-2 px-3 py-5 lg:px-4">
+        <nav className="relative flex-1 space-y-1.5 px-3 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
+                title={item.label}
                 className={({ isActive }) =>
-                  `group relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition-all duration-200 active:scale-[0.98] ${
+                  `group/item flex h-[58px] items-center gap-3 rounded-xl px-3 text-sm font-bold transition-all duration-200 active:scale-[0.98] ${
                     isActive
-                      ? 'bg-slate-950 text-white shadow-lg shadow-slate-900/10'
-                      : 'text-slate-500 hover:bg-white hover:text-slate-950 hover:shadow-md hover:shadow-slate-200/70'
+                      ? 'bg-white text-slate-950 shadow-lg shadow-black/20'
+                      : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
                   }`
                 }
               >
@@ -121,27 +130,27 @@ export const MainLayout: React.FC = () => {
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
                         isActive
-                          ? 'bg-white/10 text-emerald-300'
-                          : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700'
+                          ? 'bg-slate-950 text-emerald-300'
+                          : 'bg-white/[0.08] text-slate-300 group-hover/item:bg-emerald-300/[0.12] group-hover/item:text-emerald-200'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="hidden min-w-0 flex-1 lg:block">
+                    <span className="min-w-[150px] flex-1 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
                       <span className="block truncate">{item.label}</span>
                       <span
                         className={`mt-0.5 block truncate text-[10px] font-semibold ${
-                          isActive ? 'text-white/50' : 'text-slate-400'
+                          isActive ? 'text-slate-500' : 'text-slate-500'
                         }`}
                       >
                         {item.helper}
                       </span>
                     </span>
                     <ChevronRight
-                      className={`hidden h-4 w-4 transition-all duration-200 lg:block ${
+                      className={`h-4 w-4 shrink-0 opacity-0 transition-all duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100 ${
                         isActive
-                          ? 'translate-x-0 text-emerald-300 opacity-100'
-                          : '-translate-x-1 text-slate-300 opacity-0 group-hover:translate-x-0 group-hover:opacity-100'
+                          ? 'text-emerald-500'
+                          : 'text-slate-500 group-hover/item:text-emerald-200'
                       }`}
                     />
                   </>
@@ -151,74 +160,98 @@ export const MainLayout: React.FC = () => {
           })}
         </nav>
 
-        <div className="border-t border-slate-200/75 p-3 lg:p-4">
-          <div className="mb-3 hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-cyan-50 p-4 lg:block">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
+        <div className="relative border-t border-white/10 p-3">
+          <div className="mb-3 hidden min-w-[248px] rounded-xl border border-emerald-300/[0.15] bg-white/[0.06] p-3 shadow-sm group-hover/sidebar:block group-focus-within/sidebar:block">
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-300/[0.12] text-emerald-200">
               <Sparkles className="h-4 w-4" />
             </div>
-            <p className="text-xs font-black text-slate-900">Live workspace</p>
-            <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-500">
-              Campaign updates and candidate decisions stay synced with the API.
+            <p className="text-xs font-black text-white">Live workspace</p>
+            <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-400">
+              Campaign updates and decisions stay synced with the API.
             </p>
           </div>
 
-          <div className="mb-2 flex items-center gap-3 rounded-xl border border-slate-200/75 bg-white p-2 shadow-sm">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-xs font-black text-white shadow-md shadow-emerald-500/20">
+          <div className="mb-2 flex h-[58px] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-400 text-xs font-black text-slate-950">
               {initials}
             </div>
-            <div className="hidden min-w-0 flex-1 lg:block">
-              <p className="truncate text-xs font-black text-slate-900">
+            <div className="min-w-[170px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+              <p className="truncate text-xs font-black text-white">
                 {user?.full_name || 'Recruiter'}
               </p>
-              <p className="truncate text-[10px] font-semibold text-slate-400">{user?.email}</p>
+              <p className="truncate text-[10px] font-semibold text-slate-500">
+                {user?.email}
+              </p>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
             id="btn-logout"
-            className="flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-3 text-sm font-bold text-slate-500 transition-all duration-200 hover:border-red-100 hover:bg-red-50 hover:text-red-600 active:scale-[0.98]"
+            title="Sign Out"
+            className="flex h-[54px] w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-200 active:scale-[0.98]"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
               <LogOut className="h-4 w-4" />
             </span>
-            <span className="hidden lg:inline">Sign Out</span>
+            <span className="min-w-[160px] text-left opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+              Sign Out
+            </span>
           </button>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-10 flex h-[86px] shrink-0 items-center justify-between border-b border-white/80 bg-white/75 px-5 backdrop-blur-2xl lg:px-8">
+        <header className="z-10 flex h-[84px] shrink-0 items-center justify-between border-b border-white/70 bg-white/[0.78] px-4 shadow-sm shadow-slate-200/40 backdrop-blur-2xl sm:px-6 lg:px-8">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase text-emerald-700">
-              {user?.company_name || 'Workspace'}
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+              {user?.company_name || currentCopy.eyebrow}
             </p>
-            <h1 className="mt-1 truncate font-display text-xl font-black text-slate-950 lg:text-2xl">
+            <h1 className="mt-1 truncate font-display text-xl font-black tracking-tight text-slate-950 lg:text-2xl">
               {currentCopy.title}
             </h1>
-            <p className="mt-0.5 hidden text-sm font-medium text-slate-500 md:block">
+            <p className="mt-0.5 hidden text-sm font-semibold text-slate-500 md:block">
               {currentCopy.subtitle}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 shadow-sm sm:flex">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 shadow-sm sm:flex">
+              <Radio className="h-3.5 w-3.5" />
               Online
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white bg-white text-xs font-black text-emerald-700 shadow-sm">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-800 shadow-sm">
               {initials}
             </div>
           </div>
         </header>
 
-        <main className="relative min-h-0 flex-1 overflow-hidden p-4 sm:p-5 lg:p-6">
+        <main className="relative min-h-0 flex-1 overflow-hidden p-4 pb-20 sm:p-5 lg:p-6">
           <Outlet />
         </main>
       </div>
+
+      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-slate-200 bg-white/[0.92] p-1.5 shadow-2xl shadow-slate-900/[0.15] backdrop-blur-xl sm:hidden">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex h-12 items-center justify-center rounded-xl transition-all ${
+                  isActive
+                    ? 'bg-slate-950 text-emerald-300'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                }`
+              }
+              title={item.label}
+            >
+              <Icon className="h-5 w-5" />
+            </NavLink>
+          );
+        })}
+      </nav>
     </div>
   );
 };

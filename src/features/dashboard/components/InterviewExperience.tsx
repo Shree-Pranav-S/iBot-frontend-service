@@ -21,7 +21,7 @@ export const SectionProgress: React.FC<{
   const progress = Math.min(100, Math.max(0, (sectionNumber / totalSections) * 100));
 
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur">
+    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
         <Layers className="h-4 w-4" />
       </div>
@@ -49,7 +49,7 @@ export const StatusPill: React.FC<{ status: string; isBotSpeaking: boolean }> = 
 }) => {
   if (isBotSpeaking) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-700 shadow-sm">
+      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-700 shadow-sm shadow-emerald-900/5">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -106,47 +106,37 @@ export const Ibot3DAvatar: React.FC<{ isSpeaking: boolean; compact?: boolean }> 
   compact = false,
 }) => (
   <div
-    className={`ibot-avatar-scene ${compact ? 'ibot-avatar-scene-sm' : ''} ${
+    className={`ibot-agent-avatar ${compact ? 'ibot-agent-avatar-sm' : ''} ${
       isSpeaking ? 'is-speaking' : ''
     }`}
     aria-label={isSpeaking ? 'iBot avatar speaking' : 'iBot avatar idle'}
   >
-    <div className="ibot-avatar-halo halo-one" />
-    <div className="ibot-avatar-halo halo-two" />
-    <div className="ibot-avatar-orb orb-left" />
-    <div className="ibot-avatar-orb orb-right" />
-    <div className="ibot-avatar-floor" />
+    <div className="ibot-agent-grid" aria-hidden="true" />
+    <div className="ibot-agent-ring ring-one" aria-hidden="true" />
+    <div className="ibot-agent-ring ring-two" aria-hidden="true" />
 
-    <div className="ibot-avatar-core">
-      <div className="ibot-avatar-crown">
-        <span />
-      </div>
-      <div className="ibot-avatar-head">
-        <div className="ibot-avatar-visor">
-          <span className="ibot-avatar-eye eye-left" />
-          <span className="ibot-avatar-eye eye-right" />
-          <span className="ibot-avatar-wave">
+    <div className="ibot-agent-core">
+      <div className="ibot-agent-device">
+        <span className="ibot-agent-led" />
+        <div className="ibot-agent-face">
+          <span className="ibot-agent-eye eye-left" />
+          <span className="ibot-agent-eye eye-right" />
+          <span className="ibot-agent-waveform" aria-hidden="true">
             {[0, 1, 2, 3, 4].map((bar) => (
               <i key={bar} style={{ animationDelay: `${bar * 0.08}s` }} />
             ))}
           </span>
         </div>
       </div>
-      <div className="ibot-avatar-neck" />
-      <div className="ibot-avatar-body">
-        <span className="ibot-avatar-shoulder shoulder-left" />
-        <span className="ibot-avatar-shoulder shoulder-right" />
-        <div className="ibot-avatar-chip">
+      <div className="ibot-agent-stem" />
+      <div className="ibot-agent-base">
+        <div className="ibot-agent-chip">
           <Sparkles className="h-5 w-5" />
         </div>
       </div>
     </div>
 
-    <div className="ibot-avatar-signal" aria-hidden="true">
-      {[0, 1, 2].map((ring) => (
-        <span key={ring} style={{ animationDelay: `${ring * 0.28}s` }} />
-      ))}
-    </div>
+    <div className="ibot-agent-shadow" aria-hidden="true" />
   </div>
 );
 
@@ -165,15 +155,15 @@ const CaptionCard: React.FC<{
 
   return (
     <div
-      className={`animate-slideUp rounded-2xl border shadow-sm transition-all duration-200 ${
+      className={`animate-slideUp rounded-lg border shadow-sm transition-all duration-200 ${
         isActive
           ? isAssistant
             ? 'border-slate-800 bg-slate-950 text-white shadow-xl shadow-slate-900/20'
-            : 'border-emerald-200 bg-emerald-50 text-slate-950 shadow-lg shadow-emerald-900/6'
+            : 'border-emerald-200 bg-white text-slate-950 shadow-lg shadow-emerald-900/5'
           : isAssistant
-          ? 'border-slate-200 bg-white/90 text-slate-800'
-          : 'border-emerald-100 bg-white/90 text-slate-800'
-      } ${isActive ? 'p-5' : 'p-3.5'}`}
+          ? 'border-slate-200 bg-white text-slate-800'
+          : 'border-emerald-100 bg-white text-slate-800'
+      } ${isActive ? 'p-4' : 'p-3.5'}`}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -194,7 +184,7 @@ const CaptionCard: React.FC<{
           </span>
           <div>
             <p className={`text-xs font-black ${isActive && isAssistant ? 'text-white' : 'text-slate-900'}`}>
-              {isAssistant ? 'iBot interviewer' : 'You'}
+              {isAssistant ? 'Interviewer' : 'You'}
             </p>
             <p className={`text-[10px] font-semibold ${isActive && isAssistant ? 'text-white/50' : 'text-slate-400'}`}>
               {formatTime(message.timestamp)}
@@ -209,7 +199,7 @@ const CaptionCard: React.FC<{
         </div>
         {!message.isFinal && (
           <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${isActive && isAssistant ? 'bg-white/10 text-white/70' : 'bg-slate-100 text-slate-500'}`}>
-            Live caption
+            Live
           </span>
         )}
       </div>
@@ -217,7 +207,7 @@ const CaptionCard: React.FC<{
       <p
         className={`font-medium leading-relaxed ${
           isActive
-            ? `text-lg ${isAssistant ? 'text-white' : 'text-slate-900'}`
+            ? `text-base ${isAssistant ? 'text-white' : 'text-slate-900'}`
             : 'text-sm text-slate-700'
         }`}
       >
@@ -253,23 +243,22 @@ export const TranscriptPanel: React.FC<{
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
 
-    scrollEl.scrollTo({
-      top: scrollEl.scrollHeight,
-      behavior: 'smooth',
+    window.requestAnimationFrame(() => {
+      scrollEl.scrollTo({
+        top: scrollEl.scrollHeight,
+        behavior: 'smooth',
+      });
     });
   }, [scrollKey]);
 
   if (visibleMessages.length === 0) {
     return (
-      <div className="flex h-full min-h-[190px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/70 p-8 text-center shadow-sm backdrop-blur">
+      <div className="flex h-full min-h-[190px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white/80 p-8 text-center shadow-sm backdrop-blur">
         <div>
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
             <MessageCircle className="h-5 w-5" />
           </div>
-          <p className="text-sm font-black text-slate-800">Live subtitles will appear here</p>
-          <p className="mt-1 max-w-sm text-xs font-semibold leading-relaxed text-slate-500">
-            Captions are grouped by speaker and update as the conversation progresses.
-          </p>
+          <p className="text-sm font-black text-slate-800">Captions will appear here</p>
         </div>
       </div>
     );
@@ -279,7 +268,7 @@ export const TranscriptPanel: React.FC<{
   const history = visibleMessages.slice(Math.max(0, visibleMessages.length - 6), -1);
 
   return (
-    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 overflow-y-auto pr-1">
+    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 scroll-smooth overflow-y-auto pr-1">
       <div className="space-y-3 pb-1">
         {history.map((message) => {
           if (message.role === 'system') {
@@ -343,7 +332,7 @@ export const CompletionNotice: React.FC<{ type: 'complete' | 'terminated' | 'end
   return (
     <div className="flex flex-col items-center gap-3 py-4 text-center">
       <div
-        className={`flex h-14 w-14 items-center justify-center rounded-2xl border ${
+        className={`flex h-14 w-14 items-center justify-center rounded-lg border ${
           type === 'complete'
             ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
             : 'border-red-200 bg-red-50 text-red-500'

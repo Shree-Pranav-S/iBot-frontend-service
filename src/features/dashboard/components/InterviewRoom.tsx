@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '@livekit/components-styles/index.css';
 import {
   LiveKitRoom,
@@ -175,6 +175,40 @@ const buildTurnMessages = (
   }));
 };
 
+const LiveTranscriptPanel = React.memo(function LiveTranscriptPanel({
+  localIdentity,
+  isBotSpeaking,
+  isRecording,
+  onClosingMessage,
+}: {
+  localIdentity: string;
+  isBotSpeaking: boolean;
+  isRecording: boolean;
+  onClosingMessage: () => void;
+}) {
+  const transcriptions = useTranscriptions();
+  const messages = useMemo(
+    () => buildTurnMessages(transcriptions, localIdentity),
+    [localIdentity, transcriptions],
+  );
+  const hasClosingMessage = useMemo(
+    () => messages.some(isClosingInterviewMessage),
+    [messages],
+  );
+
+  useEffect(() => {
+    if (hasClosingMessage) onClosingMessage();
+  }, [hasClosingMessage, onClosingMessage]);
+
+  return (
+    <TranscriptPanel
+      messages={messages}
+      isBotSpeaking={isBotSpeaking}
+      isRecording={isRecording}
+    />
+  );
+});
+
 const InterviewTimer = React.memo(function InterviewTimer({
   durationMins,
   startedAtMs,
@@ -306,11 +340,11 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
   const connectionState = useConnectionState();
   const { isMicrophoneEnabled, lastMicrophoneError, localParticipant, microphoneTrack } = useLocalParticipant();
   const { agent, state: agentState } = useVoiceAssistant();
-  const transcriptions = useTranscriptions();
 
   const [micError, setMicError] = useState<string | null>(null);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
   const [sessionPhase, setSessionPhase] = useState<'active' | 'complete' | 'ended'>('active');
+  const [closingMessageDetected, setClosingMessageDetected] = useState(false);
   const hasConnectedRef = useRef(false);
   const hasAutoDisconnectedRef = useRef(false);
 
@@ -362,14 +396,9 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
     return 'Ready for your response';
   })();
 
-  const messages = useMemo(
-    () => buildTurnMessages(transcriptions, room.localParticipant.identity),
-    [room.localParticipant.identity, transcriptions],
-  );
-  const closingMessageDetected = useMemo(
-    () => messages.some(isClosingInterviewMessage),
-    [messages],
-  );
+  const markClosingMessageDetected = useCallback(() => {
+    setClosingMessageDetected(true);
+  }, []);
 
   useEffect(() => {
     if (connectionState === ConnectionState.Connected) {
@@ -487,9 +516,9 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
               <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
                 <Ibot3DAvatar isSpeaking={botIsSpeaking} />
 
-                <div className="rounded-lg border border-white/80 bg-white/[0.9] px-5 py-4 shadow-lg shadow-slate-200/60">
+                <div className="rounded-lg border border-white/80 bg-white/[0.94] px-5 py-4 shadow-lg shadow-slate-200/60">
                   <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
-                    <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                    <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     Session state
                   </div>
                   <p className="text-lg font-black text-slate-950">{readinessText}</p>
@@ -548,7 +577,12 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
             </div>
 
             <div className="min-h-0 flex-1 p-4">
-              <TranscriptPanel messages={messages} isBotSpeaking={botIsSpeaking} isRecording={isRecording} />
+              <LiveTranscriptPanel
+                localIdentity={room.localParticipant.identity}
+                isBotSpeaking={botIsSpeaking}
+                isRecording={isRecording}
+                onClosingMessage={markClosingMessageDetected}
+              />
             </div>
 
             {sessionPhase !== 'active' && (

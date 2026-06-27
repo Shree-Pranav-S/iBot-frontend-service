@@ -7,17 +7,16 @@
 
 // â”€â”€ JD Analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+export type InferredDifficulty = 'junior level' | 'mid-level' | 'senior level';
+
 export interface SkillPriority {
   skill: string;
   priority_score: number;
-  depth_required: string;
   reasoning: string;
 }
 
 export interface JDAnalysis {
-  inferred_role_title: string;
-  seniority_level: string;
-  difficulty: string;
+  inferred_difficulty: InferredDifficulty;
   skills: SkillPriority[];
   behavioural_signals: string[];
 }
@@ -28,12 +27,12 @@ export interface InterviewSection {
   section_name: string;
   skill: string | null;
   allocated_mins: number;
-  priority_score: number | null;
   expected_signals?: string[];
 }
 
 export interface InterviewPlan {
   total_mins: number;
+  inferred_difficulty: InferredDifficulty;
   sections: InterviewSection[];
 }
 

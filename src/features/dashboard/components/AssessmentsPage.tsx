@@ -25,7 +25,6 @@ import {
   ChevronUp,
   Mail,
   FileSpreadsheet,
-  BarChart3,
   Gauge,
 } from 'lucide-react';
 import type { AssessmentStatus } from '../../../types/assessment.types';
@@ -499,9 +498,25 @@ export const AssessmentsPage: React.FC = () => {
               {selectedAssessment.jd_analysis && (
                 <div className="grid grid-cols-3 gap-3 shrink-0">
                   {[
-                    { label: 'Role', value: selectedAssessment.jd_analysis.inferred_role_title, icon: Briefcase },
-                    { label: 'Level', value: selectedAssessment.jd_analysis.seniority_level, icon: BarChart3 },
-                    { label: 'Difficulty', value: selectedAssessment.jd_analysis.difficulty, icon: Gauge, accent: true },
+                    {
+                      label: 'Difficulty',
+                      value: selectedAssessment.jd_analysis.inferred_difficulty,
+                      icon: Gauge,
+                      accent: true,
+                    },
+                    {
+                      label: 'Planned skills',
+                      value: String(
+                        selectedAssessment.interview_plan?.sections.filter((section) => section.skill).length
+                          ?? selectedAssessment.jd_analysis.skills.length,
+                      ),
+                      icon: Sparkles,
+                    },
+                    {
+                      label: 'Plan duration',
+                      value: `${selectedAssessment.interview_plan?.total_mins ?? selectedAssessment.interview_duration_mins} min`,
+                      icon: Clock,
+                    },
                   ].map((item) => {
                     const Icon = item.icon;
                     return (
@@ -534,7 +549,7 @@ export const AssessmentsPage: React.FC = () => {
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <span className="font-bold text-slate-800 text-xs group-hover:text-emerald-700 transition-colors">{skillItem.skill}</span>
                           <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5 transition-transform group-hover:scale-105">
-                            {skillItem.depth_required}
+                            {skillItem.priority_score}/10
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-500 font-medium leading-relaxed mb-3 line-clamp-2">
@@ -548,7 +563,7 @@ export const AssessmentsPage: React.FC = () => {
                             />
                           </div>
                           <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/50 px-1.5 py-0.5 rounded-full shrink-0 group-hover:scale-105 transition-transform">
-                            {skillItem.priority_score}/10
+                            Priority
                           </span>
                         </div>
                       </div>
@@ -577,10 +592,15 @@ export const AssessmentsPage: React.FC = () => {
                   <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                     <Sliders className="h-3.5 w-3.5 text-emerald-500" />
                     Time Allocation
+                    <span className="ml-auto normal-case tracking-normal text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+                      {selectedAssessment.interview_plan.inferred_difficulty}
+                    </span>
                   </h3>
                   
                   {(() => {
-                    const totalAllocated = selectedAssessment.interview_plan.sections.reduce((sum, s) => sum + s.allocated_mins, 0) || 1;
+                    const totalAllocated = selectedAssessment.interview_plan.total_mins
+                      || selectedAssessment.interview_plan.sections.reduce((sum, s) => sum + s.allocated_mins, 0)
+                      || 1;
                     return (
                       <div className="flex flex-col gap-2.5">
                         {selectedAssessment.interview_plan.sections.map((section, idx) => {
@@ -607,6 +627,18 @@ export const AssessmentsPage: React.FC = () => {
                                   </div>
                                   <span className="text-[10px] font-bold text-slate-400 w-8 text-right">{pct}%</span>
                                 </div>
+                                {section.expected_signals && section.expected_signals.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                    {section.expected_signals.map((signal, signalIndex) => (
+                                      <span
+                                        key={signalIndex}
+                                        className="rounded-full bg-slate-50 border border-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-500"
+                                      >
+                                        {signal}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   AlertTriangle,
   Bot,
@@ -250,6 +250,8 @@ export const TranscriptPanel = React.memo(({
 }) => {
   const visibleMessages = messages.filter((message) => message.text?.trim());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const lastAutoScrollAtRef = useRef(0);
   const activeMessage = visibleMessages[visibleMessages.length - 1];
   const scrollKey = activeMessage
     ? `${activeMessage.id}:${activeMessage.text.length}:${activeMessage.isFinal ? 'final' : 'partial'}`
@@ -257,18 +259,29 @@ export const TranscriptPanel = React.memo(({
 
   useEffect(() => {
     const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
+    if (!scrollEl || !shouldAutoScrollRef.current) return;
+
+    const now = performance.now();
+    if (!activeMessage?.isFinal && now - lastAutoScrollAtRef.current < 100) return;
 
     const frame = window.requestAnimationFrame(() => {
       scrollEl.scrollTop = scrollEl.scrollHeight;
+      lastAutoScrollAtRef.current = performance.now();
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [scrollKey]);
+  }, [activeMessage?.isFinal, scrollKey]);
+
+  const handleScroll = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    shouldAutoScrollRef.current =
+      scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < 48;
+  }, []);
 
   if (visibleMessages.length === 0) {
     return (
-      <div className="flex h-full min-h-[190px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white/80 p-8 text-center shadow-sm backdrop-blur">
+      <div className="flex h-full min-h-[190px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white/90 p-8 text-center shadow-sm">
         <div>
           <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
             <MessageCircle className="h-5 w-5" />
@@ -282,7 +295,7 @@ export const TranscriptPanel = React.memo(({
   const history = visibleMessages.slice(Math.max(0, visibleMessages.length - 6), -1);
 
   return (
-    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 overflow-y-auto pr-1">
+    <div ref={scrollRef} onScroll={handleScroll} className="ibot-scrollbar h-full min-h-0 overflow-y-auto pr-1">
       <div className="space-y-3 pb-1">
         {history.map((message) => {
           if (message.role === 'system') {
@@ -367,7 +380,7 @@ export const CompletionNotice: React.FC<{ type: 'complete' | 'terminated' | 'end
 };
 
 export const TimerPill = React.memo(({ value }: { value: string }) => (
-  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-black text-slate-700 shadow-sm backdrop-blur">
+  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 shadow-sm">
     <Clock className="h-3.5 w-3.5 text-emerald-600" />
     <span className="font-mono">{value}</span>
   </span>

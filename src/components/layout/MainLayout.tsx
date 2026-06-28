@@ -81,11 +81,17 @@ export const MainLayout: React.FC = () => {
     .join('')
     .toUpperCase();
 
-  const currentCopy = pageCopy[location.pathname] ?? {
-    eyebrow: 'Workspace',
-    title: 'iBot Workspace',
-    subtitle: 'Manage interviews and candidate decisions.',
-  };
+  const currentCopy = location.pathname.endsWith('/report')
+    ? {
+        eyebrow: 'Candidate intelligence',
+        title: 'Detailed Evaluation Report',
+        subtitle: 'Review evidence, scoring, integrity checks, and the final recommendation.',
+      }
+    : pageCopy[location.pathname] ?? {
+        eyebrow: 'Workspace',
+        title: 'iBot Workspace',
+        subtitle: 'Manage interviews and candidate decisions.',
+      };
 
   return (
     <div className="ibot-workspace-bg flex h-screen w-screen overflow-hidden font-sans text-slate-950">

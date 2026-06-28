@@ -1,481 +1,857 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCandidateEvaluation, useUpdateCandidateDecision } from '../../../hooks/queries';
-import { useToast } from '../../../hooks/useToast';
 import {
+  AlertOctagon,
   AlertTriangle,
   ArrowLeft,
-  Award,
   BarChart3,
   BrainCircuit,
+  BriefcaseBusiness,
   ChevronRight,
-  ClipboardCheck,
-  HeartHandshake,
-  ListChecks,
+  CircleGauge,
+  FileCheck2,
   Loader2,
+  Mail,
+  MessageSquareText,
+  Printer,
+  Scale,
   ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Target,
   ThumbsDown,
   ThumbsUp,
-  TrendingUp,
+  UserRound,
   Users,
 } from 'lucide-react';
+import { useCandidateEvaluation, useUpdateCandidateDecision } from '../../../hooks/queries';
+import { useToast } from '../../../hooks/useToast';
 import type {
-  EvaluationSectionSummary,
   EvaluationSkillBreakdown,
-  HighlightAnswer,
-  TranscriptEvidence,
-  ViolationSummary,
+  InterviewEvaluationResponse,
+  SectionCommunicationBreakdown,
 } from '../../../types/candidate.types';
-
-const recommendationLabel = (value: string) => value.replace(/_/g, ' ');
-
-const displayLabel = (value: string | null | undefined) =>
-  String(value || 'General').replace(/_/g, ' ');
-
-const scoreValue = (score: number | null | undefined) =>
-  typeof score === 'number' && Number.isFinite(score) ? score : null;
-
-const scorePercent = (score: number | null | undefined, scale = 100) => {
-  const value = scoreValue(score);
-  return value === null ? null : Math.max(0, Math.min(100, (value / scale) * 100));
-};
-
-const scoreColor = (score: number | null | undefined) => {
-  const value = scoreValue(score);
-  if (value === null) return 'text-slate-400';
-  if (value >= 80) return 'text-emerald-600';
-  if (value >= 60) return 'text-cyan-700';
-  if (value >= 40) return 'text-amber-600';
-  return 'text-red-600';
-};
-
-const scoreBg = (score: number | null | undefined) => {
-  const value = scoreValue(score) ?? 0;
-  if (value >= 80) return 'bg-emerald-500';
-  if (value >= 60) return 'bg-cyan-500';
-  if (value >= 40) return 'bg-amber-500';
-  return 'bg-red-500';
-};
-
-const recommendationStyle = (rec: string) => {
-  switch (rec) {
-    case 'STRONG_HIRE':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    case 'HIRE':
-      return 'border-green-200 bg-green-50 text-green-700';
-    case 'CONSIDER':
-      return 'border-cyan-200 bg-cyan-50 text-cyan-700';
-    case 'WEAK':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
-    case 'NO_HIRE':
-      return 'border-red-200 bg-red-50 text-red-700';
-    default:
-      return 'border-slate-200 bg-slate-50 text-slate-700';
-  }
-};
-
-const decisionStyle = (decision: string) => {
-  if (decision === 'APPROVED') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (decision === 'REJECTED') return 'border-red-200 bg-red-50 text-red-700';
-  return 'border-amber-200 bg-amber-50 text-amber-700';
-};
+import {
+  CompetencyRadar,
+  DecisionModal,
+  ScoreBar,
+  ScoreRing,
+  StatusPill,
+} from './EvaluationUI';
+import {
+  candidateInitials,
+  decisionMeta,
+  formatDateTime,
+  formatLabel,
+  recommendationMeta,
+  scoreLabel,
+  scoreTextClass,
+  useEvaluationDecision,
+} from './evaluationUiUtils';
 
 export const EvaluationReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
-  const { data: evaluation, isLoading, isError, refetch, isFetching } = useCandidateEvaluation(id || null);
+  const { data: evaluation, isLoading, isError, isFetching, refetch } =
+    useCandidateEvaluation(id || null);
   const decisionMutation = useUpdateCandidateDecision();
+  const { modal, requestDecision, closeDecision } = useEvaluationDecision();
 
-  const skillRows = useMemo(() => {
+  const skills = useMemo(() => {
     if (!evaluation) return [];
-    return Object.entries(evaluation.skill_scores ?? {})
-      .map(([skill, data]) => ({
-        skill,
-        data,
-        score: data.raw_score === null ? null : scorePercent(data.raw_score, 10),
-      }))
-      .sort((left, right) => (right.score ?? -1) - (left.score ?? -1));
+    return Object.entries(evaluation.skill_scores ?? {}).sort(([, left], [, right]) => {
+      const priorityDifference = right.priority_score - left.priority_score;
+      return priorityDifference || right.score - left.score;
+    });
   }, [evaluation]);
 
-  const sectionRows = useMemo(() => {
-    if (!evaluation) return [];
-    return Object.entries(evaluation.section_summaries ?? {})
-      .map(([section, data]) => ({
-        section,
-        data,
-        score: data.avg_score === null ? null : scorePercent(data.avg_score, 10),
-      }))
-      .sort((left, right) => (right.score ?? -1) - (left.score ?? -1));
-  }, [evaluation]);
-
-  const updateDecision = async (decision: 'APPROVED' | 'REJECTED') => {
-    if (!id) return;
+  const saveDecision = async (feedback?: string) => {
     try {
-      await decisionMutation.mutateAsync({ candidateId: id, decision });
-      success('Decision Saved', `Candidate marked as ${decision.toLowerCase()} and notification queued.`);
-      await refetch();
-    } catch (err: unknown) {
-      toastError('Decision Failed', err instanceof Error ? err.message : 'Failed to save decision.');
+      await decisionMutation.mutateAsync({
+        candidateId: modal.candidateId,
+        decision: modal.decision,
+        feedback,
+      });
+      success(
+        'Decision saved',
+        `${modal.candidateName} has been ${modal.decision === 'APPROVED' ? 'approved' : 'rejected'}.`,
+      );
+      closeDecision();
+    } catch (error: unknown) {
+      toastError(
+        'Unable to save decision',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full min-h-[500px] flex-col items-center justify-center">
-        <Loader2 className="mb-3 h-8 w-8 animate-spin text-emerald-500" />
-        <p className="text-sm font-semibold text-slate-500">Loading report...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <ReportLoadingState />;
 
   if (isError || !evaluation) {
     return (
-      <div className="flex h-full min-h-[500px] flex-col items-center justify-center text-center animate-fadeIn">
-        <ShieldAlert className="mb-3 h-10 w-10 text-amber-500" />
-        <p className="text-base font-black text-slate-900">Report is still being prepared</p>
-        <p className="mt-1 max-w-sm text-xs font-medium text-slate-500">
-          The report appears after the section and skill evaluations have been synthesized.
-        </p>
-        <div className="mt-5 flex items-center gap-2">
-          <button onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back
-          </button>
-          <button onClick={() => refetch()} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700">
-            {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Retry
-          </button>
+      <div className="flex h-full min-h-[440px] items-center justify-center">
+        <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-9 text-center shadow-xl shadow-slate-200/60">
+          <FileCheck2 className="mx-auto h-11 w-11 text-slate-300" />
+          <h2 className="mt-4 text-lg font-black text-slate-950">Report is not available yet</h2>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+            The holistic evaluation may still be processing. You can return to evaluations or retry this report.
+          </p>
+          <div className="mt-5 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/evaluations')}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600 hover:bg-slate-50"
+            >
+              Back to evaluations
+            </button>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-black text-white hover:bg-slate-800"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const dimensions = [
-    { title: 'Technical', icon: <BrainCircuit className="h-4 w-4" />, score: evaluation.technical_dimension_score, summary: evaluation.score_summary, evidence: evaluation.score_evidence },
-    { title: 'Behavioural', icon: <Users className="h-4 w-4" />, score: evaluation.behavioural_score, summary: evaluation.behavioural_summary, evidence: evaluation.behavioural_evidence },
-    { title: 'Culture Fit', icon: <HeartHandshake className="h-4 w-4" />, score: evaluation.cultural_fit_score, summary: evaluation.cultural_fit_summary, evidence: evaluation.cultural_fit_evidence },
-  ];
+  const recommendation = recommendationMeta(evaluation.hiring_recommendation);
+  const decision = decisionMeta(evaluation.recruiter_decision);
+  const hiringRedFlag = recruiterFacingRedFlag(
+    evaluation.recommendation_override_reason,
+  );
+  const recommendationReasoning = evaluation.recommendation_reasoning
+    .replace(/\s*Deterministic override:.*$/i, '')
+    .trim();
+  const candidateName = evaluation.candidate_name || 'Candidate';
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden animate-fadeIn">
-      <div className="ibot-command-panel mb-3 flex shrink-0 items-center justify-between px-4 py-3 animate-slideDown">
-        <button onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 transition-colors hover:text-emerald-600">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </button>
-        <span className="text-[10px] font-semibold text-slate-400">Generated {new Date(evaluation.generated_at).toLocaleString()}</span>
-      </div>
+    <>
+      <div className="ibot-scrollbar h-full overflow-y-auto pr-1 animate-fadeIn">
+        <div className="mx-auto max-w-[1500px] space-y-4 pb-8 print:max-w-none">
+          <header className="print:hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/evaluations')}
+                className="inline-flex items-center gap-2 text-xs font-black text-slate-500 transition-colors hover:text-emerald-700"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Evaluation workspace
+              </button>
+              <div className="flex items-center gap-2">
+                {isFetching && <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />}
+                <span className="hidden text-[10px] font-bold text-slate-400 sm:inline">
+                  Generated {formatDateTime(evaluation.generated_at)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-600 shadow-sm hover:bg-slate-50"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Print report
+                </button>
+              </div>
+            </div>
+          </header>
 
-      <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="space-y-4 pb-5">
-          <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
-            <div className="ibot-panel p-5">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-wide ${recommendationStyle(evaluation.hiring_recommendation)}`}>
-                    {recommendationLabel(evaluation.hiring_recommendation)}
-                  </span>
-                  {evaluation.recruiter_decision && (
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black tracking-wide ${decisionStyle(evaluation.recruiter_decision)}`}>
-                      {evaluation.recruiter_decision}
-                    </span>
-                  )}
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:shadow-none">
+            <div className="h-2 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
+            <div className="p-5 sm:p-6">
+              <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-display text-lg font-black text-emerald-300 shadow-lg shadow-slate-900/15">
+                    {candidateInitials(candidateName)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap gap-2">
+                      <StatusPill {...recommendation} />
+                      <StatusPill {...decision} />
+                      {evaluation.violation_summary?.has_violation && (
+                        <StatusPill
+                          label={`${evaluation.violation_summary.validated_violation_count} confirmed integrity concern${evaluation.violation_summary.validated_violation_count === 1 ? '' : 's'}`}
+                          className="border-rose-200 bg-rose-50 text-rose-800"
+                          dot="bg-rose-500"
+                        />
+                      )}
+                    </div>
+                    <h1 className="mt-3 font-display text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                      {candidateName}
+                    </h1>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
+                      <span className="inline-flex items-center gap-1.5">
+                        <BriefcaseBusiness className="h-3.5 w-3.5 text-slate-400" />
+                        {evaluation.role_name || 'Role not available'}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Target className="h-3.5 w-3.5 text-slate-400" />
+                        {evaluation.assessment_title || 'Assessment'}
+                      </span>
+                      {evaluation.candidate_email && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-slate-400" />
+                          {evaluation.candidate_email}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => updateDecision('APPROVED')} disabled={evaluation.recruiter_decision === 'APPROVED' || decisionMutation.isPending} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-45">
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                    Hire
+
+                <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      requestDecision(
+                        evaluation.candidate_assessment_id,
+                        candidateName,
+                        evaluation.recruiter_decision || 'PENDING',
+                        'APPROVED',
+                      )
+                    }
+                    disabled={evaluation.recruiter_decision === 'APPROVED'}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                    Approve candidate
                   </button>
-                  <button onClick={() => updateDecision('REJECTED')} disabled={evaluation.recruiter_decision === 'REJECTED' || decisionMutation.isPending} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-black text-red-600 shadow-sm hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45">
-                    <ThumbsDown className="h-3.5 w-3.5" />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      requestDecision(
+                        evaluation.candidate_assessment_id,
+                        candidateName,
+                        evaluation.recruiter_decision || 'PENDING',
+                        'REJECTED',
+                      )
+                    }
+                    disabled={evaluation.recruiter_decision === 'REJECTED'}
+                    className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <ThumbsDown className="h-4 w-4" />
                     Reject
                   </button>
                 </div>
               </div>
-              <h1 className="text-2xl font-black text-slate-950">{evaluation.candidate_name || 'Candidate'} Evaluation Report</h1>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
-                {evaluation.role_name || 'Role'} - {evaluation.assessment_title || 'Assessment'}
-                {evaluation.candidate_email ? ` - ${evaluation.candidate_email}` : ''}
-              </p>
-              <p className="mt-3 max-w-4xl border-l-4 border-emerald-400 bg-emerald-50/[0.6] px-4 py-3 text-sm font-medium leading-relaxed text-slate-700">
-                {evaluation.overall_narrative}
-              </p>
-              <p className="mt-3 text-xs font-medium leading-relaxed text-slate-600"><span className="font-black text-slate-800">Recommendation reasoning: </span>{evaluation.recommendation_reasoning}</p>
             </div>
 
-            <section className="ibot-panel flex flex-col items-center justify-center p-5">
-              <ScoreDial score={evaluation.overall_score} />
-              <p className="mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Overall Score</p>
-              <div className="mt-4 grid w-full grid-cols-2 gap-2 text-center">
-                <MiniMetric label="Rank" value={evaluation.rank_in_assessment ? `#${evaluation.rank_in_assessment}` : 'N/A'} />
-                <MiniMetric label="Percentile" value={evaluation.percentile_in_assessment !== null ? `${evaluation.percentile_in_assessment}%` : 'N/A'} />
-              </div>
-            </section>
+            <nav className="flex gap-1 overflow-x-auto border-t border-slate-200 bg-slate-50/80 px-3 py-2 print:hidden">
+              {[
+                ['overview', 'Overview'],
+                ['skills', 'Technical skills'],
+                ['dimensions', 'Interview dimensions'],
+                ['integrity', 'Integrity'],
+              ].map(([target, label]) => (
+                <a
+                  key={target}
+                  href={`#${target}`}
+                  className="whitespace-nowrap rounded-lg px-3 py-2 text-[10px] font-black text-slate-500 transition-colors hover:bg-white hover:text-emerald-700"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-3">
-            {dimensions.map((dimension) => <DimensionCard key={dimension.title} {...dimension} />)}
-          </section>
-
-          <section className="ibot-panel p-4">
-            <SectionHeading icon={<BarChart3 className="h-4 w-4 text-cyan-600" />} title="Technical Skill Performance" subtitle="Each bar uses the detailed individual skill evaluation score." />
-            <PerformanceGraph rows={skillRows.map(({ skill, score, data }) => ({ label: skill, score, detail: data.assessed === false ? 'Not directly assessed' : `${data.questions_asked ?? 0} answer${data.questions_asked === 1 ? '' : 's'}` }))} />
-          </section>
-
-          <section className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-            <div className="space-y-3">
-              <div className="ibot-panel p-4">
-                <SectionHeading icon={<ClipboardCheck className="h-4 w-4 text-emerald-600" />} title="Skill Evidence Ledger" subtitle="Open a skill to review the score, coverage, supporting excerpts, and unresolved gaps." />
-                <div className="space-y-3">
-                  {skillRows.map(({ skill, data, score }, index) => <SkillBreakdown key={skill} skill={skill} data={data} score={score} open={index === 0} />)}
-                  {skillRows.length === 0 && <EmptyState label="No technical skill scores were generated." />}
+          <section id="overview" className="scroll-mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <SectionTitle
+                  icon={<Sparkles className="h-4 w-4 text-emerald-600" />}
+                  title="Executive summary"
+                  subtitle="Holistic evidence-based assessment across the complete interview."
+                />
+                <p className="text-sm font-medium leading-7 text-slate-600">
+                  {evaluation.overall_summary}
+                </p>
+                <div className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <div className="flex items-start gap-3">
+                    <Scale className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
+                    <div>
+                      <p className="text-xs font-black text-indigo-950">Recommendation reasoning</p>
+                      <p className="mt-1.5 text-xs font-medium leading-6 text-indigo-900/80">
+                        {recommendationReasoning}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <section className="grid gap-3 md:grid-cols-2">
-                <SignalList title="Strengths" icon={<ThumbsUp className="h-4 w-4 text-emerald-500" />} items={evaluation.strengths} tone="emerald" />
-                <SignalList title="Concerns" icon={<ThumbsDown className="h-4 w-4 text-amber-500" />} items={evaluation.concerns} tone="amber" />
-              </section>
-            </div>
-
-            <div className="space-y-3">
-              <section className="ibot-panel p-4">
-                <SectionHeading icon={<ListChecks className="h-4 w-4 text-blue-600" />} title="Section Performance" subtitle="Section scores are reported on the same 0-100 scale for comparison." />
-                <PerformanceGraph rows={sectionRows.map(({ section, score, data }) => ({ label: section, score, detail: data.questions_asked ? `${data.questions_asked} answer${data.questions_asked === 1 ? '' : 's'}` : 'No recorded answer' }))} compact />
-              </section>
-
-              <section className="ibot-panel p-4">
-                <SectionHeading icon={<ListChecks className="h-4 w-4 text-blue-600" />} title="Section Evidence" subtitle="Coverage and evidence collected for every interview section." />
-                <div className="space-y-3">
-                  {sectionRows.map(({ section, data, score }, index) => <SectionEvidence key={section} section={section} data={data} score={score} open={index === 0} />)}
-                  {sectionRows.length === 0 && <EmptyState label="No section summaries were generated." />}
+              {hiringRedFlag && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-xs font-black text-amber-950">Hiring red flag</p>
+                      <p className="mt-1.5 text-xs font-semibold leading-5 text-amber-900/80">
+                        {hiringRedFlag}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </section>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="grid place-items-center">
+                  <ScoreRing score={evaluation.overall_score} size={164} />
+                  <p className="mt-2 text-xs font-black text-slate-900">{recommendation.label} recommendation</p>
+                  <p className="mt-1 text-center text-[10px] font-semibold text-slate-400">
+                    {scoreLabel(evaluation.overall_score)} overall performance
+                  </p>
+                </div>
+                <div className="mt-5 grid grid-cols-3 gap-2">
+                  <MiniStat label="Rank" value={evaluation.rank_in_assessment ? `#${evaluation.rank_in_assessment}` : '—'} />
+                  <MiniStat label="Percentile" value={evaluation.percentile_in_assessment === null ? '—' : `${evaluation.percentile_in_assessment}%`} />
+                  <MiniStat label="Cohort" value={evaluation.total_candidates_evaluated ? String(evaluation.total_candidates_evaluated) : '—'} />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="px-1">
+                  <p className="text-xs font-black text-slate-900">Competency radar</p>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-400">Balance across scoring dimensions</p>
+                </div>
+                <CompetencyRadar
+                  points={[
+                    { label: 'Technical', score: evaluation.overall_technical_skill_score },
+                    { label: 'Behaviour', score: evaluation.behavioural_cultural_score },
+                    { label: 'Communication', score: evaluation.communication_score },
+                    { label: 'Introduction', score: evaluation.intro_section_score },
+                  ]}
+                />
+              </div>
             </div>
           </section>
 
-          <section className="ibot-panel p-4">
-            <SectionHeading icon={<BrainCircuit className="h-4 w-4 text-emerald-600" />} title="Dimension Evidence" subtitle="The final synthesis keeps technical, behavioural, and culture-fit evidence separate." />
-            <div className="grid gap-3 xl:grid-cols-3">
-              {dimensions.map((dimension) => <DimensionEvidence key={dimension.title} {...dimension} />)}
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <ScoreMetric label="Technical" score={evaluation.overall_technical_skill_score} icon={<BrainCircuit className="h-4 w-4" />} />
+            <ScoreMetric label="Behaviour & culture" score={evaluation.behavioural_cultural_score} icon={<Users className="h-4 w-4" />} />
+            <ScoreMetric label="Communication" score={evaluation.communication_score} icon={<MessageSquareText className="h-4 w-4" />} />
+            <ScoreMetric label="Self introduction" score={evaluation.intro_section_score} icon={<UserRound className="h-4 w-4" />} />
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <SectionTitle
+              icon={<CircleGauge className="h-4 w-4 text-indigo-600" />}
+              title="Score overview"
+              subtitle="Interview performance and integrity findings reflected in the final result."
+            />
+            <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
+              <CalculationStep
+                label="Performance score"
+                value={evaluation.raw_overall_score}
+                helper="Combined interview performance"
+              />
+              <span className="hidden text-xl font-black text-slate-300 md:block">−</span>
+              <CalculationStep
+                label="Integrity adjustment"
+                value={evaluation.violation_penalty}
+                helper="Adjustment for confirmed concerns"
+                penalty
+              />
+              <span className="hidden text-xl font-black text-slate-300 md:block">=</span>
+              <CalculationStep
+                label="Final score"
+                value={evaluation.overall_score}
+                helper="Overall interview result"
+                final
+              />
             </div>
           </section>
 
-          <section className="grid gap-3 md:grid-cols-2">
-            <AnswerHighlight title="Best Answer" answer={evaluation.best_answer} tone="emerald" />
-            <AnswerHighlight title="Weakest Answer" answer={evaluation.weakest_answer} tone="red" />
+          <section id="skills" className="scroll-mt-4 space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <SectionTitle
+                icon={<BarChart3 className="h-4 w-4 text-emerald-600" />}
+                title="Technical skill portfolio"
+                subtitle="Candidate performance across the technical areas assessed during the interview."
+              />
+              <SkillPortfolioGraph skills={skills} />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SignalPanel
+                title="Demonstrated strengths"
+                subtitle="Technical skills scoring 7.5 or above."
+                items={evaluation.strengths}
+                icon={<ThumbsUp className="h-4 w-4" />}
+                tone="emerald"
+              />
+              <SignalPanel
+                title="Technical concerns"
+                subtitle="Low-scoring or risky high-priority skills."
+                items={evaluation.concerns}
+                icon={<ShieldAlert className="h-4 w-4" />}
+                tone="rose"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <SectionTitle
+                icon={<FileCheck2 className="h-4 w-4 text-cyan-600" />}
+                title="Skill evidence ledger"
+                subtitle="Expand each skill to review its summary and supporting interview evidence."
+              />
+              <div className="space-y-3">
+                {skills.map(([skill, details], index) => (
+                  <SkillEvidenceCard
+                    key={skill}
+                    skill={skill}
+                    details={details}
+                    summary={evaluation.skill_summary?.[skill] || 'No summary was generated.'}
+                    evidence={evaluation.skill_evidence?.[skill] || []}
+                    initiallyOpen={index === 0}
+                  />
+                ))}
+                {skills.length === 0 && <EmptyEvidence label="No technical skills were evaluated." />}
+              </div>
+            </div>
           </section>
 
-          {evaluation.violation_summary && <Violations summary={evaluation.violation_summary} />}
+          <section id="dimensions" className="scroll-mt-4 space-y-4">
+            <div className="grid gap-4 xl:grid-cols-3">
+              <NarrativeCard
+                title="Self introduction"
+                score={evaluation.intro_section_score}
+                summary={evaluation.intro_section_summary}
+                evidence={evaluation.intro_section_evidence}
+                icon={<UserRound className="h-4 w-4" />}
+              />
+              <NarrativeCard
+                title="Behaviour & culture"
+                score={evaluation.behavioural_cultural_score}
+                summary={evaluation.behavioural_cultural_summary}
+                evidence={evaluation.behavioural_cultural_evidence}
+                icon={<Users className="h-4 w-4" />}
+              />
+              <NarrativeCard
+                title="Communication"
+                score={evaluation.communication_score}
+                summary={evaluation.communication_summary}
+                evidence={evaluation.communication_evidence}
+                icon={<MessageSquareText className="h-4 w-4" />}
+              />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <SectionTitle
+                icon={<MessageSquareText className="h-4 w-4 text-indigo-600" />}
+                title="Communication by interview section"
+                subtitle="Clarity, structure, tone, and engagement assessed independently across each phase."
+              />
+              <div className="grid gap-3 lg:grid-cols-3">
+                {Object.entries(evaluation.section_communication_scores ?? {}).map(([section, details]) => (
+                  <SectionCommunicationCard key={section} section={section} details={details} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section id="integrity" className="scroll-mt-4">
+            <IntegrityPanel evaluation={evaluation} />
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/10 print:border-slate-300 print:bg-white print:text-slate-950">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-emerald-300 print:bg-emerald-50 print:text-emerald-700">
+                  <Scale className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-black">Recruiter decision</p>
+                  <p className="mt-1 max-w-2xl text-xs font-medium leading-5 text-slate-400 print:text-slate-600">
+                    AI provides an evidence-based recommendation. The accountable hiring decision remains with the recruiter.
+                  </p>
+                  {evaluation.recruiter_feedback && (
+                    <p className="mt-2 text-xs font-semibold text-slate-300 print:text-slate-700">
+                      Saved feedback: {evaluation.recruiter_feedback}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2 print:hidden">
+                <StatusPill {...decision} />
+                <button
+                  type="button"
+                  onClick={() =>
+                    requestDecision(
+                      evaluation.candidate_assessment_id,
+                      candidateName,
+                      evaluation.recruiter_decision || 'PENDING',
+                      'APPROVED',
+                    )
+                  }
+                  disabled={evaluation.recruiter_decision === 'APPROVED'}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    requestDecision(
+                      evaluation.candidate_assessment_id,
+                      candidateName,
+                      evaluation.recruiter_decision || 'PENDING',
+                      'REJECTED',
+                    )
+                  }
+                  disabled={evaluation.recruiter_decision === 'REJECTED'}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  Reject
+                </button>
+              </div>
+            </div>
+          </section>
+
         </div>
       </div>
-    </div>
+
+      <DecisionModal
+        key={`${modal.candidateId}:${modal.decision}:${modal.open}`}
+        open={modal.open}
+        candidateName={modal.candidateName}
+        currentDecision={modal.currentDecision}
+        decision={modal.decision}
+        loading={decisionMutation.isPending}
+        onClose={closeDecision}
+        onConfirm={saveDecision}
+      />
+    </>
   );
 };
 
-const SectionHeading: React.FC<{ icon: React.ReactNode; title: string; subtitle: string }> = ({ icon, title, subtitle }) => (
+const SectionTitle: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}> = ({ icon, title, subtitle }) => (
   <div className="mb-4">
     <div className="flex items-center gap-2">
       {icon}
-      <h2 className="text-sm font-black text-slate-900">{title}</h2>
+      <h2 className="text-sm font-black text-slate-950">{title}</h2>
     </div>
-    <p className="mt-1 text-[10px] font-medium leading-relaxed text-slate-500">{subtitle}</p>
+    <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-400">{subtitle}</p>
   </div>
 );
 
-const ScoreDial: React.FC<{ score: number }> = ({ score }) => {
-  const bounded = Math.min(100, Math.max(0, score));
-  return (
-    <div className="relative flex h-32 w-32 items-center justify-center">
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" aria-label={`Overall score ${Math.round(bounded)} out of 100`} role="img">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="8" />
-        <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${(bounded / 100) * 251.2} 251.2`} className={scoreColor(bounded)} />
-      </svg>
-      <div className="absolute text-center">
-        <p className={`text-4xl font-black ${scoreColor(bounded)}`}>{Math.round(bounded)}</p>
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">/ 100</p>
+const recruiterFacingRedFlag = (reason: string | null): string => {
+  const value = reason?.trim();
+  if (!value) return '';
+  return value
+    .replace(/^Recommendation gates? applied:\s*/i, '')
+    .replace(/^Hard gate:\s*/i, '')
+    .replace(
+      /Deterministic score thresholds changed the model recommendation/i,
+      'The overall interview result did not meet the hiring threshold',
+    );
+};
+
+const MiniStat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2.5 text-center">
+    <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+    <p className="mt-1 text-sm font-black text-slate-900">{value}</p>
+  </div>
+);
+
+const ScoreMetric: React.FC<{ label: string; score: number; icon: React.ReactNode }> = ({
+  label,
+  score,
+  icon,
+}) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">{label}</p>
+        <p className={`mt-1.5 font-display text-2xl font-black ${scoreTextClass(score)}`}>
+          {score.toFixed(1)}
+          <span className="ml-1 text-[10px] text-slate-400">/10</span>
+        </p>
+        <p className="mt-1 text-[10px] font-bold text-slate-500">{scoreLabel(score)}</p>
+      </div>
+      <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 ${scoreTextClass(score)}`}>
+        {icon}
       </div>
     </div>
-  );
-};
-
-const MiniMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="border border-slate-100 bg-slate-50 p-2">
-    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</p>
-    <p className="mt-0.5 text-sm font-black text-slate-900">{value}</p>
+    <div className="mt-3"><ScoreBar score={score} compact /></div>
   </div>
 );
 
-const DimensionCard: React.FC<{ title: string; icon: React.ReactNode; score: number | null | undefined }> = ({ title, icon, score }) => {
-  const value = scoreValue(score);
-  return (
-    <div className="border border-slate-200 bg-white p-4 shadow-sm">
-      <div className={`mb-3 flex h-8 w-8 items-center justify-center bg-slate-50 ring-1 ring-slate-100 ${scoreColor(value)}`}>{icon}</div>
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{title}</p>
-      <p className={`mt-1 text-2xl font-black ${scoreColor(value)}`}>{value === null ? 'N/A' : Math.round(value)}{value !== null && <span className="text-xs font-bold text-slate-400">/100</span>}</p>
-    </div>
-  );
-};
+const CalculationStep: React.FC<{
+  label: string;
+  value: number;
+  helper: string;
+  penalty?: boolean;
+  final?: boolean;
+}> = ({ label, value, helper, penalty = false, final = false }) => (
+  <div
+    className={`rounded-xl border p-4 ${
+      final
+        ? 'border-emerald-200 bg-emerald-50/70'
+        : penalty && value > 0
+          ? 'border-rose-200 bg-rose-50/70'
+          : 'border-slate-200 bg-slate-50/70'
+    }`}
+  >
+    <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">{label}</p>
+    <p className={`mt-1.5 font-display text-2xl font-black ${penalty && value > 0 ? 'text-rose-700' : final ? 'text-emerald-700' : 'text-slate-900'}`}>
+      {value.toFixed(2)}
+    </p>
+    <p className="mt-1 text-[10px] font-semibold leading-4 text-slate-500">{helper}</p>
+  </div>
+);
 
-const PerformanceGraph: React.FC<{ rows: Array<{ label: string; score: number | null; detail: string }>; compact?: boolean }> = ({ rows, compact = false }) => (
-  <div className={compact ? 'space-y-2.5' : 'space-y-3'}>
-    <div className="grid grid-cols-[minmax(88px,0.7fr)_minmax(0,1.3fr)_42px] gap-2 text-[9px] font-black uppercase tracking-wider text-slate-400">
-      <span>Area</span>
-      <span className="flex justify-between"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></span>
+const SkillPortfolioGraph: React.FC<{
+  skills: Array<[string, EvaluationSkillBreakdown]>;
+}> = ({ skills }) => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-[minmax(120px,0.65fr)_minmax(0,1.35fr)_68px] gap-3 text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">
+      <span>Skill</span>
+      <span className="flex justify-between px-1"><span>0</span><span>2.5</span><span>5</span><span>7.5</span><span>10</span></span>
       <span className="text-right">Score</span>
     </div>
-    {rows.map((row) => {
-      const width = row.score ?? 0;
-      return (
-        <div key={row.label} className="grid grid-cols-[minmax(88px,0.7fr)_minmax(0,1.3fr)_42px] items-center gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-black text-slate-800" title={displayLabel(row.label)}>{displayLabel(row.label)}</p>
-            {!compact && <p className="truncate text-[9px] font-medium text-slate-400" title={row.detail}>{row.detail}</p>}
-          </div>
-          <div className="relative h-3 overflow-hidden bg-slate-100" role="progressbar" aria-label={`${displayLabel(row.label)} score`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.score ?? undefined}>
-            <div className="absolute inset-y-0 left-1/4 border-l border-white/70" />
-            <div className="absolute inset-y-0 left-1/2 border-l border-white/70" />
-            <div className="absolute inset-y-0 left-3/4 border-l border-white/70" />
-            {row.score !== null && <div className={`relative h-full ${scoreBg(row.score)}`} style={{ width: `${width}%` }} />}
-          </div>
-          <p className={`text-right text-[11px] font-black ${scoreColor(row.score)}`}>{row.score === null ? 'N/A' : Math.round(row.score)}</p>
+    {skills.map(([skill, details]) => (
+      <div key={skill} className="grid grid-cols-[minmax(120px,0.65fr)_minmax(0,1.35fr)_68px] items-center gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-black text-slate-800" title={skill}>{skill}</p>
+          <p className="mt-0.5 text-[9px] font-bold text-slate-400">
+            Role importance {details.priority_score.toFixed(1)}
+          </p>
         </div>
-      );
-    })}
-    {rows.length === 0 && <EmptyState label="No scored areas were available." />}
+        <div className="relative">
+          <div className="absolute inset-0 flex justify-between px-[25%]">
+            <span className="border-l border-white/80" />
+            <span className="border-l border-white/80" />
+            <span className="border-l border-white/80" />
+          </div>
+          <ScoreBar score={details.score} />
+        </div>
+        <div className="text-right">
+          <p className={`text-sm font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</p>
+          <p className="text-[8px] font-bold text-slate-400">{Math.round(details.confidence * 100)}% conf.</p>
+        </div>
+      </div>
+    ))}
+    {skills.length === 0 && <EmptyEvidence label="No technical skill scores were generated." />}
   </div>
 );
 
-const SkillBreakdown: React.FC<{ skill: string; data: EvaluationSkillBreakdown; score: number | null; open: boolean }> = ({ skill, data, score, open }) => (
-  <details className="group border border-slate-200 bg-white" open={open}>
-    <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-3 marker:content-none">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
-          <p className="truncate text-sm font-black text-slate-900">{displayLabel(skill)}</p>
+const SignalPanel: React.FC<{
+  title: string;
+  subtitle: string;
+  items: string[];
+  icon: React.ReactNode;
+  tone: 'emerald' | 'rose';
+}> = ({ title, subtitle, items, icon, tone }) => {
+  const style =
+    tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50/60 text-emerald-800'
+      : 'border-rose-200 bg-rose-50/60 text-rose-800';
+  return (
+    <div className={`rounded-2xl border p-5 ${style}`}>
+      <div className="flex items-center gap-2">{icon}<p className="text-sm font-black">{title}</p></div>
+      <p className="mt-1 text-[10px] font-semibold opacity-70">{subtitle}</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span key={item} className="rounded-full border border-current/10 bg-white/75 px-3 py-1.5 text-[10px] font-black">
+            {item}
+          </span>
+        ))}
+        {items.length === 0 && <p className="text-xs font-semibold opacity-65">None identified.</p>}
+      </div>
+    </div>
+  );
+};
+
+const SkillEvidenceCard: React.FC<{
+  skill: string;
+  details: EvaluationSkillBreakdown;
+  summary: string;
+  evidence: string[];
+  initiallyOpen: boolean;
+}> = ({ skill, details, summary, evidence, initiallyOpen }) => (
+  <details className="group overflow-hidden rounded-xl border border-slate-200 bg-white" open={initiallyOpen}>
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 marker:content-none hover:bg-slate-50/70">
+      <div className="flex min-w-0 items-center gap-3">
+        <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-slate-900">{skill}</p>
+          <p className="mt-1 text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">
+            Role importance {details.priority_score.toFixed(1)} · {details.questions_evaluated} question{details.questions_evaluated === 1 ? '' : 's'} · {Math.round(details.confidence * 100)}% confidence
+          </p>
         </div>
-        <p className="mt-1 pl-6 text-[9px] font-black uppercase tracking-wider text-slate-400">
-          Priority {data.priority_score ?? 'N/A'}
-          {data.depth_required ? ` - ${data.depth_required}` : ''}
-          {typeof data.weight_share === 'number' ? ` - Weight ${data.weight_share.toFixed(1)}%` : ''}
-          {data.assessed === false ? ' - Not directly assessed' : ` - ${data.questions_asked ?? 0} answer${data.questions_asked === 1 ? '' : 's'}`}
-        </p>
       </div>
-      <span className={`shrink-0 text-sm font-black ${scoreColor(score)}`}>{data.raw_score === null ? 'N/A' : `${data.raw_score.toFixed(1)}/10`}</span>
+      <span className={`shrink-0 text-base font-black ${scoreTextClass(details.score)}`}>
+        {details.score.toFixed(1)}
+        <span className="text-[9px] text-slate-400">/10</span>
+      </span>
     </summary>
-    <div className="border-t border-slate-100 p-3">
-      <div className="mb-3 h-2 overflow-hidden bg-slate-100"><div className={`h-full ${scoreBg(score)}`} style={{ width: `${score ?? 0}%` }} /></div>
-      <p className="text-xs font-medium leading-relaxed text-slate-600">{data.summary}</p>
-      {data.similar_skill_credit && <p className="mt-3 border-l-2 border-cyan-400 bg-cyan-50 px-3 py-2 text-[10px] font-semibold leading-relaxed text-cyan-900">Similar-skill credit: {(data.similar_skills_considered ?? []).join(', ') || 'Transferable adjacent experience was considered.'}</p>}
-      <EvidenceList title="Evidence" evidence={data.transcript_evidence ?? []} emptyLabel="No direct transcript evidence was recorded for this skill." />
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <SignalChips title="Demonstrated" items={data.signals_demonstrated ?? []} tone="emerald" />
-        <SignalChips title="Missing or unclear" items={data.signals_missing ?? []} tone="amber" />
-      </div>
+    <div className="border-t border-slate-100 bg-slate-50/40 p-4">
+      <ScoreBar score={details.score} compact />
+      <p className="mt-4 text-xs font-medium leading-6 text-slate-600">{summary}</p>
+      <EvidenceList evidence={evidence} empty="No direct evidence was recorded for this skill." />
     </div>
   </details>
 );
 
-const SectionEvidence: React.FC<{ section: string; data: EvaluationSectionSummary; score: number | null; open: boolean }> = ({ section, data, score, open }) => (
-  <details className="group border border-slate-200 bg-white" open={open}>
-    <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-3 marker:content-none">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-90" />
-          <p className="truncate text-xs font-black text-slate-900">{displayLabel(section)}</p>
-        </div>
-        <p className="mt-1 pl-6 text-[9px] font-black uppercase tracking-wider text-slate-400">{data.questions_asked ?? 0} answer{data.questions_asked === 1 ? '' : 's'}{data.difficulty_reached ? ` - ${data.difficulty_reached}` : ''}</p>
+const NarrativeCard: React.FC<{
+  title: string;
+  score: number;
+  summary: string;
+  evidence: string[];
+  icon: React.ReactNode;
+}> = ({ title, score, summary, evidence, icon }) => (
+  <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 ${scoreTextClass(score)}`}>{icon}</span>
+        <h3 className="text-sm font-black text-slate-950">{title}</h3>
       </div>
-      <span className={`shrink-0 text-xs font-black ${scoreColor(score)}`}>{score === null ? 'N/A' : `${Math.round(score)}%`}</span>
-    </summary>
-    <div className="border-t border-slate-100 p-3">
-      <p className="text-[11px] font-medium leading-relaxed text-slate-600">{data.summary}</p>
-      {data.score_basis && <p className="mt-2 border-l-2 border-slate-300 bg-slate-50 px-3 py-2 text-[10px] font-medium leading-relaxed text-slate-500">{data.score_basis}</p>}
-      <EvidenceList title="Section evidence" evidence={data.evidence ?? []} emptyLabel="No direct transcript evidence was recorded for this section." />
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <SignalChips title="Observed" items={data.signals_demonstrated ?? []} tone="emerald" />
-        <SignalChips title="Missing" items={data.signals_missing ?? []} tone="amber" />
-      </div>
+      <span className={`text-lg font-black ${scoreTextClass(score)}`}>{score.toFixed(1)}</span>
     </div>
-  </details>
+    <div className="mt-3"><ScoreBar score={score} compact /></div>
+    <p className="mt-4 text-xs font-medium leading-6 text-slate-600">{summary}</p>
+    <EvidenceList evidence={evidence} empty="No direct evidence was recorded." />
+  </article>
 );
 
-const DimensionEvidence: React.FC<{ title: string; score: number | null | undefined; summary: string; evidence: string[] }> = ({ title, score, summary, evidence }) => (
-  <div className="border border-slate-200 bg-white p-3">
-    <div className="mb-2 flex items-center justify-between gap-3">
-      <h3 className="text-xs font-black text-slate-900">{title}</h3>
-      <span className={`text-xs font-black ${scoreColor(score)}`}>{scoreValue(score) === null ? 'N/A' : `${Math.round(scoreValue(score)!)}%`}</span>
+const SectionCommunicationCard: React.FC<{
+  section: string;
+  details: SectionCommunicationBreakdown;
+}> = ({ section, details }) => (
+  <article className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+    <div className="flex items-center justify-between gap-3">
+      <h3 className="text-xs font-black text-slate-900">{formatLabel(section)}</h3>
+      <span className={`text-sm font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</span>
     </div>
-    <p className="text-[11px] font-medium leading-relaxed text-slate-600">{summary}</p>
-    <ul className="mt-3 space-y-1.5">
-      {(evidence ?? []).map((item, index) => <li key={`${title}-${index}`} className="border-l-2 border-slate-200 bg-slate-50 px-2.5 py-2 text-[10px] font-medium leading-relaxed text-slate-600">{item}</li>)}
-      {(!evidence || evidence.length === 0) && <li className="text-[10px] font-medium text-slate-400">No evidence recorded.</li>}
+    <div className="mt-2"><ScoreBar score={details.score} compact /></div>
+    <p className="mt-3 text-[11px] font-medium leading-5 text-slate-600">{details.summary}</p>
+    <EvidenceList evidence={details.evidence} empty="No section evidence recorded." compact />
+  </article>
+);
+
+const EvidenceList: React.FC<{
+  evidence: string[];
+  empty: string;
+  compact?: boolean;
+}> = ({ evidence, empty, compact = false }) => (
+  <div className={compact ? 'mt-3' : 'mt-4'}>
+    <p className="mb-2 text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">Evidence</p>
+    <ul className="space-y-2">
+      {evidence.map((item, index) => (
+        <li
+          key={`${item}-${index}`}
+          className="border-l-2 border-emerald-300 bg-white px-3 py-2 text-[10px] font-medium leading-5 text-slate-600 shadow-sm"
+        >
+          {item}
+        </li>
+      ))}
+      {evidence.length === 0 && <li className="text-[10px] font-semibold text-slate-400">{empty}</li>}
     </ul>
   </div>
 );
 
-const EvidenceList: React.FC<{ title: string; evidence: TranscriptEvidence[]; emptyLabel: string }> = ({ title, evidence, emptyLabel }) => (
-  <div className="mt-4">
-    <p className="mb-2 text-[9px] font-black uppercase tracking-wider text-slate-400">{title}</p>
-    <div className="space-y-2">
-      {evidence.map((item, index) => <EvidenceQuote key={`${item.turn_number ?? 'na'}-${index}`} item={item} />)}
-      {evidence.length === 0 && <EmptyState label={emptyLabel} />}
-    </div>
-  </div>
-);
+const IntegrityPanel: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ evaluation }) => {
+  const summary = evaluation.violation_summary;
+  if (!summary) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <SectionTitle
+          icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
+          title="Integrity and conduct"
+          subtitle="Interview integrity summary."
+        />
+        <p className="text-xs font-semibold text-slate-500">No violation summary was generated.</p>
+      </div>
+    );
+  }
 
-const EvidenceQuote: React.FC<{ item: TranscriptEvidence }> = ({ item }) => (
-  <div className="border border-slate-200 bg-slate-50/[0.45] px-3 py-2.5">
-    <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Turn {item.turn_number ?? 'N/A'}{item.section ? ` - ${displayLabel(item.section)}` : ''}{item.skill ? ` - ${item.skill}` : ''}</p>
-    {item.question && <p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-600"><span className="font-black text-slate-700">Question: </span>{item.question}</p>}
-    <p className="mt-2 text-[11px] font-semibold leading-relaxed text-slate-800">"{item.quote}"</p>
-    <p className="mt-2 text-[10px] font-medium leading-relaxed text-slate-600">{item.interpretation}</p>
-  </div>
-);
-
-const SignalChips: React.FC<{ title: string; items: string[]; tone: 'emerald' | 'amber' }> = ({ title, items, tone }) => {
-  const itemClass = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-amber-100 bg-amber-50 text-amber-800';
+  const hasCritical = summary.severity_counts.critical > 0;
   return (
-    <div>
-      <p className="mb-1.5 text-[9px] font-black uppercase tracking-wider text-slate-400">{title}</p>
-      <div className="flex flex-wrap gap-1.5">
-        {items.map((item, index) => <span key={`${title}-${index}`} className={`border px-2 py-1 text-[9px] font-bold ${itemClass}`}>{item}</span>)}
-        {items.length === 0 && <span className="text-[10px] font-medium text-slate-400">None recorded</span>}
+    <div className={`rounded-2xl border p-5 shadow-sm ${summary.has_violation ? 'border-amber-200 bg-amber-50/35' : 'border-emerald-200 bg-emerald-50/30'}`}>
+      <SectionTitle
+        icon={summary.has_violation ? <AlertOctagon className="h-4 w-4 text-amber-600" /> : <ShieldCheck className="h-4 w-4 text-emerald-600" />}
+        title="Integrity and conduct"
+        subtitle="Interview integrity concerns and the evidence supporting them."
+      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <SeverityTile label="Confirmed" value={summary.validated_violation_count} tone={summary.has_violation ? 'amber' : 'emerald'} />
+        <SeverityTile label="Low" value={summary.severity_counts.low} tone="slate" />
+        <SeverityTile label="Medium" value={summary.severity_counts.medium} tone="amber" />
+        <SeverityTile label="High" value={summary.severity_counts.high} tone="rose" />
+        <SeverityTile label="Critical" value={summary.severity_counts.critical} tone={hasCritical ? 'rose' : 'slate'} />
+      </div>
+      <p className="mt-4 text-xs font-medium leading-6 text-slate-600">{summary.summary}</p>
+
+      {summary.hard_gate_reasons.length > 0 && (
+        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-600" />
+            <p className="text-xs font-black text-rose-900">Hiring red flags</p>
+          </div>
+          <ul className="mt-2 space-y-1.5">
+            {summary.hard_gate_reasons.map((reason) => (
+              <li key={reason} className="text-[11px] font-semibold leading-5 text-rose-800">• {reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <EvidenceList
+        evidence={evaluation.violation_evidence ?? []}
+        empty="No supporting integrity evidence was recorded."
+      />
+    </div>
+  );
+};
+
+const SeverityTile: React.FC<{
+  label: string;
+  value: number;
+  tone: 'slate' | 'emerald' | 'amber' | 'rose';
+}> = ({ label, value, tone }) => {
+  const styles = {
+    slate: 'border-slate-200 bg-white text-slate-800',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    amber: 'border-amber-200 bg-amber-50 text-amber-800',
+    rose: 'border-rose-200 bg-rose-50 text-rose-800',
+  };
+  return (
+    <div className={`rounded-xl border p-3 text-center ${styles[tone]}`}>
+      <p className="text-[8px] font-black uppercase tracking-[0.12em] opacity-60">{label}</p>
+      <p className="mt-1 text-xl font-black">{value}</p>
+    </div>
+  );
+};
+
+const EmptyEvidence: React.FC<{ label: string }> = ({ label }) => (
+  <p className="rounded-xl border border-dashed border-slate-200 px-3 py-3 text-[10px] font-semibold text-slate-400">
+    {label}
+  </p>
+);
+
+const ReportLoadingState = () => (
+  <div className="ibot-scrollbar h-full overflow-y-auto pr-1">
+    <div className="mx-auto max-w-[1500px] space-y-4">
+      <div className="h-6 w-40 animate-pulse rounded bg-slate-200" />
+      <div className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+        <div className="grid h-80 place-items-center rounded-2xl border border-slate-200 bg-white">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
+            <p className="mt-3 text-xs font-bold text-slate-400">Building detailed report…</p>
+          </div>
+        </div>
       </div>
     </div>
-  );
-};
-
-const SignalList: React.FC<{ title: string; icon: React.ReactNode; items: string[]; tone: 'emerald' | 'amber' }> = ({ title, icon, items, tone }) => {
-  const classes = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50/[0.55] text-emerald-800' : 'border-amber-100 bg-amber-50/[0.6] text-amber-800';
-  return (
-    <section className="ibot-panel p-4">
-      <div className="mb-3 flex items-center gap-2">{icon}<h2 className="text-sm font-black text-slate-900">{title}</h2></div>
-      <ul className="space-y-2">
-        {items.map((item, index) => <li key={`${title}-${index}`} className={`border-l-2 p-2.5 text-xs font-medium leading-relaxed ${classes}`}>{item}</li>)}
-        {items.length === 0 && <li className="text-xs font-medium text-slate-400">None recorded.</li>}
-      </ul>
-    </section>
-  );
-};
-
-const AnswerHighlight: React.FC<{ title: string; answer: HighlightAnswer | null; tone: 'emerald' | 'red' }> = ({ title, answer, tone }) => {
-  const box = tone === 'emerald' ? 'border-emerald-100 bg-emerald-50/[0.55] text-emerald-800' : 'border-red-100 bg-red-50/[0.55] text-red-800';
-  return (
-    <section className="ibot-panel p-4">
-      <div className="mb-3 flex items-center gap-2">{tone === 'emerald' ? <Award className="h-4 w-4 text-emerald-500" /> : <TrendingUp className="h-4 w-4 text-red-500" />}<h2 className="text-sm font-black text-slate-900">{title}</h2></div>
-      {answer ? <div><div className={`mb-3 border-l-2 p-3 ${box}`}><p className="mb-1 text-[10px] font-black uppercase tracking-wider">Turn {answer.turn_number} - {displayLabel(answer.section)}</p><p className="text-xs font-medium leading-relaxed">{answer.question}</p></div><p className="text-xs font-medium leading-relaxed text-slate-600"><span className="font-black text-slate-800">Why: </span>{answer.reason}</p></div> : <p className="text-xs font-medium text-slate-400">No answer highlight recorded.</p>}
-    </section>
-  );
-};
-
-const Violations: React.FC<{ summary: ViolationSummary }> = ({ summary }) => (
-  <section className="border border-amber-200 bg-amber-50/[0.45] p-4">
-    <div className="mb-3 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" /><h2 className="text-sm font-black text-slate-900">Violation Summary</h2></div>
-    <div className="grid grid-cols-3 gap-2 text-center"><MiniMetric label="Irrelevant" value={String(summary.total_irrelevant)} /><MiniMetric label="Silences" value={String(summary.total_silences)} /><MiniMetric label="Early End" value={summary.terminated_early ? 'Yes' : 'No'} /></div>
-    {summary.entries.length > 0 && <ul className="mt-3 space-y-2">{summary.entries.map((entry, index) => <li key={index} className="border-l-2 border-amber-300 bg-white/[0.75] p-2.5 text-[10px] font-medium leading-relaxed text-slate-600">{entry.violation_type ?? 'Violation'} on turn {entry.turn_number ?? 'N/A'}</li>)}</ul>}
-  </section>
+  </div>
 );
-
-const EmptyState: React.FC<{ label: string }> = ({ label }) => <p className="border border-dashed border-slate-200 px-3 py-2 text-[10px] font-medium text-slate-400">{label}</p>;

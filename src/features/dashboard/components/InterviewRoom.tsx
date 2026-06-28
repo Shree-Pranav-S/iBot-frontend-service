@@ -36,6 +36,7 @@ const TURN_GROUP_GAP_MS = 12_000;
 const MAX_RENDERED_TRANSCRIPTION_SEGMENTS = 96;
 const CLOSING_MESSAGE_MARKERS = [
   'thank you for completing the interview',
+  'thank you for completing your interview',
   'thank you for completing it',
   'next step will be handled after this session',
   'i have enough information from this interview',
@@ -253,9 +254,10 @@ interface InterviewRoomProps {
   token: string;
   durationMins?: number;
   onExit?: () => void;
+  onComplete?: () => void;
 }
 
-export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMins, onExit }) => {
+export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMins, onExit, onComplete }) => {
   const { data, loading, error, createToken } = useLiveKitInterviewToken(token);
   const [connect, setConnect] = useState(false);
 
@@ -329,13 +331,21 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
       }}
       className="flex h-full flex-col"
     >
-      <InterviewStage durationMins={durationMins} onExit={onExit} />
+      <InterviewStage durationMins={durationMins} onExit={onExit} onComplete={onComplete} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
 };
 
-function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExit?: () => void }) {
+function InterviewStage({
+  durationMins,
+  onExit,
+  onComplete,
+}: {
+  durationMins?: number;
+  onExit?: () => void;
+  onComplete?: () => void;
+}) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
   const { isMicrophoneEnabled, lastMicrophoneError, localParticipant, microphoneTrack } = useLocalParticipant();
@@ -347,6 +357,7 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
   const [closingMessageDetected, setClosingMessageDetected] = useState(false);
   const hasConnectedRef = useRef(false);
   const hasAutoDisconnectedRef = useRef(false);
+  const hasCompletionNotifiedRef = useRef(false);
 
   useEffect(() => {
     if (connectionState !== ConnectionState.Connected || isMicrophoneEnabled) return;
@@ -400,6 +411,12 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
     setClosingMessageDetected(true);
   }, []);
 
+  const notifyCompletion = useCallback(() => {
+    if (hasCompletionNotifiedRef.current) return;
+    hasCompletionNotifiedRef.current = true;
+    if (onComplete) onComplete();
+  }, [onComplete]);
+
   useEffect(() => {
     if (connectionState === ConnectionState.Connected) {
       hasConnectedRef.current = true;
@@ -429,10 +446,11 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
         hasAutoDisconnectedRef.current = true;
         room.disconnect();
       }
+      notifyCompletion();
     }, 400);
 
     return () => window.clearTimeout(closeTimer);
-  }, [botIsSpeaking, closingMessageDetected, connectionState, room, sessionPhase]);
+  }, [botIsSpeaking, closingMessageDetected, connectionState, notifyCompletion, room, sessionPhase]);
 
   useEffect(() => {
     if (
@@ -444,7 +462,8 @@ function InterviewStage({ durationMins, onExit }: { durationMins?: number; onExi
     }
 
     setSessionPhase(closingMessageDetected ? 'complete' : 'ended');
-  }, [closingMessageDetected, connectionState, sessionPhase]);
+    if (closingMessageDetected) notifyCompletion();
+  }, [closingMessageDetected, connectionState, notifyCompletion, sessionPhase]);
 
   let statusStr: 'idle' | 'connecting' | 'connected' | 'complete' | 'error' | 'closed' = 'idle';
   if (sessionPhase === 'complete') statusStr = 'complete';

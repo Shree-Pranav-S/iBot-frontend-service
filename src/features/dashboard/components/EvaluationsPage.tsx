@@ -1,404 +1,655 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  ArrowUpRight,
   Award,
   BarChart3,
   BrainCircuit,
   CheckCircle2,
-  Eye,
+  Filter,
   Loader2,
-  MessageSquare,
-  ShieldCheck,
+  MessageSquareText,
+  Search,
+  ShieldAlert,
+  Sparkles,
+  Target,
   ThumbsDown,
   ThumbsUp,
   UserCheck,
+  UserRoundSearch,
   UserX,
   Users,
 } from 'lucide-react';
 import { useRecruiterEvaluations, useUpdateCandidateDecision } from '../../../hooks/queries';
 import { useToast } from '../../../hooks/useToast';
 import type { RecruiterEvaluationListItem } from '../../../types/candidate.types';
+import {
+  CompetencyRadar,
+  DecisionModal,
+  MetricTile,
+  ScoreBar,
+  ScoreRing,
+  StatusPill,
+} from './EvaluationUI';
+import {
+  candidateInitials,
+  decisionMeta,
+  formatDateTime,
+  recommendationMeta,
+  scoreTextClass,
+  useEvaluationDecision,
+} from './evaluationUiUtils';
 
-const scoreColor = (score: number) => {
-  if (score >= 80) return 'text-emerald-600';
-  if (score >= 60) return 'text-indigo-600';
-  if (score >= 40) return 'text-amber-600';
-  return 'text-red-600';
-};
+type DecisionFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
+type SortOption = 'score' | 'recent' | 'rank';
 
-const scoreBg = (score: number) => {
-  if (score >= 80) return 'bg-emerald-500';
-  if (score >= 60) return 'bg-indigo-500';
-  if (score >= 40) return 'bg-amber-500';
-  return 'bg-red-500';
-};
-
-const recommendationClass = (recommendation: string) => {
-  switch (recommendation) {
-    case 'STRONG_HIRE':
-    case 'HIRE':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    case 'CONSIDER':
-      return 'border-indigo-200 bg-indigo-50 text-indigo-700';
-    case 'WEAK':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
-    case 'NO_HIRE':
-      return 'border-red-200 bg-red-50 text-red-700';
-    default:
-      return 'border-slate-200 bg-slate-50 text-slate-700';
-  }
-};
-
-const decisionClass = (decision: string) => {
-  if (decision === 'APPROVED') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (decision === 'REJECTED') return 'border-red-200 bg-red-50 text-red-700';
-  return 'border-amber-200 bg-amber-50 text-amber-700';
-};
-
-const formatRecommendation = (recommendation: string) => recommendation.replace(/_/g, ' ');
-
-const topSkills = (evaluation: RecruiterEvaluationListItem) =>
-  Object.entries(evaluation.skill_scores ?? {})
-    .sort(([, a], [, b]) => {
-      const priorityDelta = (b.priority_score ?? 0) - (a.priority_score ?? 0);
-      if (priorityDelta !== 0) return priorityDelta;
-      return (b.weighted_score ?? 0) - (a.weighted_score ?? 0);
-    })
-    .slice(0, 4);
+const orderedSkills = (evaluation: RecruiterEvaluationListItem) =>
+  Object.entries(evaluation.skill_scores ?? {}).sort(([, left], [, right]) => {
+    const priorityDifference = right.priority_score - left.priority_score;
+    return priorityDifference || right.score - left.score;
+  });
 
 export const EvaluationsPage: React.FC = () => {
   const navigate = useNavigate();
   const { success, error: toastError } = useToast();
-  const { data: evaluations = [], isLoading, isError } = useRecruiterEvaluations();
+  const { data: evaluations = [], isLoading, isError, refetch } = useRecruiterEvaluations();
   const decisionMutation = useUpdateCandidateDecision();
+  const { modal, requestDecision, closeDecision } = useEvaluationDecision();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const selected = useMemo(() => {
-    if (evaluations.length === 0) return null;
-    return evaluations.find((item) => item.candidate_assessment_id === selectedId) ?? evaluations[0];
-  }, [evaluations, selectedId]);
+  const [search, setSearch] = useState('');
+  const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('all');
+  const [sort, setSort] = useState<SortOption>('score');
 
   const stats = useMemo(() => {
     const total = evaluations.length;
     const approved = evaluations.filter((item) => item.recruiter_decision === 'APPROVED').length;
     const rejected = evaluations.filter((item) => item.recruiter_decision === 'REJECTED').length;
-    const pending = evaluations.filter((item) => item.recruiter_decision === 'PENDING').length;
-    const avgScore = total
-      ? Math.round(evaluations.reduce((sum, item) => sum + item.overall_score, 0) / total)
+    const pending = total - approved - rejected;
+    const average = total
+      ? evaluations.reduce((sum, item) => sum + item.overall_score, 0) / total
       : 0;
-    return { total, approved, rejected, pending, avgScore };
+    return { total, approved, rejected, pending, average };
   }, [evaluations]);
 
-  const updateDecision = async (evaluation: RecruiterEvaluationListItem, decision: 'APPROVED' | 'REJECTED') => {
+  const visibleEvaluations = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const filtered = evaluations.filter((evaluation) => {
+      const matchesDecision =
+        decisionFilter === 'all' || evaluation.recruiter_decision === decisionFilter;
+      const matchesQuery =
+        !query ||
+        [
+          evaluation.candidate_name,
+          evaluation.candidate_email,
+          evaluation.role_name,
+          evaluation.assessment_title,
+        ].some((value) => value.toLowerCase().includes(query));
+      return matchesDecision && matchesQuery;
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (sort === 'recent') {
+        return new Date(right.generated_at).getTime() - new Date(left.generated_at).getTime();
+      }
+      if (sort === 'rank') {
+        return (left.rank_in_assessment ?? Number.MAX_SAFE_INTEGER) -
+          (right.rank_in_assessment ?? Number.MAX_SAFE_INTEGER);
+      }
+      return right.overall_score - left.overall_score;
+    });
+  }, [decisionFilter, evaluations, search, sort]);
+
+  const selected = useMemo(
+    () =>
+      visibleEvaluations.find((item) => item.candidate_assessment_id === selectedId) ??
+      visibleEvaluations[0] ??
+      null,
+    [selectedId, visibleEvaluations],
+  );
+
+  const saveDecision = async (feedback?: string) => {
     try {
       await decisionMutation.mutateAsync({
-        candidateId: evaluation.candidate_assessment_id,
-        decision,
+        candidateId: modal.candidateId,
+        decision: modal.decision,
+        feedback,
       });
-      success('Decision Saved', `${evaluation.candidate_name} marked as ${decision.toLowerCase()} and notification queued.`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save decision.';
-      toastError('Decision Failed', message);
+      success(
+        'Decision saved',
+        `${modal.candidateName} has been ${modal.decision === 'APPROVED' ? 'approved' : 'rejected'}.`,
+      );
+      closeDecision();
+    } catch (error: unknown) {
+      toastError(
+        'Unable to save decision',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full min-h-[420px] flex-col items-center justify-center">
-        <Loader2 className="mb-3 h-8 w-8 animate-spin text-emerald-500" />
-        <p className="text-sm font-semibold text-slate-500">Loading evaluations...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <EvaluationLoadingState />;
 
   if (isError) {
     return (
-      <div className="flex h-full min-h-[420px] flex-col items-center justify-center text-center">
-        <AlertTriangle className="mb-3 h-9 w-9 text-red-500" />
-        <p className="text-base font-bold text-slate-900">Unable to load evaluations</p>
-        <p className="mt-1 max-w-sm text-xs font-medium text-slate-500">
-          Please try again after confirming the API service is running.
-        </p>
+      <div className="flex h-full min-h-[440px] items-center justify-center">
+        <div className="max-w-md rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-xl shadow-rose-100/60">
+          <AlertTriangle className="mx-auto h-10 w-10 text-rose-500" />
+          <h2 className="mt-4 text-lg font-black text-slate-950">Evaluations could not be loaded</h2>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+            The reporting service may still be starting. Retry to refresh this workspace.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-5 rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-black text-white hover:bg-slate-800"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (!selected) {
+  if (evaluations.length === 0) {
     return (
-      <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/70 p-8 text-center">
-        <Award className="mb-3 h-10 w-10 text-slate-300" />
-        <p className="text-base font-bold text-slate-900">No evaluated interviews yet</p>
-        <p className="mt-1 max-w-sm text-xs font-medium text-slate-500">
-          Completed interviews will appear here once the evaluation is generated.
-        </p>
+      <div className="flex h-full min-h-[440px] items-center justify-center">
+        <div className="max-w-lg rounded-2xl border border-dashed border-slate-300 bg-white/80 p-10 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <h2 className="mt-4 text-lg font-black text-slate-950">Evaluation workspace is ready</h2>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+            Completed interviews will appear here as soon as holistic evaluation finishes.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden animate-fadeIn">
-      <div className="ibot-command-panel flex flex-col gap-3 p-4 animate-slideDown md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-black tracking-tight text-slate-950">Evaluations</h1>
-          <p className="mt-0.5 text-sm font-medium text-slate-500">
-            Review completed interviews and make hiring decisions.
-          </p>
-        </div>
-      </div>
+    <>
+      <div className="ibot-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto animate-fadeIn xl:overflow-hidden">
+        <section className="ibot-command-panel shrink-0 overflow-hidden p-4 sm:p-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-emerald-700">
+                  Decision center
+                </span>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {stats.pending} awaiting review
+                </span>
+              </div>
+              <h2 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-950">
+                Candidate intelligence
+              </h2>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                Compare evidence-backed reports and make confident hiring decisions.
+              </p>
+            </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <MetricCard label="Evaluated" value={stats.total} icon={<Award className="h-4 w-4" />} />
-        <MetricCard label="Avg Score" value={stats.avgScore} suffix="/100" icon={<BarChart3 className="h-4 w-4" />} />
-        <MetricCard label="Pending" value={stats.pending} icon={<Users className="h-4 w-4" />} />
-        <MetricCard label="Approved" value={stats.approved} icon={<UserCheck className="h-4 w-4" />} />
-        <MetricCard label="Rejected" value={stats.rejected} icon={<UserX className="h-4 w-4" />} />
-      </div>
-
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[390px_minmax(0,1fr)]">
-        <div className="ibot-panel flex min-h-0 flex-col overflow-hidden">
-          <div className="border-b border-slate-200/70 px-4 py-3">
-            <p className="text-xs font-black uppercase tracking-wider text-slate-500">Completed Interviews</p>
-          </div>
-          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
-            {evaluations.map((evaluation) => {
-              const active = evaluation.candidate_assessment_id === selected.candidate_assessment_id;
-              return (
-                <button
-                  key={evaluation.candidate_assessment_id}
-                  onClick={() => setSelectedId(evaluation.candidate_assessment_id)}
-                  className={`mb-2 w-full rounded-xl border p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/[0.35] ${
-                    active ? 'border-emerald-300 bg-white shadow-md shadow-emerald-900/5' : 'border-slate-200 bg-white'
-                  }`}
+            <div className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto_auto]">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search candidates or roles"
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                />
+              </label>
+              <label className="relative">
+                <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={decisionFilter}
+                  onChange={(event) => setDecisionFilter(event.target.value as DecisionFilter)}
+                  className="h-10 appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-black text-slate-600 outline-none focus:border-emerald-400"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-900">{evaluation.candidate_name}</p>
-                      <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">{evaluation.candidate_email}</p>
-                    </div>
-                    <span className={`shrink-0 text-lg font-black ${scoreColor(evaluation.overall_score)}`}>
-                      {Math.round(evaluation.overall_score)}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${recommendationClass(evaluation.hiring_recommendation)}`}>
-                      {formatRecommendation(evaluation.hiring_recommendation)}
-                    </span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black ${decisionClass(evaluation.recruiter_decision)}`}>
-                      {evaluation.recruiter_decision}
-                    </span>
-                  </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full ${scoreBg(evaluation.overall_score)}`}
-                      style={{ width: `${Math.min(100, Math.max(0, evaluation.overall_score))}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 truncate text-[10px] font-semibold text-slate-500">
-                    {evaluation.role_name} - {evaluation.assessment_title}
-                  </p>
-                </button>
-              );
-            })}
+                  <option value="all">All decisions</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+              </label>
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as SortOption)}
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 outline-none focus:border-emerald-400"
+              >
+                <option value="score">Highest score</option>
+                <option value="rank">Best rank</option>
+                <option value="recent">Most recent</option>
+              </select>
+            </div>
           </div>
+        </section>
+
+        <section className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-5">
+          <MetricTile label="Evaluated" value={String(stats.total)} helper="completed reports" icon={<Award className="h-4 w-4" />} />
+          <MetricTile label="Average score" value={stats.average.toFixed(1)} helper="out of 10" icon={<BarChart3 className="h-4 w-4" />} tone="indigo" />
+          <MetricTile label="Pending" value={String(stats.pending)} helper="need a decision" icon={<Users className="h-4 w-4" />} tone="amber" />
+          <MetricTile label="Approved" value={String(stats.approved)} helper="moving forward" icon={<UserCheck className="h-4 w-4" />} tone="emerald" />
+          <div className="hidden lg:block">
+            <MetricTile label="Rejected" value={String(stats.rejected)} helper="not progressing" icon={<UserX className="h-4 w-4" />} tone="rose" />
+          </div>
+        </section>
+
+        <section className="grid shrink-0 gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[370px_minmax(0,1fr)]">
+          <aside className="ibot-panel flex h-[430px] min-h-[260px] flex-col overflow-hidden xl:h-auto">
+            <header className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3">
+              <div>
+                <p className="text-xs font-black text-slate-900">Candidate reports</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                  {visibleEvaluations.length} shown
+                </p>
+              </div>
+              <UserRoundSearch className="h-4 w-4 text-slate-400" />
+            </header>
+
+            <div className="ibot-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto p-2.5">
+              {visibleEvaluations.map((evaluation) => (
+                <CandidateReportListItem
+                  key={evaluation.candidate_assessment_id}
+                  evaluation={evaluation}
+                  active={evaluation.candidate_assessment_id === selected?.candidate_assessment_id}
+                  onClick={() => setSelectedId(evaluation.candidate_assessment_id)}
+                />
+              ))}
+              {visibleEvaluations.length === 0 && (
+                <div className="grid min-h-52 place-items-center rounded-xl border border-dashed border-slate-200 p-6 text-center">
+                  <div>
+                    <Search className="mx-auto h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-xs font-black text-slate-700">No matching reports</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('');
+                        setDecisionFilter('all');
+                      }}
+                      className="mt-2 text-[11px] font-black text-emerald-700 hover:text-emerald-800"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {selected && (
+            <main className="ibot-scrollbar min-h-0 overflow-visible rounded-2xl xl:overflow-y-auto xl:pr-1">
+              <CandidateSummary
+                evaluation={selected}
+                onViewReport={() =>
+                  navigate(`/candidates/${selected.candidate_assessment_id}/report`)
+                }
+                onDecision={(decision) =>
+                  requestDecision(
+                    selected.candidate_assessment_id,
+                    selected.candidate_name,
+                    selected.recruiter_decision,
+                    decision,
+                  )
+                }
+              />
+            </main>
+          )}
+        </section>
+      </div>
+
+      <DecisionModal
+        key={`${modal.candidateId}:${modal.decision}:${modal.open}`}
+        open={modal.open}
+        candidateName={modal.candidateName}
+        currentDecision={modal.currentDecision}
+        decision={modal.decision}
+        loading={decisionMutation.isPending}
+        onClose={closeDecision}
+        onConfirm={saveDecision}
+      />
+    </>
+  );
+};
+
+const CandidateReportListItem: React.FC<{
+  evaluation: RecruiterEvaluationListItem;
+  active: boolean;
+  onClick: () => void;
+}> = ({ evaluation, active, onClick }) => {
+  const recommendation = recommendationMeta(evaluation.hiring_recommendation);
+  const decision = decisionMeta(evaluation.recruiter_decision);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group w-full rounded-xl border p-3 text-left transition-all ${
+        active
+          ? 'border-emerald-300 bg-white shadow-md shadow-emerald-900/[0.07]'
+          : 'border-slate-200 bg-white/75 hover:border-slate-300 hover:bg-white'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
+            active ? 'bg-slate-950 text-emerald-300' : 'bg-slate-100 text-slate-600'
+          }`}
+        >
+          {candidateInitials(evaluation.candidate_name)}
         </div>
-
-        <div className="ibot-scrollbar min-h-0 overflow-y-auto pr-1">
-          <div className="ibot-panel overflow-hidden">
-            <div className="border-b border-slate-200/70 bg-white/90 p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="min-w-0">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black ${recommendationClass(selected.hiring_recommendation)}`}>
-                      {formatRecommendation(selected.hiring_recommendation)}
-                    </span>
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black ${decisionClass(selected.recruiter_decision)}`}>
-                      {selected.recruiter_decision}
-                    </span>
-                    {selected.red_flags_count > 0 && (
-                      <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[10px] font-black text-red-700">
-                        {selected.red_flags_count} red flag{selected.red_flags_count > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-xl font-black text-slate-950">{selected.candidate_name}</h2>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    {selected.role_name} - {selected.assessment_title}
-                  </p>
-                  <p className="mt-3 max-w-3xl text-sm font-medium leading-relaxed text-slate-600">
-                    {selected.overall_narrative}
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <button
-                    onClick={() => updateDecision(selected, 'APPROVED')}
-                    disabled={selected.recruiter_decision === 'APPROVED' || decisionMutation.isPending}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-[11px] font-black text-white shadow-sm transition-all hover:bg-emerald-700 hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => updateDecision(selected, 'REJECTED')}
-                    disabled={selected.recruiter_decision === 'REJECTED' || decisionMutation.isPending}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2 text-[11px] font-black text-red-600 shadow-sm transition-all hover:bg-red-500 hover:text-white hover:scale-[1.03] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    <ThumbsDown className="h-3.5 w-3.5" />
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => navigate(`/candidates/${selected.candidate_assessment_id}/report`)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-black text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-emerald-700 hover:scale-[1.03] active:scale-[0.97]"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    Full Report
-                  </button>
-                </div>
-              </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-slate-900">{evaluation.candidate_name}</p>
+              <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-400">
+                {evaluation.role_name}
+              </p>
             </div>
-
-            <div className="space-y-4 bg-slate-50/[0.55] p-5">
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-                <ScoreCard label="Overall" score={selected.overall_score} icon={<Award className="h-4 w-4" />} />
-                <ScoreCard label="Technical" score={selected.technical_dimension_score} icon={<BrainCircuit className="h-4 w-4" />} />
-                <ScoreCard label="Behavioural" score={selected.behavioural_score} icon={<Users className="h-4 w-4" />} />
-                <ScoreCard label="Culture" score={selected.cultural_fit_score} icon={<ShieldCheck className="h-4 w-4" />} />
-                <ScoreCard label="Tone" score={selected.tone_classification_score} icon={<MessageSquare className="h-4 w-4" />} />
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-black text-slate-900">Top Skill Metrics</h3>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {selected.rank_in_assessment ? `Rank #${selected.rank_in_assessment}` : 'Rank N/A'}
-                      {selected.total_candidates_evaluated ? ` of ${selected.total_candidates_evaluated}` : ''}
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {topSkills(selected).map(([skill, data]) => (
-                      <div key={skill}>
-                        <div className="mb-1 flex items-end justify-between gap-3">
-                          <span className="truncate text-xs font-black capitalize text-slate-800">{skill.replace(/_/g, ' ')}</span>
-                          <span className={`text-xs font-black ${scoreColor(data.weighted_score)}`}>{Math.round(data.weighted_score)}</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className={`h-full rounded-full ${scoreBg(data.weighted_score)}`}
-                            style={{ width: `${Math.min(100, Math.max(0, data.weighted_score))}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-relaxed text-slate-500">{data.summary}</p>
-                        <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-slate-400">
-                          Priority {data.priority_score ?? 'N/A'}
-                          {typeof data.weight_share === 'number' ? ` - Weight ${data.weight_share.toFixed(1)}%` : ''}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <h3 className="mb-3 text-sm font-black text-slate-900">Recommendation Reasoning</h3>
-                  <p className="text-xs font-medium leading-relaxed text-slate-600">{selected.recommendation_reasoning}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Percentile</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">
-                        {selected.percentile_in_assessment !== null ? `${selected.percentile_in_assessment}%` : 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Generated</p>
-                      <p className="mt-1 text-xs font-bold text-slate-700">{new Date(selected.generated_at).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-2">
-                <SignalList
-                  title="Strengths"
-                  icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                  items={selected.strengths}
-                  tone="emerald"
-                />
-                <SignalList
-                  title="Concerns"
-                  icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
-                  items={selected.concerns}
-                  tone="amber"
-                />
-              </div>
-            </div>
+            <span className={`shrink-0 font-display text-lg font-black ${scoreTextClass(evaluation.overall_score)}`}>
+              {evaluation.overall_score.toFixed(1)}
+            </span>
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <StatusPill {...recommendation} />
+            <StatusPill {...decision} />
+            {evaluation.validated_violation_count > 0 && (
+              <StatusPill
+                label={`${evaluation.validated_violation_count} violation${evaluation.validated_violation_count === 1 ? '' : 's'}`}
+                className="border-rose-200 bg-rose-50 text-rose-800"
+                dot="bg-rose-500"
+              />
+            )}
+          </div>
+          <div className="mt-3">
+            <ScoreBar score={evaluation.overall_score} compact />
           </div>
         </div>
       </div>
+    </button>
+  );
+};
+
+const CandidateSummary: React.FC<{
+  evaluation: RecruiterEvaluationListItem;
+  onViewReport: () => void;
+  onDecision: (decision: 'APPROVED' | 'REJECTED') => void;
+}> = ({ evaluation, onViewReport, onDecision }) => {
+  const recommendation = recommendationMeta(evaluation.hiring_recommendation);
+  const decision = decisionMeta(evaluation.recruiter_decision);
+  const skills = orderedSkills(evaluation);
+  const topSkills = skills.slice(0, 5);
+
+  return (
+    <div className="space-y-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="h-1.5 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
+        <div className="p-5">
+          <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap gap-2">
+                <StatusPill {...recommendation} />
+                <StatusPill {...decision} />
+                {evaluation.rank_in_assessment && (
+                  <StatusPill
+                    label={`Rank #${evaluation.rank_in_assessment}`}
+                    className="border-slate-200 bg-slate-50 text-slate-700"
+                    dot="bg-slate-400"
+                  />
+                )}
+              </div>
+              <h2 className="mt-3 font-display text-2xl font-black tracking-tight text-slate-950">
+                {evaluation.candidate_name}
+              </h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                {evaluation.candidate_email} · {evaluation.role_name} · {evaluation.assessment_title}
+              </p>
+              <p className="mt-4 max-w-4xl text-sm font-medium leading-6 text-slate-600">
+                {evaluation.overall_summary}
+              </p>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onDecision('APPROVED')}
+                disabled={evaluation.recruiter_decision === 'APPROVED'}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ThumbsUp className="h-4 w-4" />
+                Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => onDecision('REJECTED')}
+                disabled={evaluation.recruiter_decision === 'REJECTED'}
+                className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ThumbsDown className="h-4 w-4" />
+                Reject
+              </button>
+              <button
+                type="button"
+                onClick={onViewReport}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-black text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+              >
+                Full report
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
+        <div className="grid gap-4 md:grid-cols-[210px_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid place-items-center">
+              <ScoreRing score={evaluation.overall_score} size={154} />
+              <p className="mt-2 text-xs font-black text-slate-800">
+                AI recommendation: {recommendation.label}
+              </p>
+              <p className="mt-1 text-center text-[10px] font-semibold text-slate-400">
+                Generated {formatDateTime(evaluation.generated_at)}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-slate-900">Core dimensions</p>
+                <p className="mt-1 text-[10px] font-semibold text-slate-400">Evidence-calibrated scores</p>
+              </div>
+              <Target className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <DimensionMiniCard
+                label="Technical"
+                score={evaluation.overall_technical_skill_score}
+                icon={<BrainCircuit className="h-4 w-4" />}
+              />
+              <DimensionMiniCard
+                label="Behaviour"
+                score={evaluation.behavioural_cultural_score}
+                icon={<Users className="h-4 w-4" />}
+              />
+              <DimensionMiniCard
+                label="Communication"
+                score={evaluation.communication_score}
+                icon={<MessageSquareText className="h-4 w-4" />}
+              />
+            </div>
+            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+              <CompactStat
+                label="Percentile"
+                value={evaluation.percentile_in_assessment === null ? '—' : `${evaluation.percentile_in_assessment}%`}
+              />
+              <CompactStat
+                label="Rank"
+                value={evaluation.rank_in_assessment === null ? '—' : `#${evaluation.rank_in_assessment}`}
+              />
+              <CompactStat
+                label="Violations"
+                value={String(evaluation.validated_violation_count)}
+                alert={evaluation.validated_violation_count > 0}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <p className="text-xs font-black text-slate-900">Competency shape</p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">At-a-glance balance</p>
+            </div>
+            <Sparkles className="h-4 w-4 text-indigo-500" />
+          </div>
+          <CompetencyRadar
+            points={[
+              { label: 'Technical', score: evaluation.overall_technical_skill_score },
+              { label: 'Behaviour', score: evaluation.behavioural_cultural_score },
+              { label: 'Communication', score: evaluation.communication_score },
+            ]}
+          />
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-black text-slate-900">Priority skill performance</p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                Highest-priority planned skills first
+              </p>
+            </div>
+            <BrainCircuit className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div className="mt-5 space-y-4">
+            {topSkills.map(([skill, details]) => (
+              <div key={skill}>
+                <ScoreBar score={details.score} label={skill} />
+                <div className="mt-1.5 flex items-center gap-3 text-[9px] font-bold text-slate-400">
+                  <span>Priority {details.priority_score.toFixed(1)}</span>
+                  <span>{details.questions_evaluated} question{details.questions_evaluated === 1 ? '' : 's'}</span>
+                  <span>{Math.round(details.confidence * 100)}% confidence</span>
+                </div>
+              </div>
+            ))}
+            {topSkills.length === 0 && (
+              <p className="rounded-xl border border-dashed border-slate-200 p-4 text-xs font-semibold text-slate-400">
+                No technical skill data is available.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <SignalCard
+            title="Technical strengths"
+            items={evaluation.strengths}
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            tone="emerald"
+          />
+          <SignalCard
+            title="Areas of concern"
+            items={evaluation.concerns}
+            icon={<ShieldAlert className="h-4 w-4" />}
+            tone="rose"
+          />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
+            <MessageSquareText className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-xs font-black text-slate-900">Recommendation reasoning</p>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+              {evaluation.recommendation_reasoning}
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
-const MetricCard: React.FC<{ label: string; value: number; suffix?: string; icon: React.ReactNode }> = ({
-  label,
-  value,
-  suffix = '',
-  icon,
-}) => (
-  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
-    <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+const DimensionMiniCard: React.FC<{
+  label: string;
+  score: number;
+  icon: React.ReactNode;
+}> = ({ label, score, icon }) => (
+  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+    <div className={`flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-sm ${scoreTextClass(score)}`}>
       {icon}
     </div>
-    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
-    <p className="mt-1 text-2xl font-black text-slate-950">
-      {value}<span className="text-xs font-bold text-slate-400">{suffix}</span>
+    <p className="mt-3 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+    <p className={`mt-1 font-display text-xl font-black ${scoreTextClass(score)}`}>
+      {score.toFixed(1)}
+      <span className="ml-0.5 text-[10px] text-slate-400">/10</span>
     </p>
   </div>
 );
 
-const ScoreCard: React.FC<{ label: string; score: number | null; icon: React.ReactNode }> = ({ label, score, icon }) => {
-  const displayScore = score ?? 0;
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
-      <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${scoreColor(displayScore)} bg-slate-50 ring-1 ring-slate-100`}>
-        {icon}
-      </div>
-      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-black ${score === null ? 'text-slate-400' : scoreColor(displayScore)}`}>
-        {score === null ? 'N/A' : Math.round(score)}
-        {score !== null && <span className="text-xs font-bold text-slate-400">/100</span>}
-      </p>
-    </div>
-  );
-};
+const CompactStat: React.FC<{ label: string; value: string; alert?: boolean }> = ({
+  label,
+  value,
+  alert = false,
+}) => (
+  <div className={`rounded-lg border px-3 py-2 ${alert ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+    <p className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+    <p className={`mt-1 text-sm font-black ${alert ? 'text-rose-700' : 'text-slate-800'}`}>{value}</p>
+  </div>
+);
 
-const SignalList: React.FC<{
+const SignalCard: React.FC<{
   title: string;
-  icon: React.ReactNode;
   items: string[];
-  tone: 'emerald' | 'amber';
-}> = ({ title, icon, items, tone }) => {
-  const classes = tone === 'emerald'
-    ? 'border-emerald-100 bg-emerald-50/[0.45] text-emerald-800'
-    : 'border-amber-100 bg-amber-50/[0.55] text-amber-800';
-
+  icon: React.ReactNode;
+  tone: 'emerald' | 'rose';
+}> = ({ title, items, icon, tone }) => {
+  const styles =
+    tone === 'emerald'
+      ? 'border-emerald-200 bg-emerald-50/60 text-emerald-800'
+      : 'border-rose-200 bg-rose-50/60 text-rose-800';
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
-      <div className="mb-3 flex items-center gap-2">
+    <div className={`rounded-2xl border p-4 ${styles}`}>
+      <div className="flex items-center gap-2">
         {icon}
-        <h3 className="text-sm font-black text-slate-900">{title}</h3>
+        <p className="text-xs font-black">{title}</p>
       </div>
-      {items.length === 0 ? (
-        <p className="text-xs font-medium text-slate-400">None recorded.</p>
-      ) : (
-        <ul className="space-y-2">
-          {items.slice(0, 5).map((item, index) => (
-            <li key={`${title}-${index}`} className={`rounded-lg border p-2.5 text-xs font-medium leading-relaxed ${classes}`}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span key={item} className="rounded-full border border-current/10 bg-white/70 px-2.5 py-1 text-[10px] font-black">
+            {item}
+          </span>
+        ))}
+        {items.length === 0 && <p className="text-[11px] font-semibold opacity-70">None identified.</p>}
+      </div>
     </div>
   );
 };
+
+const EvaluationLoadingState = () => (
+  <div className="flex h-full min-h-[440px] flex-col gap-4">
+    <div className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      {Array.from({ length: 5 }, (_, index) => (
+        <div key={index} className="h-24 animate-pulse rounded-xl border border-slate-200 bg-white" />
+      ))}
+    </div>
+    <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[370px_minmax(0,1fr)]">
+      <div className="animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
+          <p className="mt-3 text-xs font-bold text-slate-400">Loading candidate intelligence…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);

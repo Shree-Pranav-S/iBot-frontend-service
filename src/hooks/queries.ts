@@ -135,6 +135,7 @@ export const useUpdateCandidateDecision = () => {
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["candidates"] });
       client.invalidateQueries({ queryKey: ["evaluations"] });
+      client.invalidateQueries({ queryKey: ["candidate-evaluation"] });
     },
   });
 };

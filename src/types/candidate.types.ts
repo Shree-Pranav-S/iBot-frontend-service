@@ -51,6 +51,7 @@ export interface SingleCandidateResponse {
 
 export interface TokenValidationResponse {
   candidate_name: string;
+  company_name: string;
   assessment_title: string;
   interview_duration_mins: number;
   window_end: string;
@@ -58,69 +59,33 @@ export interface TokenValidationResponse {
   sections_overview: string[];
 }
 
-export interface TranscriptEvidence {
-  turn_number: number | null;
-  section: string | null;
-  skill: string | null;
-  question?: string | null;
-  quote: string;
-  interpretation: string;
-}
-
 export interface EvaluationSkillBreakdown {
-  priority_score: number | null;
-  depth_required?: string | null;
-  weighted_score: number;
-  raw_score: number | null;
-  weight_share?: number | null;
-  weighted_contribution?: number | null;
-  difficulty_reached: string | number | null;
-  questions_asked?: number | null;
-  assessed?: boolean | null;
-  similar_skill_credit?: boolean;
-  similar_skills_considered?: string[];
-  transcript_evidence?: TranscriptEvidence[];
-  signals_demonstrated: string[];
-  signals_missing: string[];
+  score: number;
+  priority_score: number;
+  questions_evaluated: number;
+  confidence: number;
+}
+
+export interface SectionCommunicationBreakdown {
+  score: number;
   summary: string;
+  evidence: string[];
 }
 
-export interface EvaluationSectionSummary {
-  summary: string;
-  avg_score: number | null;
-  difficulty_reached: string | number | null;
-  questions_asked: number | null;
-  evidence?: TranscriptEvidence[];
-  signals_demonstrated?: string[];
-  signals_missing?: string[];
-  score_basis?: string | null;
-}
-
-export interface HighlightAnswer {
-  question: string;
-  turn_number: number;
-  section: string | null;
-  difficulty_at_time: string | number | null;
-  reason: string;
-}
-
-export interface RedFlag {
-  description: string;
-  severity: 'critical' | 'minor';
-}
-
-export interface ViolationEntry {
-  turn_number?: number | null;
-  violation_type?: string | null;
-  severity?: string | null;
-  [key: string]: unknown;
+export interface SeverityCounts {
+  low: number;
+  medium: number;
+  high: number;
+  critical: number;
 }
 
 export interface ViolationSummary {
-  total_irrelevant: number;
-  total_silences: number;
-  terminated_early: boolean;
-  entries: ViolationEntry[];
+  has_violation: boolean;
+  validated_violation_count: number;
+  severity_counts: SeverityCounts;
+  summary: string;
+  penalty_applied: number;
+  hard_gate_reasons: string[];
 }
 
 export interface InterviewEvaluationResponse {
@@ -133,46 +98,51 @@ export interface InterviewEvaluationResponse {
   role_name?: string | null;
   recruiter_decision?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
   recruiter_feedback?: string | null;
-  
-  // Skills
+
+  intro_section_score: number;
+  intro_section_summary: string;
+  intro_section_evidence: string[];
+
   skill_scores: Record<string, EvaluationSkillBreakdown>;
-  
-  // Dimensions
-  technical_dimension_score: number;
-  score_evidence: string[];
-  score_summary: string;
-  behavioural_score: number;
-  behavioural_evidence: string[];
-  behavioural_summary: string;
-  cultural_fit_score: number;
-  cultural_fit_evidence: string[];
-  cultural_fit_summary: string;
-  tone_classification_score: number | null;
-  tone_distribution: Record<string, unknown>[] | null;
-  
-  // Section summaries
-  section_summaries: Record<string, EvaluationSectionSummary>;
-  
-  // Overall
+  overall_technical_skill_score: number;
+  skill_summary: Record<string, string>;
+  skill_evidence: Record<string, string[]>;
+
+  behavioural_cultural_score: number;
+  behavioural_cultural_summary: string;
+  behavioural_cultural_evidence: string[];
+
+  communication_score: number;
+  communication_summary: string;
+  communication_evidence: string[];
+  section_communication_scores: Record<string, SectionCommunicationBreakdown>;
+
+  violation_summary: ViolationSummary | null;
+  violation_evidence: string[] | null;
+
+  raw_overall_score: number;
+  violation_penalty: number;
   overall_score: number;
-  hiring_recommendation: string;
-  overall_narrative: string;
+  hiring_recommendation: 'hire' | 'consider' | 'no hire';
+  model_recommendation: 'hire' | 'consider' | 'no hire';
+  recommendation_override_reason: string | null;
+  overall_summary: string;
   recommendation_reasoning: string;
-  
-  // Highlights & Flags
   strengths: string[];
   concerns: string[];
-  violation_summary: ViolationSummary | null;
-  best_answer: HighlightAnswer | null;
-  weakest_answer: HighlightAnswer | null;
-  
-  // Ranking
+
+  prompt_version: string;
+  model_name: string;
+  model_provider: string;
+  evaluation_schema_version: string;
+  transcript_hash: string;
+
   rank_in_assessment: number | null;
   percentile_in_assessment: number | null;
   total_candidates_evaluated: number | null;
-  
   generated_at: string;
 }
+
 export interface RecruiterEvaluationListItem {
   candidate_assessment_id: string;
   candidate_name: string;
@@ -185,19 +155,18 @@ export interface RecruiterEvaluationListItem {
   interview_ended_at: string | null;
   generated_at: string;
   overall_score: number;
-  hiring_recommendation: string;
+  hiring_recommendation: 'hire' | 'consider' | 'no hire';
   recommendation_reasoning: string;
-  overall_narrative: string;
-  technical_dimension_score: number;
-  behavioural_score: number;
-  cultural_fit_score: number;
-  tone_classification_score: number | null;
+  overall_summary: string;
+  overall_technical_skill_score: number;
+  behavioural_cultural_score: number;
+  communication_score: number;
   rank_in_assessment: number | null;
   percentile_in_assessment: number | null;
   total_candidates_evaluated: number | null;
   strengths: string[];
   concerns: string[];
-  red_flags_count: number;
+  validated_violation_count: number;
   skill_scores: Record<string, EvaluationSkillBreakdown>;
 }
 

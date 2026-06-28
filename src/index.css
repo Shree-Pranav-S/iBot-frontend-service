@@ -100,6 +100,45 @@
   }
 }
 
+@media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .ibot-workspace-bg,
+  .ibot-workspace-bg > div,
+  main,
+  .ibot-scrollbar {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .ibot-workspace-bg > aside,
+  .ibot-workspace-bg > div > header,
+  .ibot-workspace-bg > nav {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  section,
+  article,
+  details {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  details:not([open]) > :not(summary) {
+    display: block !important;
+  }
+}
+
 @layer utilities {
   
   .ibot-scrollbar::-webkit-scrollbar {

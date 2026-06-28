@@ -3,13 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { InterviewRoom } from './InterviewRoom';
 import { WaitingRoom } from './WaitingRoom';
 import { DemoInterviewRoom } from './DemoInterviewRoom';
-import { ShieldAlert, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export const InterviewPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token')?.trim() || null;
-  const [view, setView] = useState<'waiting_room' | 'interview' | 'demo'>('waiting_room');
+  const [view, setView] = useState<'waiting_room' | 'interview' | 'demo' | 'completed'>('waiting_room');
   const [durationMins, setDurationMins] = useState<number>(30);
+  const [companyName, setCompanyName] = useState<string>('the company');
 
   if (token) {
     if (view === 'waiting_room') {
@@ -18,7 +19,10 @@ export const InterviewPage: React.FC = () => {
           token={token}
           onStartInterview={() => setView('interview')}
           onStartDemo={() => setView('demo')}
-          onDetailsLoaded={(details) => setDurationMins(details.interview_duration_mins)}
+          onDetailsLoaded={(details) => {
+            setDurationMins(details.interview_duration_mins);
+            setCompanyName(details.company_name || 'the company');
+          }}
         />
       );
     }
@@ -32,9 +36,32 @@ export const InterviewPage: React.FC = () => {
       );
     }
 
+    if (view === 'completed') {
+      return (
+        <div className="ibot-waiting-room-bg flex h-screen items-center justify-center p-6">
+          <div className="w-full max-w-xl rounded-2xl border border-white/80 bg-white/95 p-10 text-center shadow-2xl shadow-slate-900/10">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+            <h1 className="mt-6 text-2xl font-black text-slate-950">Interview completed</h1>
+            <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600">
+              Thank you for completing your interview for {companyName}. Your responses have been submitted successfully.
+            </p>
+            <p className="mt-2 text-xs font-medium text-slate-500">
+              The recruiting team will contact you if there are any next steps.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white">
-        <InterviewRoom token={token} durationMins={durationMins} />
+        <InterviewRoom
+          token={token}
+          durationMins={durationMins}
+          onComplete={() => setView('completed')}
+        />
       </div>
     );
   }

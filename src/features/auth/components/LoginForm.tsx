@@ -60,7 +60,7 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className="w-full rounded-input-btn border border-subtle bg-elevated-2/60 py-3 pl-11 pr-4 text-sm text-white placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2"
+              className="w-full rounded-input-btn border border-subtle bg-white py-3 pl-11 pr-4 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white"
             />
           </div>
         </div>
@@ -79,7 +79,7 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-input-btn border border-subtle bg-elevated-2/60 py-3 pl-11 pr-11 text-sm text-white placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2"
+              className="w-full rounded-input-btn border border-subtle bg-white py-3 pl-11 pr-11 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white"
             />
             <button
               type="button"
@@ -89,6 +89,18 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+        </div>
+
+        {/* Forgot password */}
+        <div className="flex justify-end -mt-1">
+          <button
+            type="button"
+            id="btn-forgot-password"
+            onClick={() => navigate('/reset-password')}
+            className="text-[11px] font-medium text-muted hover:text-emerald-400 transition-colors"
+          >
+            Forgot password?
+          </button>
         </div>
 
         {/* Submit */}

@@ -51,7 +51,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
     }
   };
 
-  const inputClass = "w-full rounded-input-btn border border-subtle bg-elevated-2/60 py-2.5 pl-10 pr-4 text-sm text-white placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2";
+  const inputClass = "w-full rounded-input-btn border border-subtle bg-white py-2.5 pl-10 pr-4 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white";
 
   return (
     <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">

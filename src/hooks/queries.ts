@@ -1,6 +1,7 @@
 ﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assessmentService } from "../features/dashboard/services/assessment";
 import { candidateService } from "../features/dashboard/services/candidate";
+import { notificationService } from "../features/dashboard/services/notification";
 import type {
   AssessmentSummaryResponse,
   AssessmentResponse,
@@ -14,6 +15,7 @@ import type {
   RecruiterEvaluationListItem,
   SingleCandidateResponse,
 } from "../types/candidate.types";
+import type { RecruiterDashboardNotification } from "../types/realtime.types";
 
 export const useAssessments = () => {
   return useQuery<AssessmentSummaryResponse[], Error>({
@@ -166,6 +168,18 @@ export const useRecruiterEvaluations = () => {
       const resp = await candidateService.getRecruiterEvaluations();
       if (!resp.success || !resp.data)
         throw new Error(resp.message || "Failed to fetch evaluations");
+      return resp.data;
+    },
+  });
+};
+
+export const useRecruiterNotifications = () => {
+  return useQuery<RecruiterDashboardNotification[], Error>({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      const resp = await notificationService.getNotifications();
+      if (!resp.success || !resp.data)
+        throw new Error(resp.message || "Failed to fetch notifications");
       return resp.data;
     },
   });

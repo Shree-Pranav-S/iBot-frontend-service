@@ -95,4 +95,55 @@ export const authService = {
       throw new Error(data?.message || err.message);
     }
   },
+
+  /**
+   * Initiate a password reset.
+   * Sends the recruiter's email and new password to the backend, which
+   * generates a 4-digit OTP and emails it.
+   */
+  async forgotPassword(payload: { email: string; new_password: string }): Promise<APIResponse<null>> {
+    try {
+      const response = await api.post<APIResponse<null>>('/auth/forgot-password', payload);
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      const fieldErrors = data?.errors;
+      if (fieldErrors?.length) {
+        const details = fieldErrors
+          .map((errItem: any) => {
+            const field = errItem.field?.replace(/^body\./, '') ?? 'input';
+            return `${field}: ${errItem.message}`;
+          })
+          .join(' ');
+        throw new Error(details || data?.message || err.message);
+      }
+      throw new Error(data?.message || err.message);
+    }
+  },
+
+  /**
+   * Verify the 4-digit OTP and complete the password reset.
+   */
+  async verifyOTP(payload: { email: string; otp: string }): Promise<APIResponse<null>> {
+    try {
+      const response = await api.post<APIResponse<null>>('/auth/verify-otp', payload);
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
+
+  /**
+   * Resend the OTP after the previous one has expired.
+   */
+  async resendOTP(payload: { email: string; new_password: string }): Promise<APIResponse<null>> {
+    try {
+      const response = await api.post<APIResponse<null>>('/auth/resend-otp', payload);
+      return response.data;
+    } catch (err: any) {
+      const data = err.response?.data;
+      throw new Error(data?.message || err.message);
+    }
+  },
 };

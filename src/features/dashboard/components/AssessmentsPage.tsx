@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../../hooks/useToast';
+import { CustomSelect } from '../../../components/ui/CustomSelect';
 import {
   useAssessments,
   useAssessmentDetails,
@@ -184,7 +185,7 @@ export const AssessmentsPage: React.FC = () => {
         {loadingAssessments ? (
           <div className="flex-1 flex flex-col items-center justify-center ibot-panel">
             <Loader2 className="h-6 w-6 text-emerald-500 animate-spin mb-2" />
-            <p className="text-[11px] text-slate-400 font-semibold">Loadingâ€¦</p>
+            <p className="text-[11px] text-slate-400 font-semibold">Loading...</p>
           </div>
         ) : assessments.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-5 text-center ibot-panel border-dashed">
@@ -242,7 +243,7 @@ export const AssessmentsPage: React.FC = () => {
         {loadingDetails ? (
           <div className="flex flex-col items-center justify-center h-full ibot-panel">
             <Loader2 className="h-8 w-8 text-emerald-500 animate-spin mb-3" />
-            <p className="text-xs text-slate-400 font-semibold">Loading detailsâ€¦</p>
+            <p className="text-xs text-slate-400 font-semibold">Loading details...</p>
           </div>
         ) : selectedAssessment ? (
           <div className="h-full ibot-panel flex flex-col overflow-hidden animate-scaleIn">
@@ -254,15 +255,15 @@ export const AssessmentsPage: React.FC = () => {
                   <h2 className="text-lg font-extrabold text-slate-900 mb-1 font-display">{selectedAssessment.title}</h2>
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 font-medium">
                     <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 text-[10px]">{selectedAssessment.role_name}</span>
-                    <span className="text-slate-300">Â·</span>
+                    <span className="text-slate-300"> • </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5 text-slate-400" />
                       {selectedAssessment.interview_duration_mins}m
                     </span>
-                    <span className="text-slate-300">Â·</span>
+                    <span className="text-slate-300"> • </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      {new Date(selectedAssessment.window_start).toLocaleDateString()} â€“ {new Date(selectedAssessment.window_end).toLocaleDateString()}
+                      {new Date(selectedAssessment.window_start).toLocaleDateString()} - {new Date(selectedAssessment.window_end).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -300,7 +301,7 @@ export const AssessmentsPage: React.FC = () => {
                     <div>
                       <h3 className="text-xs font-bold text-slate-800">AI Analysis & Timeline</h3>
                       <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                        {selectedAssessment.jd_analysis?.skills?.length ?? 3} skills tracked Â· Plan generated
+                        {selectedAssessment.jd_analysis?.skills?.length ?? 3} skills tracked • Plan generated
                       </p>
                     </div>
                   </div>
@@ -721,15 +722,14 @@ export const AssessmentsPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Duration</label>
-                    <input
-                      required
-                      type="number"
-                      min={2}
-                      max={180}
-                      step={1}
+                    <CustomSelect
                       value={createDuration}
-                      onChange={(e) => setCreateDuration(Number(e.target.value))}
-                      className={inputStyles}
+                      onChange={setCreateDuration}
+                      options={Array.from({ length: 18 }, (_, i) => (i + 1) * 5).map((mins) => ({
+                        value: mins,
+                        label: `${mins} minutes`,
+                      }))}
+                      className="w-full"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -818,7 +818,7 @@ export const AssessmentsPage: React.FC = () => {
                   <textarea
                     required value={createJdText}
                     onChange={(e) => setCreateJdText(e.target.value)}
-                    placeholder="Paste the job requirements and qualificationsâ€¦"
+                    placeholder="Paste the job requirements and qualifications..."
                     rows={4}
                     className={`${inputStyles} resize-none`}
                   />
@@ -858,7 +858,7 @@ export const AssessmentsPage: React.FC = () => {
                 {createMutation.isPending ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Analyzingâ€¦
+                    Analyzing...
                   </>
                 ) : (
                   'Launch'

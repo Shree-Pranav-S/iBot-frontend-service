@@ -176,16 +176,14 @@ const buildTurnMessages = (
   }));
 };
 
-const LiveTranscriptPanel = React.memo(function LiveTranscriptPanel({
+export const LiveTranscriptPanel = React.memo(function LiveTranscriptPanel({
   localIdentity,
   isBotSpeaking,
-  isRecording,
   onClosingMessage,
 }: {
   localIdentity: string;
   isBotSpeaking: boolean;
-  isRecording: boolean;
-  onClosingMessage: () => void;
+  onClosingMessage?: () => void;
 }) {
   const transcriptions = useTranscriptions();
   const messages = useMemo(
@@ -198,40 +196,45 @@ const LiveTranscriptPanel = React.memo(function LiveTranscriptPanel({
   );
 
   useEffect(() => {
-    if (hasClosingMessage) onClosingMessage();
+    if (hasClosingMessage) onClosingMessage?.();
   }, [hasClosingMessage, onClosingMessage]);
 
   return (
     <TranscriptPanel
       messages={messages}
       isBotSpeaking={isBotSpeaking}
-      isRecording={isRecording}
     />
   );
 });
 
 const InterviewTimer = React.memo(function InterviewTimer({
   durationMins,
-  startedAtMs,
+  initialElapsedSecs,
+  runningSinceMs,
   isRunning,
 }: {
   durationMins?: number;
-  startedAtMs: number;
+  initialElapsedSecs: number;
+  runningSinceMs: number | null;
   isRunning: boolean;
 }) {
-  const [elapsedSecs, setElapsedSecs] = useState(0);
+  const [elapsedSecs, setElapsedSecs] = useState(initialElapsedSecs);
 
   useEffect(() => {
     const updateElapsed = () => {
-      setElapsedSecs(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
+      const connectedElapsed =
+        runningSinceMs === null
+          ? 0
+          : Math.max(0, Math.floor((Date.now() - runningSinceMs) / 1000));
+      setElapsedSecs(Math.max(0, initialElapsedSecs + connectedElapsed));
     };
 
     updateElapsed();
-    if (!isRunning) return;
+    if (!isRunning || runningSinceMs === null) return;
 
     const intervalId = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(intervalId);
-  }, [isRunning, startedAtMs]);
+  }, [initialElapsedSecs, isRunning, runningSinceMs]);
 
   const timerText = useMemo(() => {
     if (!durationMins) {
@@ -331,7 +334,13 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
       }}
       className="flex h-full flex-col"
     >
-      <InterviewStage durationMins={durationMins} onExit={onExit} onComplete={onComplete} />
+      <InterviewStage
+        durationMins={durationMins}
+        initialElapsedSecs={Math.max(0, data.elapsed_secs ?? 0)}
+        interviewStarted={Boolean(data.interview_started)}
+        onExit={onExit}
+        onComplete={onComplete}
+      />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
@@ -339,10 +348,14 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
 
 function InterviewStage({
   durationMins,
+  initialElapsedSecs,
+  interviewStarted,
   onExit,
   onComplete,
 }: {
   durationMins?: number;
+  initialElapsedSecs: number;
+  interviewStarted: boolean;
   onExit?: () => void;
   onComplete?: () => void;
 }) {
@@ -424,14 +437,14 @@ function InterviewStage({
   }, [connectionState]);
 
   useEffect(() => {
-    if (timerStartedAtMs !== null || agentState !== 'speaking') return;
+    if (timerStartedAtMs !== null || !isLive || !agentIsReady) return;
 
     const frame = window.requestAnimationFrame(() => {
       setTimerStartedAtMs(Date.now());
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [agentState, timerStartedAtMs]);
+  }, [agentIsReady, isLive, timerStartedAtMs]);
 
   useEffect(() => {
     if (!closingMessageDetected || botIsSpeaking || sessionPhase !== 'active') return;
@@ -474,11 +487,14 @@ function InterviewStage({
   else if (connectionState === ConnectionState.Disconnected) statusStr = 'closed';
 
   return (
-    <div className="ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
-      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.96] px-4 py-3 shadow-sm shadow-slate-200/50 sm:px-6">
+    <div className="ibot-interview-room-bg relative isolate flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
+      <div className="pointer-events-none absolute -left-24 top-24 h-80 w-80 rounded-full bg-emerald-300/15 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-cyan-300/15 blur-3xl" />
+
+      <header className="z-20 flex min-h-[76px] items-center justify-between gap-4 border-b border-slate-200/70 bg-white/85 px-4 py-3 shadow-sm shadow-slate-200/40 backdrop-blur-xl sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/70">
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -489,10 +505,11 @@ function InterviewStage({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {timerStartedAtMs !== null && sessionPhase === 'active' && (
+          {(interviewStarted || timerStartedAtMs !== null) && sessionPhase === 'active' && (
             <InterviewTimer
               durationMins={durationMins}
-              startedAtMs={timerStartedAtMs}
+              initialElapsedSecs={initialElapsedSecs}
+              runningSinceMs={timerStartedAtMs}
               isRunning={isLive}
             />
           )}
@@ -525,17 +542,18 @@ function InterviewStage({
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
-          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-lg border border-white/80 p-6 shadow-xl shadow-slate-900/10">
+      <main className="relative z-10 min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
+        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.78fr)]">
+          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/80 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-white/60">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
             <div className="pointer-events-none absolute bottom-0 left-1/2 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300/10 blur-3xl" />
 
             {sessionPhase === 'active' ? (
               <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
                 <Ibot3DAvatar isSpeaking={botIsSpeaking} />
 
-                <div className="rounded-lg border border-white/80 bg-white/[0.94] px-5 py-4 shadow-lg shadow-slate-200/60">
+                <div className="rounded-2xl border border-white/90 bg-white/90 px-6 py-4 shadow-xl shadow-slate-200/60 ring-1 ring-slate-100/80 backdrop-blur-xl">
                   <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
                     <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     Session state
@@ -569,8 +587,8 @@ function InterviewStage({
 
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.92] shadow-xl shadow-slate-900/10">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/90 shadow-2xl shadow-slate-900/10 ring-1 ring-white/60 backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100/80 bg-white/55 px-5 py-4 backdrop-blur">
               <div>
                 <p className="text-[10px] font-black uppercase text-emerald-700">Live room</p>
                 <h2 className="mt-1 text-sm font-black text-slate-950">Transcript</h2>
@@ -599,7 +617,6 @@ function InterviewStage({
               <LiveTranscriptPanel
                 localIdentity={room.localParticipant.identity}
                 isBotSpeaking={botIsSpeaking}
-                isRecording={isRecording}
                 onClosingMessage={markClosingMessageDetected}
               />
             </div>

@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import { LoginForm } from "../../features/auth/components/LoginForm";
 import { RegisterForm } from "../../features/auth/components/RegisterForm";
+import { ResetPasswordForm } from "../../features/auth/components/ResetPasswordForm";
 import { AuthLayout } from "../../components/layout/AuthLayout";
 import { MainLayout } from "../../components/layout/MainLayout";
 import { LandingPage } from "../../components/layout/LandingPage";
@@ -81,6 +82,18 @@ export const AppRoutes: React.FC = () => {
           ) : (
             <AuthLayout>
               <RegisterForm />
+            </AuthLayout>
+          )
+        }
+      />
+      <Route
+        path="reset-password"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <AuthLayout>
+              <ResetPasswordForm />
             </AuthLayout>
           )
         }

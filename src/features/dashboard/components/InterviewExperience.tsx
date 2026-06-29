@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import {
   AlertTriangle,
   Bot,
@@ -153,28 +153,25 @@ const CaptionCard = React.memo(({
   message,
   isActive = false,
   isBotSpeaking,
-  isRecording,
 }: {
   message: ChatMessage;
   isActive?: boolean;
   isBotSpeaking: boolean;
-  isRecording: boolean;
 }) => {
   const isAssistant = message.role === 'assistant';
-  const showLiveDots =
-    !message.isFinal && (isAssistant ? isBotSpeaking : isRecording);
+  const showLiveState = isAssistant && !message.isFinal && isBotSpeaking;
 
   return (
     <div
-      className={`animate-slideUp rounded-lg border shadow-sm transition-all duration-200 ${
+      className={`animate-slideUp rounded-2xl border shadow-sm transition-all duration-300 ${
         isActive
           ? isAssistant
-            ? 'border-slate-800 bg-slate-950 text-white shadow-xl shadow-slate-900/20'
-            : 'border-emerald-200 bg-white text-slate-950 shadow-lg shadow-emerald-900/5'
+            ? 'border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white shadow-xl shadow-slate-900/20'
+            : 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50/70 text-slate-950 shadow-lg shadow-emerald-900/5'
           : isAssistant
-          ? 'border-slate-200 bg-white text-slate-800'
-          : 'border-emerald-100 bg-white text-slate-800'
-      } ${isActive ? 'p-4' : 'p-3.5'}`}
+          ? 'border-slate-200/80 bg-white/90 text-slate-800'
+          : 'border-emerald-100 bg-emerald-50/35 text-slate-800'
+      } ${isActive ? 'p-4' : 'p-3.5'} ${isAssistant ? 'mr-4' : 'ml-4'}`}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -201,14 +198,14 @@ const CaptionCard = React.memo(({
               {formatTime(message.timestamp)}
             </p>
           </div>
-          {isActive && isAssistant && isBotSpeaking && (
+          {isActive && showLiveState && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700">
               <Volume2 className="h-2.5 w-2.5" />
               Live
             </span>
           )}
         </div>
-        {!message.isFinal && (
+        {showLiveState && (
           <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${isActive && isAssistant ? 'bg-white/10 text-white/70' : 'bg-slate-100 text-slate-500'}`}>
             Live
           </span>
@@ -223,7 +220,7 @@ const CaptionCard = React.memo(({
         }`}
       >
         {message.text}
-        {showLiveDots && (
+        {showLiveState && (
           <span className="ml-2 inline-flex items-center gap-1 align-middle">
             {[0, 1, 2].map((dot) => (
               <span
@@ -242,46 +239,31 @@ const CaptionCard = React.memo(({
 export const TranscriptPanel = React.memo(({
   messages,
   isBotSpeaking,
-  isRecording = false,
 }: {
   messages: ChatMessage[];
   isBotSpeaking: boolean;
-  isRecording?: boolean;
 }) => {
   const visibleMessages = messages.filter((message) => message.text?.trim());
   const scrollRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScrollRef = useRef(true);
-  const lastAutoScrollAtRef = useRef(0);
   const activeMessage = visibleMessages[visibleMessages.length - 1];
   const scrollKey = activeMessage
-    ? `${activeMessage.id}:${activeMessage.text.length}:${activeMessage.isFinal ? 'final' : 'partial'}`
+    ? `${activeMessage.id}:${activeMessage.text}:${activeMessage.isFinal ? 'final' : 'partial'}`
     : '';
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const scrollEl = scrollRef.current;
-    if (!scrollEl || !shouldAutoScrollRef.current) return;
-
-    const now = performance.now();
-    if (!activeMessage?.isFinal && now - lastAutoScrollAtRef.current < 100) return;
+    if (!scrollEl) return;
 
     const frame = window.requestAnimationFrame(() => {
       scrollEl.scrollTop = scrollEl.scrollHeight;
-      lastAutoScrollAtRef.current = performance.now();
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [activeMessage?.isFinal, scrollKey]);
-
-  const handleScroll = useCallback(() => {
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    shouldAutoScrollRef.current =
-      scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < 48;
-  }, []);
+  }, [scrollKey]);
 
   if (visibleMessages.length === 0) {
     return (
-      <div className="flex h-full min-h-[190px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white/90 p-8 text-center shadow-sm">
+      <div className="flex h-full min-h-[190px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-white to-emerald-50/40 p-8 text-center shadow-inner shadow-slate-100">
         <div>
           <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
             <MessageCircle className="h-5 w-5" />
@@ -295,8 +277,8 @@ export const TranscriptPanel = React.memo(({
   const history = visibleMessages.slice(Math.max(0, visibleMessages.length - 6), -1);
 
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="ibot-scrollbar h-full min-h-0 overflow-y-auto pr-1">
-      <div className="space-y-3 pb-1">
+    <div ref={scrollRef} className="ibot-scrollbar h-full min-h-0 overflow-y-auto pr-1 [overflow-anchor:none]">
+      <div className="space-y-3 pb-2" aria-live="polite" aria-relevant="additions text">
         {history.map((message) => {
           if (message.role === 'system') {
             return (
@@ -313,7 +295,6 @@ export const TranscriptPanel = React.memo(({
               key={message.id}
               message={message}
               isBotSpeaking={isBotSpeaking}
-              isRecording={isRecording}
             />
           );
         })}
@@ -329,7 +310,6 @@ export const TranscriptPanel = React.memo(({
             message={activeMessage}
             isActive
             isBotSpeaking={isBotSpeaking}
-            isRecording={isRecording}
           />
         )}
       </div>
@@ -380,8 +360,8 @@ export const CompletionNotice: React.FC<{ type: 'complete' | 'terminated' | 'end
 };
 
 export const TimerPill = React.memo(({ value }: { value: string }) => (
-  <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 shadow-sm">
-    <Clock className="h-3.5 w-3.5 text-emerald-600" />
-    <span className="font-mono">{value}</span>
+  <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-lg shadow-slate-900/15">
+    <Clock className="h-3.5 w-3.5 text-emerald-400" />
+    <span className="font-mono tabular-nums tracking-wide">{value}</span>
   </span>
 ));

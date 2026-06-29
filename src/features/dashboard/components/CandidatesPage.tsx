@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
+import { CustomSelect } from '../../../components/ui/CustomSelect';
 import {
   useAssessments,
   useCandidates,
@@ -242,7 +243,7 @@ export const CandidatesPage: React.FC = () => {
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden animate-fadeIn">
       {/* ── Header Bar & Toolbar ─────────────────────────────────────────── */}
-      <div className="ibot-command-panel flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 flex-shrink-0 p-3 animate-slideDown">
+      <div className="ibot-command-panel relative z-20 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 flex-shrink-0 p-3 animate-slideDown">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
             <Users className="h-4 w-4 text-emerald-500 animate-pulse" />
@@ -250,33 +251,22 @@ export const CandidatesPage: React.FC = () => {
           </h2>
 
           {/* Campaign Filter Selector */}
-          <div className="relative">
-            <select
-              value={selectedCampaignId}
-              onChange={(e) => setSelectedCampaignId(e.target.value)}
-              className="pl-3 pr-8 py-2 border border-slate-200 rounded-lg bg-white text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all appearance-none cursor-pointer hover:border-emerald-300 shadow-sm"
-            >
-              {loadingCampaigns ? (
-                <option>Loading…</option>
-              ) : assessments.length === 0 ? (
-                <option>No campaigns</option>
-              ) : (
-                <>
-                  <option value="all">All Campaigns</option>
-                  {assessments.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.title}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-            <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-slate-400">
-              <ChevronDown className="h-3 w-3" />
-            </div>
-          </div>
-
-
+          <CustomSelect
+            value={selectedCampaignId}
+            onChange={setSelectedCampaignId}
+            options={
+              loadingCampaigns
+                ? [{ value: 'all', label: 'Loading…' }]
+                : assessments.length === 0
+                ? [{ value: 'all', label: 'No campaigns' }]
+                : [
+                    { value: 'all', label: 'All Campaigns' },
+                    ...assessments.map((a) => ({ value: a.id, label: a.title })),
+                  ]
+            }
+            disabled={loadingCampaigns}
+            buttonClassName="min-w-[160px]"
+          />
         </div>
 
         {/* Action Buttons */}
@@ -434,22 +424,6 @@ export const CandidatesPage: React.FC = () => {
                             <FileText className="h-4 w-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => handleRecruiterDecision(c, 'APPROVED')}
-                          disabled={c.recruiter_decision === 'APPROVED' || decisionMutation.isPending}
-                          className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-emerald-600 hover:bg-emerald-50 disabled:opacity-30 transition-colors shadow-none hover:scale-110 active:scale-90"
-                          title="Approve Candidate"
-                        >
-                          <ThumbsUp className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleRecruiterDecision(c, 'REJECTED')}
-                          disabled={c.recruiter_decision === 'REJECTED' || decisionMutation.isPending}
-                          className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-red-500 hover:bg-red-50 disabled:opacity-30 transition-colors shadow-none hover:scale-110 active:scale-90"
-                          title="Reject Candidate"
-                        >
-                          <ThumbsDown className="h-4 w-4" />
-                        </button>
                         <button
                           onClick={() => handleDeleteCandidate(c.id)}
                           disabled={deleteMutation.isPending}

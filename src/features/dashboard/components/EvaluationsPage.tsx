@@ -10,7 +10,6 @@ import {
   Filter,
   Loader2,
   MessageSquareText,
-  Search,
   ShieldAlert,
   Sparkles,
   Target,
@@ -23,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useRecruiterEvaluations, useUpdateCandidateDecision } from '../../../hooks/queries';
 import { useToast } from '../../../hooks/useToast';
+import { CustomSelect } from '../../../components/ui/CustomSelect';
 import type { RecruiterEvaluationListItem } from '../../../types/candidate.types';
 import {
   CompetencyRadar,
@@ -57,7 +57,6 @@ export const EvaluationsPage: React.FC = () => {
   const decisionMutation = useUpdateCandidateDecision();
   const { modal, requestDecision, closeDecision } = useEvaluationDecision();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('all');
   const [sort, setSort] = useState<SortOption>('score');
 
@@ -73,19 +72,10 @@ export const EvaluationsPage: React.FC = () => {
   }, [evaluations]);
 
   const visibleEvaluations = useMemo(() => {
-    const query = search.trim().toLowerCase();
     const filtered = evaluations.filter((evaluation) => {
       const matchesDecision =
         decisionFilter === 'all' || evaluation.recruiter_decision === decisionFilter;
-      const matchesQuery =
-        !query ||
-        [
-          evaluation.candidate_name,
-          evaluation.candidate_email,
-          evaluation.role_name,
-          evaluation.assessment_title,
-        ].some((value) => value.toLowerCase().includes(query));
-      return matchesDecision && matchesQuery;
+      return matchesDecision;
     });
 
     return [...filtered].sort((left, right) => {
@@ -170,7 +160,7 @@ export const EvaluationsPage: React.FC = () => {
   return (
     <>
       <div className="ibot-scrollbar flex h-full min-h-0 flex-col gap-4 overflow-y-auto animate-fadeIn xl:overflow-hidden">
-        <section className="ibot-command-panel shrink-0 overflow-hidden p-4 sm:p-5">
+        <section className="ibot-command-panel relative z-20 shrink-0 p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -189,38 +179,31 @@ export const EvaluationsPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-[minmax(220px,1fr)_auto_auto]">
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search candidates or roles"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                />
-              </label>
-              <label className="relative">
-                <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                <select
+            <div className="flex gap-2">
+              <div className="relative">
+                <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 z-10" />
+                <CustomSelect
                   value={decisionFilter}
-                  onChange={(event) => setDecisionFilter(event.target.value as DecisionFilter)}
-                  className="h-10 appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-black text-slate-600 outline-none focus:border-emerald-400"
-                >
-                  <option value="all">All decisions</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
-              </label>
-              <select
+                  onChange={(val) => setDecisionFilter(val as DecisionFilter)}
+                  options={[
+                    { value: 'all', label: 'All decisions' },
+                    { value: 'PENDING', label: 'Pending' },
+                    { value: 'APPROVED', label: 'Approved' },
+                    { value: 'REJECTED', label: 'Rejected' },
+                  ]}
+                  buttonClassName="pl-8 w-36"
+                />
+              </div>
+              <CustomSelect
                 value={sort}
-                onChange={(event) => setSort(event.target.value as SortOption)}
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 outline-none focus:border-emerald-400"
-              >
-                <option value="score">Highest score</option>
-                <option value="rank">Best rank</option>
-                <option value="recent">Most recent</option>
-              </select>
+                onChange={(val) => setSort(val as SortOption)}
+                options={[
+                  { value: 'score', label: 'Highest score' },
+                  { value: 'rank', label: 'Best rank' },
+                  { value: 'recent', label: 'Most recent' },
+                ]}
+                buttonClassName="w-36"
+              />
             </div>
           </div>
         </section>
@@ -236,7 +219,7 @@ export const EvaluationsPage: React.FC = () => {
         </section>
 
         <section className="grid shrink-0 gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[370px_minmax(0,1fr)]">
-          <aside className="ibot-panel flex h-[430px] min-h-[260px] flex-col overflow-hidden xl:h-auto">
+          <aside className="ibot-panel flex h-[430px] min-h-[260px] flex-col overflow-hidden xl:h-full">
             <header className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3">
               <div>
                 <p className="text-xs font-black text-slate-900">Candidate reports</p>
@@ -385,7 +368,7 @@ const CandidateSummary: React.FC<{
         <div className="h-1.5 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
         <div className="p-5">
           <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap gap-2">
                 <StatusPill {...recommendation} />
                 <StatusPill {...decision} />
@@ -403,7 +386,7 @@ const CandidateSummary: React.FC<{
               <p className="mt-1 text-xs font-semibold text-slate-500">
                 {evaluation.candidate_email} · {evaluation.role_name} · {evaluation.assessment_title}
               </p>
-              <p className="mt-4 max-w-4xl text-sm font-medium leading-6 text-slate-600">
+              <p className="mt-4 text-sm font-medium leading-6 text-slate-600">
                 {evaluation.overall_summary}
               </p>
             </div>
@@ -587,7 +570,7 @@ const DimensionMiniCard: React.FC<{
     <div className={`flex h-7 w-7 items-center justify-center rounded-lg bg-white shadow-sm ${scoreTextClass(score)}`}>
       {icon}
     </div>
-    <p className="mt-3 text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+    <p className="mt-3 truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-400" title={label}>{label}</p>
     <p className={`mt-1 font-display text-xl font-black ${scoreTextClass(score)}`}>
       {score.toFixed(1)}
       <span className="ml-0.5 text-[10px] text-slate-400">/10</span>

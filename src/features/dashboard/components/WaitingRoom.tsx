@@ -21,21 +21,30 @@ import {
   WifiOff,
   X,
 } from 'lucide-react';
-import { candidateService } from '../services/candidate';
 import type { TokenValidationResponse } from '../../../types/candidate.types';
+import {
+  livekitService,
+  type CandidateSessionBootstrapResponse,
+} from '../services/livekit';
 
 interface WaitingRoomProps {
-  token: string;
+  invitationToken: string | null;
+  sessionToken: string | null;
   onStartInterview: () => void;
   onStartDemo: () => void;
   onDetailsLoaded?: (details: TokenValidationResponse) => void;
+  onSessionReady: (session: CandidateSessionBootstrapResponse) => void;
+  onSessionInvalid: () => void;
 }
 
 export const WaitingRoom: React.FC<WaitingRoomProps> = ({
-  token,
+  invitationToken,
+  sessionToken,
   onStartInterview,
   onStartDemo,
   onDetailsLoaded,
+  onSessionReady,
+  onSessionInvalid,
 }) => {
   const [details, setDetails] = useState<TokenValidationResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,12 +71,20 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const testAudioRef = useRef<HTMLAudioElement | null>(null);
   const onDetailsLoadedRef = useRef(onDetailsLoaded);
+  const onSessionReadyRef = useRef(onSessionReady);
+  const onSessionInvalidRef = useRef(onSessionInvalid);
+  const bootstrapRequestRef = useRef<{
+    key: string;
+    promise: Promise<CandidateSessionBootstrapResponse>;
+  } | null>(null);
   const lastVolumeUpdateRef = useRef(0);
   const lastVolumeRef = useRef(0);
 
   useEffect(() => {
     onDetailsLoadedRef.current = onDetailsLoaded;
-  }, [onDetailsLoaded]);
+    onSessionReadyRef.current = onSessionReady;
+    onSessionInvalidRef.current = onSessionInvalid;
+  }, [onDetailsLoaded, onSessionInvalid, onSessionReady]);
 
   const checkLatency = useCallback(async () => {
     setLatencyChecking(true);
@@ -88,22 +105,39 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
   useEffect(() => {
     let isMounted = true;
-    candidateService
-      .validateCandidateToken(token)
-      .then((res) => {
+    const credentialKey = invitationToken
+      ? `invite:${invitationToken}`
+      : sessionToken
+        ? `session:${sessionToken}`
+        : 'missing';
+    let loadSession = bootstrapRequestRef.current?.key === credentialKey
+      ? bootstrapRequestRef.current.promise
+      : null;
+    if (!loadSession) {
+      loadSession = invitationToken
+        ? livekitService.enterCandidateSession(invitationToken)
+        : sessionToken
+          ? livekitService.restoreCandidateSession(sessionToken)
+          : Promise.reject(new Error('No interview credential is available.'));
+      bootstrapRequestRef.current = {
+        key: credentialKey,
+        promise: loadSession,
+      };
+    }
+
+    loadSession
+      .then((session) => {
         if (isMounted) {
-          if (res.success && res.data) {
-            setDetails(res.data);
-            if (onDetailsLoadedRef.current) onDetailsLoadedRef.current(res.data);
-          } else {
-            setError(res.message || 'Failed to validate invitation token.');
-          }
+          setDetails(session);
+          onDetailsLoadedRef.current?.(session);
+          onSessionReadyRef.current(session);
           setLoading(false);
         }
       })
       .catch((err) => {
         if (isMounted) {
           setError(err.message || 'Could not validate invitation token. Please check your link.');
+          onSessionInvalidRef.current();
           setLoading(false);
         }
       });
@@ -111,7 +145,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [invitationToken, sessionToken]);
 
   useEffect(() => {
     let initialLatencyTimer: ReturnType<typeof setTimeout> | null = null;

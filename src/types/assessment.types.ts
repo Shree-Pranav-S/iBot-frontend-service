@@ -45,7 +45,7 @@ export interface FocusAreaOverride {
 
 // â”€â”€ Assessment Responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export type AssessmentStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+export type AssessmentStatus = 'PROCESSING' | 'DRAFT' | 'ACTIVE' | 'CLOSED';
 
 export interface AssessmentResponse {
   id: string;

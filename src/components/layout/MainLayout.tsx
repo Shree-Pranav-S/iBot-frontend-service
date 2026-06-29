@@ -12,6 +12,8 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useRecruiterRealtime } from '../../hooks/useRecruiterRealtime';
+import { NotificationCenter } from './NotificationCenter';
 
 const navItems = [
   {
@@ -66,6 +68,7 @@ const pageCopy: Record<string, { title: string; subtitle: string; eyebrow: strin
 
 export const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  useRecruiterRealtime();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -94,17 +97,17 @@ export const MainLayout: React.FC = () => {
       };
 
   return (
-    <div className="ibot-workspace-bg flex h-screen w-screen overflow-hidden font-sans text-slate-950">
+    <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-slate-950">
       <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 flex-col overflow-hidden border-r border-white/70 bg-slate-950 text-white shadow-[18px_0_48px_rgba(15,23,42,0.16)] transition-[width] duration-300 ease-out hover:w-[304px] focus-within:w-[304px] sm:flex">
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-500/[0.18] via-cyan-500/10 to-transparent" />
 
-        <div className="relative flex h-[84px] items-center gap-3 border-b border-white/10 px-4">
+        <div className="relative flex h-[76px] items-center gap-3 border-b border-white/10 px-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20">
             <Bot className="h-6 w-6" />
           </div>
           <div className="min-w-[180px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
             <div className="flex items-center gap-2">
-              <p className="font-display text-lg font-black">iBot</p>
+              <p className="font-display text-lg font-bold tracking-tight">iBot</p>
               <span className="rounded-full border border-emerald-300/[0.35] bg-emerald-300/[0.12] px-2 py-0.5 text-[10px] font-black uppercase text-emerald-200">
                 Pro
               </span>
@@ -171,9 +174,9 @@ export const MainLayout: React.FC = () => {
             <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-300/[0.12] text-emerald-200">
               <Sparkles className="h-4 w-4" />
             </div>
-            <p className="text-xs font-black text-white">Live workspace</p>
+              <p className="text-xs font-semibold text-white">Real-Time Sync</p>
             <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-400">
-              Campaign updates and decisions stay synced with the API.
+              Campaign details, candidate statuses, and AI evaluations are automatically kept up to date.
             </p>
           </div>
 
@@ -182,7 +185,7 @@ export const MainLayout: React.FC = () => {
               {initials}
             </div>
             <div className="min-w-[170px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
-              <p className="truncate text-xs font-black text-white">
+              <p className="truncate text-xs font-semibold text-white">
                 {user?.full_name || 'Recruiter'}
               </p>
               <p className="truncate text-[10px] font-semibold text-slate-500">
@@ -208,31 +211,32 @@ export const MainLayout: React.FC = () => {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-10 flex h-[84px] shrink-0 items-center justify-between border-b border-white/70 bg-white/[0.96] px-4 shadow-sm shadow-slate-200/40 sm:px-6 lg:px-8">
+        <header className="z-10 flex h-[76px] shrink-0 items-center justify-between border-b border-white/70 bg-white/[0.96] px-4 shadow-sm shadow-slate-200/40 sm:px-6 lg:px-7">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">
               {user?.company_name || currentCopy.eyebrow}
             </p>
-            <h1 className="mt-1 truncate font-display text-xl font-black tracking-tight text-slate-950 lg:text-2xl">
+            <h1 className="mt-0.5 truncate font-display text-xl font-bold tracking-[-0.025em] text-slate-950 lg:text-[22px]">
               {currentCopy.title}
             </h1>
-            <p className="mt-0.5 hidden text-sm font-semibold text-slate-500 md:block">
+            <p className="mt-0.5 hidden text-xs font-medium text-slate-500 md:block">
               {currentCopy.subtitle}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 shadow-sm sm:flex">
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 shadow-sm sm:flex">
               <Radio className="h-3.5 w-3.5" />
               Online
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-black text-slate-800 shadow-sm">
+            <NotificationCenter />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 shadow-sm">
               {initials}
             </div>
           </div>
         </header>
 
-        <main className="relative min-h-0 flex-1 overflow-hidden p-4 pb-20 sm:p-5 lg:p-6">
+        <main className="relative min-h-0 flex-1 overflow-hidden p-4 pb-20 sm:p-5 lg:p-5">
           <Outlet />
         </main>
       </div>

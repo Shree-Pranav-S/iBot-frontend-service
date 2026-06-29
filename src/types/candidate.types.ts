@@ -8,7 +8,7 @@ export interface CandidateAssessmentListItem {
   id: string;
   full_name: string;
   email: string;
-  status: 'INVITED' | 'WAITING_ROOM' | 'IN_PROGRESS' | 'COMPLETED' | 'EVALUATED';
+  status: 'INVITED' | 'WAITING_ROOM' | 'IN_PROGRESS' | 'COMPLETED' | 'EVALUATED' | 'TERMINATED';
   resume_parse_status: 'PENDING' | 'COMPLETED' | 'FAILED';
   interview_started_at: string | null;
   interview_ended_at: string | null;

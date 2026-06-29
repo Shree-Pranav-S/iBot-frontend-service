@@ -4,21 +4,58 @@ import { InterviewRoom } from './InterviewRoom';
 import { WaitingRoom } from './WaitingRoom';
 import { DemoInterviewRoom } from './DemoInterviewRoom';
 import { ShieldAlert, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  CANDIDATE_SESSION_STORAGE_KEY,
+  type CandidateSessionBootstrapResponse,
+} from '../services/livekit';
 
 export const InterviewPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token')?.trim() || null;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const invitationToken = searchParams.get('token')?.trim() || null;
+  const [sessionToken, setSessionToken] = useState<string | null>(() =>
+    sessionStorage.getItem(CANDIDATE_SESSION_STORAGE_KEY),
+  );
   const [view, setView] = useState<'waiting_room' | 'interview' | 'demo' | 'completed'>('waiting_room');
   const [durationMins, setDurationMins] = useState<number>(30);
   const [companyName, setCompanyName] = useState<string>('the company');
 
-  if (token) {
+  const handleSessionReady = (session: CandidateSessionBootstrapResponse) => {
+    sessionStorage.setItem(
+      CANDIDATE_SESSION_STORAGE_KEY,
+      session.session_token,
+    );
+    setSessionToken(session.session_token);
+    setDurationMins(session.interview_duration_mins);
+    setCompanyName(session.company_name || 'the company');
+
+    if (invitationToken) {
+      setSearchParams({}, { replace: true });
+    }
+    if (
+      session.interview_started ||
+      session.session_status === 'DISCONNECTED'
+    ) {
+      setView('interview');
+    }
+  };
+
+  const clearCandidateSession = () => {
+    sessionStorage.removeItem(CANDIDATE_SESSION_STORAGE_KEY);
+    setSessionToken(null);
+  };
+
+  if (invitationToken || sessionToken) {
     if (view === 'waiting_room') {
       return (
         <WaitingRoom
-          token={token}
+          invitationToken={invitationToken}
+          sessionToken={sessionToken}
           onStartInterview={() => setView('interview')}
           onStartDemo={() => setView('demo')}
+          onSessionReady={handleSessionReady}
+          onSessionInvalid={() => {
+            if (!invitationToken) clearCandidateSession();
+          }}
           onDetailsLoaded={(details) => {
             setDurationMins(details.interview_duration_mins);
             setCompanyName(details.company_name || 'the company');
@@ -30,7 +67,7 @@ export const InterviewPage: React.FC = () => {
     if (view === 'demo') {
       return (
         <DemoInterviewRoom
-          token={token}
+          token={sessionToken!}
           onExit={() => setView('waiting_room')}
         />
       );
@@ -58,9 +95,12 @@ export const InterviewPage: React.FC = () => {
     return (
       <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white">
         <InterviewRoom
-          token={token}
+          token={sessionToken!}
           durationMins={durationMins}
-          onComplete={() => setView('completed')}
+          onComplete={() => {
+            sessionStorage.removeItem(CANDIDATE_SESSION_STORAGE_KEY);
+            setView('completed');
+          }}
         />
       </div>
     );

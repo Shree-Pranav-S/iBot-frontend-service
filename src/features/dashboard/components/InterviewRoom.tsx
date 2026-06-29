@@ -10,6 +10,7 @@ import {
   useVoiceAssistant,
 } from '@livekit/components-react';
 import { ConnectionState } from 'livekit-client';
+import { LIVEKIT_FORCE_RELAY } from '../../../config/livekit';
 import {
   AudioLines,
   ChevronRight,
@@ -332,6 +333,11 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
         adaptiveStream: true,
         dynacast: true,
       }}
+      connectOptions={
+        LIVEKIT_FORCE_RELAY
+          ? { rtcConfig: { iceTransportPolicy: 'relay' } }
+          : undefined
+      }
       className="flex h-full flex-col"
     >
       <InterviewStage

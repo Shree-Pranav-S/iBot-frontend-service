@@ -88,7 +88,7 @@ export const EvaluationsPage: React.FC = () => {
       }
       return right.overall_score - left.overall_score;
     });
-  }, [decisionFilter, evaluations, search, sort]);
+  }, [decisionFilter, evaluations, sort]);
 
   const selected = useMemo(
     () =>
@@ -242,17 +242,16 @@ export const EvaluationsPage: React.FC = () => {
               {visibleEvaluations.length === 0 && (
                 <div className="grid min-h-52 place-items-center rounded-xl border border-dashed border-slate-200 p-6 text-center">
                   <div>
-                    <Search className="mx-auto h-7 w-7 text-slate-300" />
-                    <p className="mt-3 text-xs font-black text-slate-700">No matching reports</p>
+                    <Filter className="mx-auto h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-xs font-black text-slate-700">
+                      No reports match this decision
+                    </p>
                     <button
                       type="button"
-                      onClick={() => {
-                        setSearch('');
-                        setDecisionFilter('all');
-                      }}
+                      onClick={() => setDecisionFilter('all')}
                       className="mt-2 text-[11px] font-black text-emerald-700 hover:text-emerald-800"
                     >
-                      Clear filters
+                      Show all decisions
                     </button>
                   </div>
                 </div>

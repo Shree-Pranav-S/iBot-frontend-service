@@ -7,15 +7,15 @@
 
 // â”€â”€ JD Analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export type InferredDifficulty = 'junior level' | 'mid-level' | 'senior level';
+type InferredDifficulty = 'junior level' | 'mid-level' | 'senior level';
 
-export interface SkillPriority {
+interface SkillPriority {
   skill: string;
   priority_score: number;
   reasoning: string;
 }
 
-export interface JDAnalysis {
+interface JDAnalysis {
   inferred_difficulty: InferredDifficulty;
   skills: SkillPriority[];
   behavioural_signals: string[];
@@ -23,14 +23,14 @@ export interface JDAnalysis {
 
 // â”€â”€ Interview Plan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export interface InterviewSection {
+interface InterviewSection {
   section_name: string;
   skill: string | null;
   allocated_mins: number;
   expected_signals?: string[];
 }
 
-export interface InterviewPlan {
+interface InterviewPlan {
   total_mins: number;
   inferred_difficulty: InferredDifficulty;
   sections: InterviewSection[];
@@ -38,7 +38,7 @@ export interface InterviewPlan {
 
 // â”€â”€ Focus Areas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export interface FocusAreaOverride {
+interface FocusAreaOverride {
   skill: string;
   weight_override: number;
 }

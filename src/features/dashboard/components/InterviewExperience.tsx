@@ -4,44 +4,12 @@ import {
   Bot,
   CheckCircle2,
   Clock,
-  Layers,
   MessageCircle,
   Sparkles,
   User,
   Volume2,
 } from 'lucide-react';
 import type { ChatMessage } from '../../../types/socket.types';
-
-export const SectionProgress: React.FC<{
-  sectionName: string;
-  sectionNumber: number;
-  totalSections: number;
-  skill: string;
-}> = ({ sectionName, sectionNumber, totalSections, skill }) => {
-  const progress = Math.min(100, Math.max(0, (sectionNumber / totalSections) * 100));
-
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-        <Layers className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-xs font-black leading-none text-slate-950">{sectionName}</p>
-        <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">
-          {sectionNumber}/{totalSections} - {skill.replace(/_/g, ' ')}
-        </p>
-      </div>
-      <div className="hidden w-28 sm:block">
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/80">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-700 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const StatusPill: React.FC<{ status: string; isBotSpeaking: boolean }> = ({
   status,

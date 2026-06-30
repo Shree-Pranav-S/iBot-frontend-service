@@ -4,8 +4,6 @@
  * Types and interfaces for authentication, user session, and context.
  */
 
-import type { APIResponse } from './api.types';
-
 // ── User / session ────────────────────────────────────────────────────────────
 
 export interface UserInfo {
@@ -64,6 +62,3 @@ export interface LoginFormProps {
 export interface RegisterFormProps {
   onToggleView?: () => void;
 }
-
-// Re-export so callers can import everything auth-related from one place
-export type { APIResponse };

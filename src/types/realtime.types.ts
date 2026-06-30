@@ -1,4 +1,4 @@
-export type RecruiterEventType =
+type RecruiterEventType =
   | 'ASSESSMENT_PROCESSING_COMPLETED'
   | 'ASSESSMENT_PROCESSING_FAILED'
   | 'RESUME_PARSING_COMPLETED'

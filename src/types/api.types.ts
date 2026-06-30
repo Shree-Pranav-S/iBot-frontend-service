@@ -12,16 +12,3 @@ export interface APIResponse<T> {
   message: string;
   data: T | null;
 }
-
-// ── Error shapes ──────────────────────────────────────────────────────────────
-
-export interface ErrorDetail {
-  field?: string;
-  message: string;
-}
-
-export interface ErrorResponse {
-  success: boolean;
-  message: string;
-  errors?: ErrorDetail[];
-}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
@@ -6,11 +6,15 @@ import {
   useAssessments,
   useCandidates,
   useBulkUploadCandidates,
-  useUpdateCandidateDecision,
   useCreateCandidate,
   useDeleteCandidate,
+  useUniqueCandidates,
+  useEnrollCandidate,
 } from '../../../hooks/queries';
-import type { BulkUploadResponse } from '../../../types/candidate.types';
+import type {
+  BulkUploadResponse,
+  CandidateAssessmentListItem,
+} from '../../../types/candidate.types';
 import {
   Users,
   Mail,
@@ -19,8 +23,6 @@ import {
   AlertCircle,
   Upload,
   X,
-  ThumbsUp,
-  ThumbsDown,
   CheckCircle2,
   XCircle,
   FileSpreadsheet,
@@ -30,6 +32,7 @@ import {
   Eye,
   Trash2,
   Plus,
+  UserPlus,
 } from 'lucide-react';
 
 export const CandidatesPage: React.FC = () => {
@@ -43,13 +46,15 @@ export const CandidatesPage: React.FC = () => {
 
   // Candidates query & mutations
   const { data: candidates = [], isLoading: loadingCandidates } = useCandidates(selectedCampaignId || null);
+  const { data: uniqueCandidates = [] } = useUniqueCandidates();
   const selectedAssessment = assessments.find(a => a.id === selectedCampaignId) || null;
   const bulkUploadMutation = useBulkUploadCandidates();
-  const decisionMutation = useUpdateCandidateDecision();
   const deleteMutation = useDeleteCandidate();
+  const enrollMutation = useEnrollCandidate();
 
   // Modal States for View Resume and View JD
-  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateAssessmentListItem | null>(null);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
 
@@ -70,14 +75,14 @@ export const CandidatesPage: React.FC = () => {
   const [showManualModal, setShowManualModal] = useState(false);
   const [manualName, setManualName] = useState('');
   const [manualEmail, setManualEmail] = useState('');
-  const [manualRole, setManualRole] = useState('');
+  const [manualAssessmentId, setManualAssessmentId] = useState('');
   const [manualResume, setManualResume] = useState<File | null>(null);
   const createMutation = useCreateCandidate();
 
   const resetManualModal = () => {
     setManualName('');
     setManualEmail('');
-    setManualRole(selectedAssessment?.role_name || '');
+    setManualAssessmentId(selectedCampaignId !== 'all' ? (selectedCampaignId || '') : '');
     setManualResume(null);
   };
 
@@ -88,15 +93,15 @@ export const CandidatesPage: React.FC = () => {
 
   const handleManualCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualName || !manualEmail || !manualRole || !manualResume) {
-      toastError('Missing Fields', 'Please fill in all fields and attach a resume.');
+    if (!manualName || !manualEmail || !manualAssessmentId || !manualResume) {
+      toastError('Missing Fields', 'Please fill in all fields and select an assessment.');
       return;
     }
     try {
       await createMutation.mutateAsync({
         name: manualName,
         email: manualEmail,
-        role: manualRole,
+        assessmentId: manualAssessmentId,
         resumeFile: manualResume,
       });
       toastSuccess('Candidate Added', 'Invitation sent successfully.');
@@ -107,11 +112,42 @@ export const CandidatesPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (showManualModal && selectedAssessment && !manualRole) {
-      setManualRole(selectedAssessment.role_name);
+  // Enroll existing candidate modal state
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [enrollCandidateId, setEnrollCandidateId] = useState('');
+  const [enrollAssessmentId, setEnrollAssessmentId] = useState('');
+  const [enrollResume, setEnrollResume] = useState<File | null>(null);
+
+  const resetEnrollModal = () => {
+    setEnrollCandidateId('');
+    setEnrollAssessmentId('');
+    setEnrollResume(null);
+  };
+
+  const handleCloseEnroll = () => {
+    setShowEnrollModal(false);
+    resetEnrollModal();
+  };
+
+  const handleEnrollCandidate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enrollCandidateId || !enrollAssessmentId) {
+      toastError('Missing Fields', 'Please select both a candidate and an assessment.');
+      return;
     }
-  }, [showManualModal, selectedAssessment, manualRole]);
+    try {
+      await enrollMutation.mutateAsync({
+        candidateId: enrollCandidateId,
+        assessmentId: enrollAssessmentId,
+        resumeFile: enrollResume,
+      });
+      toastSuccess('Enrolled', 'Candidate enrolled and invitation sent.');
+      handleCloseEnroll();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Enrollment failed.';
+      toastError('Failed', msg);
+    }
+  };
 
   const handleCloseUpload = () => {
     setShowUploadModal(false);
@@ -152,25 +188,6 @@ export const CandidatesPage: React.FC = () => {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Upload failed.';
-      toastError('Failed', msg);
-    }
-  };
-
-  const handleRecruiterDecision = async (candidate: any, decision: 'APPROVED' | 'REJECTED') => {
-    const assessmentId = candidate.assessment_id || selectedCampaignId;
-    if (!assessmentId || assessmentId === 'all') {
-      toastError('Error', 'Cannot determine campaign for this decision.');
-      return;
-    }
-    try {
-      await decisionMutation.mutateAsync({
-        assessmentId,
-        candidateId: candidate.id,
-        decision,
-      });
-      toastSuccess('Decision Saved', `Candidate ${decision.toLowerCase()}.`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to update.';
       toastError('Failed', msg);
     }
   };
@@ -277,12 +294,27 @@ export const CandidatesPage: React.FC = () => {
                 toastError('No Campaigns', 'Create a campaign first.');
                 return;
               }
+              resetManualModal();
               setShowManualModal(true);
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-[11px] font-bold text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
           >
             <Plus className="h-3.5 w-3.5" />
             Add
+          </button>
+          <button
+            onClick={() => {
+              if (assessments.length === 0) {
+                toastError('No Campaigns', 'Create a campaign first.');
+                return;
+              }
+              resetEnrollModal();
+              setShowEnrollModal(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-[11px] font-bold text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Enroll
           </button>
           <button
             onClick={() => {
@@ -480,13 +512,33 @@ export const CandidatesPage: React.FC = () => {
                 {/* CSV Format Info */}
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-start gap-2 hover:border-emerald-500/20 transition-all">
                   <Info className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5 animate-bounce" />
-                  <p className="text-[10px] text-slate-500 leading-relaxed font-bold">
+                  <div className="text-[10px] text-slate-500 leading-relaxed font-bold">
                     Required columns:{' '}
                     <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">name</code>,{' '}
                     <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">email</code>,{' '}
                     <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">resume</code>,{' '}
-                    <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">role</code>
-                  </p>
+                    <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">assessment_id</code>
+                    {assessments.length > 0 && (
+                      <div className="mt-2 border border-slate-200 rounded-md overflow-hidden">
+                        <div className="bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">Your Assessment IDs</div>
+                        <div className="divide-y divide-slate-100 max-h-28 overflow-y-auto ibot-scrollbar">
+                          {assessments.map(a => (
+                            <div key={a.id} className="flex items-center justify-between px-2 py-1.5 hover:bg-white transition-colors gap-2">
+                              <span className="text-[9px] text-slate-600 font-semibold truncate">{a.title} ({a.role_name})</span>
+                              <button
+                                type="button"
+                                onClick={() => { navigator.clipboard.writeText(a.id); toastSuccess('Copied', 'Assessment ID copied to clipboard.'); }}
+                                className="shrink-0 font-mono text-[8px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded hover:bg-emerald-100 transition-colors"
+                                title="Click to copy"
+                              >
+                                {a.id.slice(0, 8)}…
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Upload Result */}
@@ -671,14 +723,21 @@ export const CandidatesPage: React.FC = () => {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Role</label>
-                  <input
-                    required type="text" value={manualRole}
-                    onChange={(e) => setManualRole(e.target.value)}
-                    placeholder="Backend Developer"
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assessment</label>
+                  <select
+                    required
+                    value={manualAssessmentId}
+                    onChange={(e) => setManualAssessmentId(e.target.value)}
                     className={inputStyles}
-                  />
-                  <p className="text-[9px] text-slate-400 font-semibold">Must match assessment role name exactly</p>
+                  >
+                    <option value="">— Select an assessment —</option>
+                    {assessments.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.title} ({a.role_name})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[9px] text-slate-400 font-semibold">Select which assessment to assign this candidate to</p>
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Resume PDF</label>
@@ -844,6 +903,133 @@ export const CandidatesPage: React.FC = () => {
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition-all hover:scale-[1.03] active:scale-[0.97]"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Enroll Existing Candidate Modal ──────────────────────────────── */}
+      {showEnrollModal && (
+        <div className="ibot-overlay">
+          <div className="ibot-modal max-w-md max-h-[85vh] animate-scaleIn">
+            <div className="flex justify-between items-start border-b border-slate-100 px-6 py-4 shrink-0">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
+                  <UserPlus className="h-4 w-4 text-emerald-500 animate-pulse" />
+                  Enroll Candidate
+                </h2>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Assign an existing candidate to another assessment</p>
+              </div>
+              <button
+                onClick={handleCloseEnroll}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors hover:scale-105 active:scale-95"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="ibot-scrollbar flex-1 overflow-y-auto px-6 py-5">
+              <form id="enroll-candidate-form" onSubmit={handleEnrollCandidate} className="flex flex-col gap-3.5">
+
+                {/* Info banner */}
+                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100 flex items-start gap-2">
+                  <Info className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-emerald-700 font-semibold leading-relaxed">
+                    If the candidate has an active enrollment whose interview window overlaps with the new assessment, they must complete that assessment first. A new resume is optional — their previous resume will be reused if none is uploaded.
+                  </p>
+                </div>
+
+                {/* Candidate selector */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Candidate</label>
+                  {uniqueCandidates.length === 0 ? (
+                    <p className="text-[10px] text-slate-400 font-semibold italic">No candidates found. Add a candidate first.</p>
+                  ) : (
+                    <select
+                      required
+                      value={enrollCandidateId}
+                      onChange={(e) => setEnrollCandidateId(e.target.value)}
+                      className={inputStyles}
+                    >
+                      <option value="">— Select a candidate —</option>
+                      {uniqueCandidates.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.full_name} ({c.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Assessment selector */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assessment</label>
+                  <select
+                    required
+                    value={enrollAssessmentId}
+                    onChange={(e) => setEnrollAssessmentId(e.target.value)}
+                    className={inputStyles}
+                  >
+                    <option value="">— Select an assessment —</option>
+                    {assessments.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.title} ({a.role_name}) — {a.status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Optional resume */}
+                <div className="flex flex-col gap-1 mt-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    New Resume PDF <span className="text-slate-300 font-normal normal-case">(optional)</span>
+                  </label>
+                  <div className="border border-dashed border-slate-300 bg-slate-50 p-4 rounded-lg flex flex-col items-center justify-center gap-1 text-center relative hover:border-emerald-400 hover:bg-emerald-50/20 hover:scale-[1.01] transition-all duration-300">
+                    <FileText className="h-5 w-5 text-slate-400" />
+                    {enrollResume ? (
+                      <span className="text-[11px] text-emerald-600 font-bold">{enrollResume.name}</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500">Select PDF or leave blank to reuse previous</span>
+                    )}
+                    <input
+                      type="file" accept=".pdf"
+                      onChange={(e) => setEnrollResume(e.target.files?.[0] || null)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  {enrollResume && (
+                    <button type="button" onClick={() => setEnrollResume(null)} className="text-[9px] text-slate-400 underline self-start font-bold hover:text-slate-600 transition-colors">
+                      Remove resume
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="border-t border-slate-100 px-6 py-3 flex justify-end gap-2 shrink-0 bg-slate-50/50">
+              <button
+                type="button" onClick={handleCloseEnroll}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 hover:scale-[1.03] active:scale-[0.97] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit" form="enroll-candidate-form"
+                disabled={enrollMutation.isPending || uniqueCandidates.length === 0}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50"
+              >
+                {enrollMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Enrolling…
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Enroll & Invite
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -14,6 +14,9 @@ import type {
   RecruiterDecisionResponse,
   RecruiterEvaluationListItem,
   SingleCandidateResponse,
+  ExistingCandidateListItem,
+  EnrollCandidateResponse,
+  InterviewTranscriptResponse,
 } from "../types/candidate.types";
 import type { RecruiterDashboardNotification } from "../types/realtime.types";
 
@@ -147,12 +150,44 @@ export const useCreateCandidate = () => {
   return useMutation<
     SingleCandidateResponse,
     Error,
-    { name: string; email: string; role: string; resumeFile: File }
+    { name: string; email: string; assessmentId: string; resumeFile: File }
   >({
     mutationFn: async (data) => {
       const resp = await candidateService.createSingleCandidate(data);
       if (!resp.success || !resp.data)
         throw new Error(resp.message || "Failed to create candidate");
+      return resp.data;
+    },
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["candidates"] });
+      client.invalidateQueries({ queryKey: ["all-candidates"] });
+    },
+  });
+};
+
+export const useUniqueCandidates = () => {
+  return useQuery<ExistingCandidateListItem[], Error>({
+    queryKey: ["all-candidates"],
+    queryFn: async () => {
+      const resp = await candidateService.getUniqueCandidates();
+      if (!resp.success || !resp.data)
+        throw new Error(resp.message || "Failed to fetch candidates");
+      return resp.data;
+    },
+  });
+};
+
+export const useEnrollCandidate = () => {
+  const client = useQueryClient();
+  return useMutation<
+    EnrollCandidateResponse,
+    Error,
+    { candidateId: string; assessmentId: string; resumeFile?: File | null }
+  >({
+    mutationFn: async (data) => {
+      const resp = await candidateService.enrollExistingCandidate(data);
+      if (!resp.success || !resp.data)
+        throw new Error(resp.message || "Failed to enroll candidate");
       return resp.data;
     },
     onSuccess: () => {
@@ -210,5 +245,19 @@ export const useDeleteCandidate = () => {
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["candidates"] });
     },
+  });
+};
+
+export const useInterviewTranscript = (caId: string | null) => {
+  return useQuery<InterviewTranscriptResponse | null, Error>({
+    queryKey: ["transcript", caId],
+    queryFn: async () => {
+      if (!caId) return null;
+      const resp = await candidateService.getInterviewTranscript(caId);
+      if (!resp.success || !resp.data)
+        throw new Error(resp.message || "Failed to fetch transcript");
+      return resp.data;
+    },
+    enabled: !!caId,
   });
 };

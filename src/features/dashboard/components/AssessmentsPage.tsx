@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import {
@@ -36,8 +36,11 @@ export const AssessmentsPage: React.FC = () => {
   // Queries & Mutations
   const { data: assessments = [], isLoading: loadingAssessments } = useAssessments();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { data: selectedAssessment, isLoading: loadingDetails } = useAssessmentDetails(selectedId);
-  const { data: assessmentCandidates = [], isLoading: loadingCandidates } = useCandidates(selectedId);
+  const activeSelectedId = selectedId ?? assessments[0]?.id ?? null;
+  const { data: selectedAssessment, isLoading: loadingDetails } =
+    useAssessmentDetails(activeSelectedId);
+  const { data: assessmentCandidates = [], isLoading: loadingCandidates } =
+    useCandidates(activeSelectedId);
   const [showCandidates, setShowCandidates] = useState(true);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
@@ -70,13 +73,6 @@ export const AssessmentsPage: React.FC = () => {
   const [newSkillOverride, setNewSkillOverride] = useState('');
   const [newWeightOverride, setNewWeightOverride] = useState(5);
   const [createFocusAreas, setCreateFocusAreas] = useState<{ skill: string; weight: number }[]>([]);
-
-  // Automatically select the first assessment if none is selected
-  useEffect(() => {
-    if (assessments.length > 0 && !selectedId) {
-      setSelectedId(assessments[0].id);
-    }
-  }, [assessments, selectedId]);
 
   const handleCreateAssessment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,14 +196,14 @@ export const AssessmentsPage: React.FC = () => {
                 key={a.id}
                 onClick={() => { setSelectedId(a.id); setShowCandidates(false); }}
                 className={`relative cursor-pointer p-4 rounded-lg border transition-all duration-300 animate-slideUp hover:scale-[1.02] hover:shadow-sm ${
-                  selectedId === a.id
+                  activeSelectedId === a.id
                     ? 'border-emerald-300 bg-white shadow-md shadow-emerald-900/5 pl-5'
                     : 'border-slate-200 bg-white/[0.92] hover:border-emerald-200 hover:bg-white'
                 }`}
                 style={{ animationDelay: `${i * 0.04}s` }}
               >
                 {/* 3px selected left accent bar */}
-                {selectedId === a.id && (
+                {activeSelectedId === a.id && (
                   <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-gradient-to-b from-emerald-400 to-emerald-600 animate-fadeIn" />
                 )}
 

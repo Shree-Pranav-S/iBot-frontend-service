@@ -122,34 +122,38 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
     score: clampScore(point.score),
   }));
   const count = Math.max(3, normalized.length);
-  const center = 130;
-  const radius = 82;
+  // Use a wider viewBox with extra horizontal padding so long labels don't clip
+  const vbW = 300;
+  const vbH = 270;
+  const center = { x: 150, y: 140 };
+  const radius = 88;
 
   const coordinates = (scale: number) =>
     Array.from({ length: count }, (_, index) => {
       const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
       return {
-        x: center + Math.cos(angle) * radius * scale,
-        y: center + Math.sin(angle) * radius * scale,
+        x: center.x + Math.cos(angle) * radius * scale,
+        y: center.y + Math.sin(angle) * radius * scale,
       };
     });
   const polygon = (coords: Array<{ x: number; y: number }>) =>
     coords.map(({ x, y }) => `${x},${y}`).join(' ');
-  const dataCoordinates = coordinates(1).map((point, index) => {
+  const dataCoordinates = coordinates(1).map((pt, index) => {
     const score = normalized[index]?.score ?? 0;
     return {
-      x: center + (point.x - center) * (score / 10),
-      y: center + (point.y - center) * (score / 10),
+      x: center.x + (pt.x - center.x) * (score / 10),
+      y: center.y + (pt.y - center.y) * (score / 10),
     };
   });
-  const labels = coordinates(1.2);
+  // Labels placed at 1.28 scale so they have breathing room from the data polygon
+  const labelPositions = coordinates(1.28);
 
   if (normalized.length < 3) return null;
 
   return (
     <svg
-      viewBox="0 0 260 260"
-      className="mx-auto h-full min-h-[220px] w-full max-w-[330px]"
+      viewBox={`0 0 ${vbW} ${vbH}`}
+      className="mx-auto h-full min-h-[220px] w-full max-w-[340px]"
       role="img"
       aria-label="Competency radar chart"
     >
@@ -162,13 +166,13 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
           strokeWidth="1"
         />
       ))}
-      {coordinates(1).map((point, index) => (
+      {coordinates(1).map((pt, index) => (
         <line
           key={index}
-          x1={center}
-          y1={center}
-          x2={point.x}
-          y2={point.y}
+          x1={center.x}
+          y1={center.y}
+          x2={pt.x}
+          y2={pt.y}
           stroke="#dbe4ef"
           strokeWidth="1"
         />
@@ -179,36 +183,41 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
         stroke="#059669"
         strokeWidth="2.5"
       />
-      {dataCoordinates.map((point, index) => (
+      {dataCoordinates.map((pt, index) => (
         <circle
           key={index}
-          cx={point.x}
-          cy={point.y}
+          cx={pt.x}
+          cy={pt.y}
           r="4"
           fill="#ffffff"
           stroke="#059669"
           strokeWidth="2.5"
         />
       ))}
-      {labels.map((point, index) => {
+      {labelPositions.map((pt, index) => {
         const item = normalized[index];
         if (!item) return null;
-        const anchor = point.x < center - 4 ? 'end' : point.x > center + 4 ? 'start' : 'middle';
+        const dx = pt.x - center.x;
+        const anchor = dx < -4 ? 'end' : dx > 4 ? 'start' : 'middle';
         return (
           <g key={item.label}>
             <text
-              x={point.x}
-              y={point.y - 2}
+              x={pt.x}
+              y={pt.y - 2}
               textAnchor={anchor}
-              className="fill-slate-500 text-[9px] font-bold"
+              fontSize="9"
+              fontWeight="600"
+              fill="#64748b"
             >
               {item.label}
             </text>
             <text
-              x={point.x}
-              y={point.y + 10}
+              x={pt.x}
+              y={pt.y + 11}
               textAnchor={anchor}
-              className="fill-slate-900 text-[10px] font-black"
+              fontSize="10"
+              fontWeight="700"
+              fill="#0f172a"
             >
               {item.score.toFixed(1)}
             </text>

@@ -25,7 +25,7 @@ export interface CandidateAssessmentListItem {
   jd_text?: string;
 }
 
-export interface CSVRowResult {
+interface CSVRowResult {
   row: number;
   email: string;
   status: 'success' | 'failed';
@@ -72,14 +72,14 @@ export interface SectionCommunicationBreakdown {
   evidence: string[];
 }
 
-export interface SeverityCounts {
+interface SeverityCounts {
   low: number;
   medium: number;
   high: number;
   critical: number;
 }
 
-export interface ViolationSummary {
+interface ViolationSummary {
   has_violation: boolean;
   validated_violation_count: number;
   severity_counts: SeverityCounts;
@@ -174,5 +174,34 @@ export interface RecruiterDecisionResponse {
   candidate_assessment_id: string;
   recruiter_decision: 'APPROVED' | 'REJECTED';
   updated_at: string;
+}
+
+export interface ExistingCandidateListItem {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
+export interface EnrollCandidateResponse {
+  candidate_assessment_id: string;
+  candidate_id: string;
+  full_name: string;
+  email: string;
+  status: string;
+}
+
+export interface TranscriptTurn {
+  turn_number: number;
+  speaker: string;
+  text: string;
+  tone?: string | null;
+}
+
+export interface InterviewTranscriptResponse {
+  candidate_assessment_id: string;
+  candidate_name: string | null;
+  assessment_title: string | null;
+  total_elapsed_secs: number;
+  turns: TranscriptTurn[];
 }
 

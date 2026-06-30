@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useUpdateCandidateDecision } from '../../../hooks/queries';
+import { useToast } from '../../../hooks/useToast';
 
 export type RecruiterDecision = 'APPROVED' | 'REJECTED';
 
@@ -98,6 +100,8 @@ export const decisionMeta = (decision: string | null | undefined) => {
 };
 
 export const useEvaluationDecision = () => {
+  const { mutateAsync, isPending } = useUpdateCandidateDecision();
+  const { success, error: showError } = useToast();
   const [modal, setModal] = useState<{
     open: boolean;
     candidateId: string;
@@ -112,24 +116,58 @@ export const useEvaluationDecision = () => {
     decision: 'APPROVED',
   });
 
-  return useMemo(
-    () => ({
-      modal,
-      requestDecision: (
-        candidateId: string,
-        candidateName: string,
-        currentDecision: string,
-        decision: RecruiterDecision,
-      ) =>
-        setModal({
-          open: true,
-          candidateId,
-          candidateName,
-          currentDecision,
-          decision,
-        }),
-      closeDecision: () => setModal((current) => ({ ...current, open: false })),
-    }),
-    [modal],
+  const requestDecision = useCallback(
+    (
+      candidateId: string,
+      candidateName: string,
+      currentDecision: string,
+      decision: RecruiterDecision,
+    ) =>
+      setModal({
+        open: true,
+        candidateId,
+        candidateName,
+        currentDecision,
+        decision,
+      }),
+    [],
   );
+
+  const closeDecision = useCallback(
+    () => setModal((current) => ({ ...current, open: false })),
+    [],
+  );
+
+  const saveDecision = useCallback(
+    async (feedback?: string) => {
+      try {
+        await mutateAsync({
+          candidateId: modal.candidateId,
+          decision: modal.decision,
+          feedback,
+        });
+        success(
+          'Decision saved',
+          `${modal.candidateName} has been ${
+            modal.decision === 'APPROVED' ? 'approved' : 'rejected'
+          }.`,
+        );
+        closeDecision();
+      } catch (error: unknown) {
+        showError(
+          'Unable to save decision',
+          error instanceof Error ? error.message : 'Please try again.',
+        );
+      }
+    },
+    [closeDecision, modal, mutateAsync, showError, success],
+  );
+
+  return {
+    modal,
+    requestDecision,
+    closeDecision,
+    saveDecision,
+    isSaving: isPending,
+  };
 };

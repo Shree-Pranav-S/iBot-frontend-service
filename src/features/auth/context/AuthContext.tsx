@@ -20,16 +20,13 @@
  *   clears both cookies → we clear React state.
  */
 
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { authService } from '../services/auth';
-import type { UserInfo, AuthContextType, LoginRequest, RecruiterRegisterRequest } from '../../../types/auth.types';
-
-export type { UserInfo, AuthContextType };
+import type { UserInfo, LoginRequest, RecruiterRegisterRequest } from '../../../types/auth.types';
+import { AuthContext } from './authContextDefinition';
 
 // ── Context ───────────────────────────────────────────────────────────────────
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 

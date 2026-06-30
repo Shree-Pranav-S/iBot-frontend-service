@@ -9,7 +9,6 @@
  */
 
 import React, {
-  createContext,
   useCallback,
   useState,
   useRef,
@@ -17,11 +16,10 @@ import React, {
 } from 'react';
 import type { ReactNode } from 'react';
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
-import type { Toast, ToastVariant, ToastContextType } from '../types/toast.types';
+import type { Toast, ToastVariant } from '../types/toast.types';
+import { ToastContext } from './toastContextDefinition';
 
 // ── Context ───────────────────────────────────────────────────────────────────
-
-export const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 // ── Config ────────────────────────────────────────────────────────────────────
 

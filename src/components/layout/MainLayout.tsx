@@ -7,7 +7,6 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   LogOut,
-  Sparkles,
   Users,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -75,17 +74,18 @@ export const MainLayout: React.FC = () => {
       };
 
   return (
-    <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-slate-950">
-      {/* ── Sidebar – only expands on hover, never on focus ── */}
-      <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 flex-col overflow-hidden border-r border-white/70 bg-slate-950 text-white shadow-[18px_0_48px_rgba(15,23,42,0.16)] transition-[width] duration-300 ease-out hover:w-[304px] sm:flex">
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-500/[0.18] via-cyan-500/10 to-transparent pointer-events-none" />
+    <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-primary">
+      {/* ── Sidebar – expands via transform overlay so main content never reflows ── */}
+      <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 sm:block">
+        <div className="absolute inset-y-0 left-0 z-30 flex w-[304px] -translate-x-[216px] flex-col overflow-hidden border-r border-emerald-900/30 bg-sidebar text-white shadow-[18px_0_48px_rgba(2,44,34,0.2)] transition-transform duration-300 ease-out will-change-transform group-hover/sidebar:translate-x-0">
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-500/20 via-sidebar-alt/50 to-transparent pointer-events-none" />
 
         {/* Logo */}
         <div className="relative flex h-[76px] items-center gap-3 border-b border-white/10 px-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20">
             <Bot className="h-6 w-6" />
           </div>
-          <div className="min-w-[180px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+          <div className="min-w-[180px]">
             <div className="flex items-center gap-2">
               <p className="font-display text-lg font-bold tracking-tight">iBot</p>
               <span className="rounded-full border border-emerald-300/[0.35] bg-emerald-300/[0.12] px-2 py-0.5 text-[10px] font-black uppercase text-emerald-200">
@@ -109,7 +109,7 @@ export const MainLayout: React.FC = () => {
                 title={item.label}
                 tabIndex={-1}
                 className={({ isActive }) =>
-                  `group/item flex h-[58px] items-center gap-3 rounded-xl px-3 text-sm font-bold transition-all duration-200 active:scale-[0.98] ${
+                  `group/item flex h-[58px] items-center gap-3 rounded-xl px-3 text-sm font-bold transition-colors duration-200 ${
                     isActive
                       ? 'bg-white text-slate-950 shadow-lg shadow-black/20'
                       : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
@@ -121,20 +121,20 @@ export const MainLayout: React.FC = () => {
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
                         isActive
-                          ? 'bg-slate-950 text-emerald-300'
-                          : 'bg-white/[0.08] text-slate-300 group-hover/item:bg-emerald-300/[0.12] group-hover/item:text-emerald-200'
+                          ? 'bg-sidebar-deep text-emerald-300'
+                          : 'bg-white/[0.08] text-slate-300 group-hover/item:bg-emerald-500/15 group-hover/item:text-emerald-200'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="min-w-[150px] flex-1 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+                    <span className="min-w-[150px] flex-1">
                       <span className="block truncate">{item.label}</span>
                       <span className="mt-0.5 block truncate text-[10px] font-semibold text-slate-500">
                         {item.helper}
                       </span>
                     </span>
                     <ChevronRight
-                      className={`h-4 w-4 shrink-0 opacity-0 transition-all duration-200 group-hover/sidebar:opacity-100 ${
+                      className={`h-4 w-4 shrink-0 ${
                         isActive ? 'text-emerald-500' : 'text-slate-500 group-hover/item:text-emerald-200'
                       }`}
                     />
@@ -145,23 +145,13 @@ export const MainLayout: React.FC = () => {
           })}
         </nav>
 
-        {/* Bottom: realtime sync card + user profile + logout */}
+        {/* Bottom: user profile + logout */}
         <div className="relative border-t border-white/10 p-3">
-          <div className="mb-3 hidden min-w-[248px] rounded-xl border border-emerald-300/[0.15] bg-white/[0.06] p-3 shadow-sm group-hover/sidebar:block">
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-300/[0.12] text-emerald-200">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <p className="text-xs font-semibold text-white">Real-Time Sync</p>
-            <p className="mt-1 text-[11px] font-medium leading-relaxed text-slate-400">
-              Campaign details, candidate statuses, and AI evaluations are automatically kept up to date.
-            </p>
-          </div>
-
           <div className="mb-2 flex h-[58px] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-400 text-xs font-black text-slate-950">
               {initials}
             </div>
-            <div className="min-w-[170px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+            <div className="min-w-[170px]">
               <p className="truncate text-xs font-semibold text-white">{user?.full_name || 'Recruiter'}</p>
               <p className="truncate text-[10px] font-semibold text-slate-500">{user?.email}</p>
             </div>
@@ -172,39 +162,40 @@ export const MainLayout: React.FC = () => {
             tabIndex={-1}
             id="btn-logout"
             title="Sign Out"
-            className="flex h-[54px] w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-200 active:scale-[0.98]"
+            className="flex h-[54px] w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-200"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
               <LogOut className="h-4 w-4" />
             </span>
-            <span className="min-w-[160px] text-left opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
+            <span className="min-w-[160px] text-left">
               Sign Out
             </span>
           </button>
+        </div>
         </div>
       </aside>
 
       {/* ── Main content ── */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="z-10 flex h-[72px] shrink-0 items-center justify-between border-b border-white/70 bg-white/[0.97] px-4 shadow-sm shadow-slate-200/40 backdrop-blur-sm sm:px-6 lg:px-7">
+        <header className="ibot-page-header-band z-10 flex h-[72px] shrink-0 items-center justify-between px-4 sm:px-6 lg:px-7">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-600">
                 {user?.company_name || currentCopy.eyebrow}
               </p>
-              <span className="hidden h-3.5 w-px bg-slate-200 sm:block" />
-              <p className="hidden truncate text-[10px] font-medium text-slate-400 sm:block">
+              <span className="hidden h-3.5 w-px bg-default sm:block" />
+              <p className="hidden truncate text-[10px] font-medium text-secondary sm:block">
                 {currentCopy.subtitle}
               </p>
             </div>
-            <h1 className="mt-0.5 truncate font-display text-lg font-bold tracking-[-0.025em] text-slate-950 lg:text-xl">
+            <h1 className="mt-0.5 truncate font-display text-lg font-bold tracking-[-0.025em] text-primary lg:text-xl">
               {currentCopy.title}
             </h1>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationCenter />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-cyan-50 text-[11px] font-black text-emerald-700 shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-default bg-emerald-50 text-[11px] font-black text-emerald-700 shadow-sm">
               {initials}
             </div>
           </div>
@@ -216,7 +207,7 @@ export const MainLayout: React.FC = () => {
       </div>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-slate-200 bg-white/[0.92] p-1.5 shadow-2xl shadow-slate-900/[0.15] backdrop-blur-xl sm:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-default bg-surface p-1.5 shadow-lg sm:hidden">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -226,8 +217,8 @@ export const MainLayout: React.FC = () => {
               className={({ isActive }) =>
                 `flex h-12 items-center justify-center rounded-xl transition-all ${
                   isActive
-                    ? 'bg-slate-950 text-emerald-300'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-sidebar text-emerald-300'
+                    : 'text-secondary hover:bg-elevated hover:text-primary'
                 }`
               }
               title={item.label}

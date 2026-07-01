@@ -192,6 +192,7 @@ export const useEnrollCandidate = () => {
     },
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["candidates"] });
+      client.invalidateQueries({ queryKey: ["all-candidates"] });
     },
   });
 };
@@ -244,6 +245,7 @@ export const useDeleteCandidate = () => {
     },
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["candidates"] });
+      client.invalidateQueries({ queryKey: ["all-candidates"] });
     },
   });
 };

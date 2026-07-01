@@ -20,10 +20,10 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
-  ThumbsDown,
-  ThumbsUp,
   User,
+  UserCheck,
   UserRound,
+  UserX,
   Users,
   X,
 } from 'lucide-react';
@@ -35,6 +35,7 @@ import type {
   TranscriptTurn,
 } from '../../../types/candidate.types';
 import {
+  CenteredDialog,
   CompetencyRadar,
   DecisionModal,
   ScoreBar,
@@ -62,7 +63,7 @@ const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'transcript', label: 'Transcript', icon: <MessageSquareText className="h-3.5 w-3.5" /> },
 ];
 
-const TURNS_PER_PAGE = 12;
+const TURNS_PER_PAGE = 8;
 
 export const EvaluationReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -130,11 +131,11 @@ export const EvaluationReportPage: React.FC = () => {
 
   return (
     <>
-      <div className="ibot-scrollbar h-full overflow-y-auto pr-1 animate-fadeIn">
-        <div className="mx-auto max-w-[1400px] space-y-4 pb-8 print:max-w-none">
+      <div className="h-full min-h-0 overflow-hidden animate-fadeIn print:h-auto print:overflow-visible">
+        <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-3 print:h-auto print:max-w-none">
 
           {/* ── Top Nav Bar ─────────────────────────────────────────── */}
-          <header className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+          <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 print:hidden">
             <button type="button" onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 text-xs font-black text-slate-500 transition-colors hover:text-emerald-700">
               <ArrowLeft className="h-4 w-4" />
               Back to Evaluations
@@ -156,12 +157,12 @@ export const EvaluationReportPage: React.FC = () => {
           </header>
 
           {/* ── Candidate Hero Card ─────────────────────────────────── */}
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:shadow-none">
+          <section className="shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:shadow-none">
             <div className="h-2 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
-            <div className="p-5 sm:p-6">
-              <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="p-4 sm:px-5 sm:py-4">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-display text-lg font-black text-emerald-300 shadow-lg shadow-slate-900/15">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 font-display text-base font-black text-emerald-300 shadow-lg shadow-slate-900/15">
                     {candidateInitials(candidateName)}
                   </div>
                   <div className="min-w-0">
@@ -176,8 +177,8 @@ export const EvaluationReportPage: React.FC = () => {
                         />
                       )}
                     </div>
-                    <h1 className="mt-3 font-display text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{candidateName}</h1>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
+                    <h1 className="mt-2 font-display text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{candidateName}</h1>
+                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-500">
                       {evaluation.role_name && (
                         <span className="inline-flex items-center gap-1.5">
                           <Target className="h-3.5 w-3.5 text-slate-400" />
@@ -197,6 +198,11 @@ export const EvaluationReportPage: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    {evaluation.recruiter_feedback && (
+                      <p className="mt-1.5 line-clamp-1 text-[10px] font-semibold text-indigo-700">
+                        Recruiter note: {evaluation.recruiter_feedback}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -207,8 +213,8 @@ export const EvaluationReportPage: React.FC = () => {
                     disabled={evaluation.recruiter_decision === 'APPROVED'}
                     className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
-                    <ThumbsUp className="h-4 w-4" />
-                    Approve
+                    <UserCheck className="h-4 w-4" />
+                    Hire
                   </button>
                   <button
                     type="button"
@@ -216,7 +222,7 @@ export const EvaluationReportPage: React.FC = () => {
                     disabled={evaluation.recruiter_decision === 'REJECTED'}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
-                    <ThumbsDown className="h-4 w-4" />
+                    <UserX className="h-4 w-4" />
                     Reject
                   </button>
                 </div>
@@ -224,13 +230,13 @@ export const EvaluationReportPage: React.FC = () => {
             </div>
 
             {/* Tab navigation */}
-            <nav className="flex gap-0.5 overflow-x-auto border-t border-slate-200 bg-slate-50/80 px-3 py-2 print:hidden">
+            <nav className="grid grid-cols-5 gap-1 border-t border-slate-200 bg-slate-50/80 px-3 py-2 print:hidden">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-[10px] font-black transition-all ${
+                  className={`inline-flex min-w-0 items-center justify-center gap-1.5 truncate rounded-lg px-2.5 py-2 text-[10px] font-black transition-all ${
                     activeTab === tab.id
                       ? 'bg-slate-950 text-emerald-300 shadow-sm'
                       : 'text-slate-500 hover:bg-white hover:text-emerald-700'
@@ -244,6 +250,7 @@ export const EvaluationReportPage: React.FC = () => {
           </section>
 
           {/* ── Tab Content ─────────────────────────────────────────── */}
+          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1 pb-3 print:overflow-visible">
           {activeTab === 'overview' && (
             <OverviewTab
               evaluation={evaluation}
@@ -273,68 +280,40 @@ export const EvaluationReportPage: React.FC = () => {
           )}
 
           {/* ── Decision Banner ─────────────────────────────────────── */}
-          <section className="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/10 print:border-slate-300 print:bg-white print:text-slate-950">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-emerald-300 print:bg-emerald-50 print:text-emerald-700">
-                  <Scale className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-black">Recruiter decision</p>
-                  <p className="mt-1 max-w-2xl text-xs font-medium leading-5 text-slate-400 print:text-slate-600">
-                    AI provides an evidence-based recommendation. The accountable hiring decision remains with the recruiter.
-                  </p>
-                  {evaluation.recruiter_feedback && (
-                    <p className="mt-2 text-xs font-semibold text-slate-300 print:text-slate-700">
-                      Saved feedback: {evaluation.recruiter_feedback}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2 print:hidden">
-                <StatusPill {...decision} />
-                <button
-                  type="button"
-                  onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'APPROVED')}
-                  disabled={evaluation.recruiter_decision === 'APPROVED'}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'REJECTED')}
-                  disabled={evaluation.recruiter_decision === 'REJECTED'}
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-black text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  <ThumbsDown className="h-4 w-4" />
-                  Reject
-                </button>
-              </div>
-            </div>
-          </section>
+          </div>
         </div>
       </div>
 
       {/* ── Detail Modal ─────────────────────────────────────────────── */}
       {detailModal && (
-        <div className="ibot-overlay" onMouseDown={() => setDetailModal(null)}>
-          <div
-            className="bg-white rounded-2xl shadow-2xl shadow-slate-900/20 w-full max-w-lg max-h-[85vh] flex flex-col animate-scaleIn overflow-hidden"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-black text-slate-950">{detailModal.title}</h2>
-              <button onClick={() => setDetailModal(null)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
-                <X className="h-4 w-4" />
-              </button>
+        <CenteredDialog
+          onClose={() => setDetailModal(null)}
+          labelledBy="evaluation-detail-title"
+          className="max-w-3xl"
+        >
+          <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
+          <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/50 px-5 py-4">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                Evaluation detail
+              </p>
+              <h2 id="evaluation-detail-title" className="mt-0.5 text-base font-black text-slate-950">
+                {detailModal.title}
+              </h2>
             </div>
-            <div className="ibot-scrollbar flex-1 overflow-y-auto p-5">
-              {detailModal.content}
-            </div>
+            <button
+              type="button"
+              onClick={() => setDetailModal(null)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Close evaluation detail"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </header>
+          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+            {detailModal.content}
           </div>
-        </div>
+        </CenteredDialog>
       )}
 
       <DecisionModal
@@ -543,7 +522,7 @@ const SkillsTab: React.FC<{
     </div>
 
     <div className="grid gap-4 lg:grid-cols-2">
-      <SignalPanel title="Demonstrated strengths" subtitle="Technical skills scoring 7.5 or above." items={evaluation.strengths} icon={<ThumbsUp className="h-4 w-4" />} tone="emerald" />
+      <SignalPanel title="Demonstrated strengths" subtitle="Technical skills scoring 7.5 or above." items={evaluation.strengths} icon={<ShieldCheck className="h-4 w-4" />} tone="emerald" />
       <SignalPanel title="Technical concerns" subtitle="Low-scoring or high-priority risk skills." items={evaluation.concerns} icon={<ShieldAlert className="h-4 w-4" />} tone="rose" />
     </div>
   </div>
@@ -831,13 +810,13 @@ const recruiterFacingRedFlag = (reason: string | null): string => {
 };
 
 const ReportLoadingState = () => (
-  <div className="ibot-scrollbar h-full overflow-y-auto pr-1">
-    <div className="mx-auto max-w-[1400px] space-y-4">
+  <div className="h-full min-h-0 overflow-hidden">
+    <div className="mx-auto flex h-full min-h-0 max-w-[1400px] flex-col gap-3">
       <div className="h-6 w-40 animate-pulse rounded bg-slate-200" />
-      <div className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-        <div className="grid h-80 place-items-center rounded-2xl border border-slate-200 bg-white">
+      <div className="h-40 shrink-0 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-2">
+        <div className="animate-pulse rounded-2xl border border-slate-200 bg-white" />
+        <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white">
           <div className="text-center">
             <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
             <p className="mt-3 text-xs font-bold text-slate-400">Building detailed report…</p>

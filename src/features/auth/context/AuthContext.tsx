@@ -20,7 +20,7 @@
  *   clears both cookies → we clear React state.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { authService } from '../services/auth';
 import type { UserInfo, LoginRequest, RecruiterRegisterRequest } from '../../../types/auth.types';
@@ -162,19 +162,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // ── Clear error ─────────────────────────────────────────────────────────────
   const clearError = useCallback(() => setError(null), []);
 
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      error,
+      login,
+      register,
+      logout,
+      clearError,
+    }),
+    [user, isLoading, error, login, register, logout, clearError],
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        error,
-        login,
-        register,
-        logout,
-        clearError,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

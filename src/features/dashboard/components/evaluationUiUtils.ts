@@ -80,7 +80,7 @@ export const recommendationMeta = (recommendation: string) => {
 export const decisionMeta = (decision: string | null | undefined) => {
   if (decision === 'APPROVED') {
     return {
-      label: 'Approved',
+      label: 'Hired',
       className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
       dot: 'bg-emerald-500',
     };
@@ -149,7 +149,7 @@ export const useEvaluationDecision = () => {
         success(
           'Decision saved',
           `${modal.candidateName} has been ${
-            modal.decision === 'APPROVED' ? 'approved' : 'rejected'
+            modal.decision === 'APPROVED' ? 'hired' : 'rejected'
           }.`,
         );
         closeDecision();

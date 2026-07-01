@@ -35,6 +35,8 @@ export const CustomSelect = <T extends SelectValue,>({
   const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
@@ -49,7 +51,7 @@ export const CustomSelect = <T extends SelectValue,>({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isOpen]);
 
   return (
     <div ref={containerRef} className={`relative inline-block text-left ${className}`}>

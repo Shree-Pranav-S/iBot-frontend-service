@@ -18,7 +18,12 @@ export default {
           500: 'var(--emerald-500)',
           600: 'var(--emerald-600)',
           700: 'var(--emerald-700)',
-        }
+        },
+        sidebar: {
+          DEFAULT: 'var(--sidebar-bg)',
+          alt: 'var(--sidebar-bg-alt)',
+          deep: 'var(--sidebar-bg-deep)',
+        },
       },
       borderColor: {
         default: 'var(--border-default)',

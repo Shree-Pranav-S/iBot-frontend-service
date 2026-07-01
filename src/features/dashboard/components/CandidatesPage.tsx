@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
@@ -10,11 +10,20 @@ import {
   useDeleteCandidate,
   useUniqueCandidates,
   useEnrollCandidate,
+  useCandidateEvaluation,
 } from '../../../hooks/queries';
 import type {
   BulkUploadResponse,
   CandidateAssessmentListItem,
 } from '../../../types/candidate.types';
+import { DecisionModal } from './EvaluationUI';
+import { formatDateTime, useEvaluationDecision } from './evaluationUiUtils';
+import {
+  buildAssessmentInstanceNumbers,
+  buildAssessmentSelectOptions,
+  formatAssessmentTitle,
+  formatEnrolledAssessmentsList,
+} from '../utils/assessmentDisplay';
 import {
   Users,
   Mail,
@@ -29,11 +38,17 @@ import {
   ChevronDown,
   Info,
   Briefcase,
-  Eye,
   Trash2,
   Plus,
   UserPlus,
+  ArrowUpRight,
+  CalendarClock,
+  ClipboardList,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
+
+const PAGE_SIZE = 15;
 
 export const CandidatesPage: React.FC = () => {
   const { error: toastError, success: toastSuccess } = useToast();
@@ -42,7 +57,17 @@ export const CandidatesPage: React.FC = () => {
   // Fetch assessments for dropdown selector
   const { data: assessments = [], isLoading: loadingCampaigns } = useAssessments();
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
+  const [page, setPage] = useState(0);
   const searchQuery = '';
+
+  const instanceNumbers = useMemo(
+    () => buildAssessmentInstanceNumbers(assessments),
+    [assessments],
+  );
+  const assessmentSelectOptions = useMemo(
+    () => buildAssessmentSelectOptions(assessments, instanceNumbers),
+    [assessments, instanceNumbers],
+  );
 
   // Candidates query & mutations
   const { data: candidates = [], isLoading: loadingCandidates } = useCandidates(selectedCampaignId || null);
@@ -51,12 +76,70 @@ export const CandidatesPage: React.FC = () => {
   const bulkUploadMutation = useBulkUploadCandidates();
   const deleteMutation = useDeleteCandidate();
   const enrollMutation = useEnrollCandidate();
+  const {
+    modal: decisionModal,
+    requestDecision,
+    closeDecision,
+    saveDecision,
+    isSaving: isSavingDecision,
+  } = useEvaluationDecision();
 
-  // Modal States for View Resume and View JD
+  // Candidate detail and document modal states
   const [selectedCandidate, setSelectedCandidate] =
     useState<CandidateAssessmentListItem | null>(null);
+  const [showCandidateModal, setShowCandidateModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
+  const activeCandidate = selectedCandidate
+    ? candidates.find((candidate) => candidate.id === selectedCandidate.id) ?? selectedCandidate
+    : null;
+  const {
+    data: candidateEvaluation,
+    isLoading: loadingCandidateEvaluation,
+    isError: candidateEvaluationError,
+  } = useCandidateEvaluation(
+    showCandidateModal && activeCandidate?.status === 'EVALUATED'
+      ? activeCandidate.id
+      : null,
+  );
+
+  useEffect(() => {
+    if (!showCandidateModal) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !decisionModal.open) {
+        setShowCandidateModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [decisionModal.open, showCandidateModal]);
+
+  const openCandidateDetails = (candidate: CandidateAssessmentListItem) => {
+    setSelectedCandidate(candidate);
+    setShowCandidateModal(true);
+  };
+
+  const openCandidateResume = (candidate: CandidateAssessmentListItem) => {
+    setSelectedCandidate(candidate);
+    setShowCandidateModal(false);
+    setShowResumeModal(true);
+  };
+
+  const openCandidateJd = (candidate: CandidateAssessmentListItem) => {
+    setSelectedCandidate(candidate);
+    setShowCandidateModal(false);
+    setShowJdModal(true);
+  };
+
+  const requestCandidateDecision = (decision: 'APPROVED' | 'REJECTED') => {
+    if (!activeCandidate) return;
+    requestDecision(
+      activeCandidate.id,
+      activeCandidate.full_name,
+      activeCandidate.recruiter_decision,
+      decision,
+    );
+  };
 
   // CSV Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -97,10 +180,23 @@ export const CandidatesPage: React.FC = () => {
       toastError('Missing Fields', 'Please fill in all fields and select an assessment.');
       return;
     }
+
+    const normalizedEmail = manualEmail.trim().toLowerCase();
+    const existingCandidate = uniqueCandidates.find(
+      (c) => c.email.trim().toLowerCase() === normalizedEmail,
+    );
+    if (existingCandidate) {
+      toastError(
+        'Candidate Already Exists',
+        'This email is already registered. Use Enroll to add them to another assessment.',
+      );
+      return;
+    }
+
     try {
       await createMutation.mutateAsync({
-        name: manualName,
-        email: manualEmail,
+        name: manualName.trim(),
+        email: normalizedEmail,
         assessmentId: manualAssessmentId,
         resumeFile: manualResume,
       });
@@ -108,7 +204,14 @@ export const CandidatesPage: React.FC = () => {
       handleCloseManual();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Creation failed.';
-      toastError('Failed', msg);
+      if (msg.toLowerCase().includes('already exists')) {
+        toastError(
+          'Candidate Already Exists',
+          'Use Enroll to add this candidate to another assessment.',
+        );
+      } else {
+        toastError('Failed', msg);
+      }
     }
   };
 
@@ -117,6 +220,43 @@ export const CandidatesPage: React.FC = () => {
   const [enrollCandidateId, setEnrollCandidateId] = useState('');
   const [enrollAssessmentId, setEnrollAssessmentId] = useState('');
   const [enrollResume, setEnrollResume] = useState<File | null>(null);
+  const needEnrollmentsLookup = showEnrollModal && selectedCampaignId !== 'all';
+  const { data: fetchedAllEnrollments = [] } = useCandidates(needEnrollmentsLookup ? 'all' : null);
+  const allEnrollments = selectedCampaignId === 'all' ? candidates : fetchedAllEnrollments;
+  const selectedEnrollCandidate = uniqueCandidates.find(
+    (candidate) => candidate.id === enrollCandidateId,
+  );
+  const enrolledAssessmentIds = useMemo(() => {
+    if (!selectedEnrollCandidate) return new Set<string>();
+    const email = selectedEnrollCandidate.email.trim().toLowerCase();
+    return new Set(
+      allEnrollments
+        .filter((enrollment) => enrollment.email.trim().toLowerCase() === email)
+        .map((enrollment) => enrollment.assessment_id)
+        .filter((id): id is string => Boolean(id)),
+    );
+  }, [selectedEnrollCandidate, allEnrollments]);
+  const enrollAssessmentSelectOptions = useMemo(
+    () =>
+      buildAssessmentSelectOptions(assessments, instanceNumbers).filter(
+        (option) => !enrolledAssessmentIds.has(option.value),
+      ),
+    [assessments, instanceNumbers, enrolledAssessmentIds],
+  );
+  const enrolledAssessmentsSummary = useMemo(() => {
+    if (enrolledAssessmentIds.size === 0) return '';
+    return formatEnrolledAssessmentsList(
+      [...enrolledAssessmentIds],
+      assessments,
+      instanceNumbers,
+    );
+  }, [enrolledAssessmentIds, assessments, instanceNumbers]);
+
+  useEffect(() => {
+    if (enrollAssessmentId && enrolledAssessmentIds.has(enrollAssessmentId)) {
+      setEnrollAssessmentId('');
+    }
+  }, [enrollAssessmentId, enrolledAssessmentIds]);
 
   const resetEnrollModal = () => {
     setEnrollCandidateId('');
@@ -133,6 +273,13 @@ export const CandidatesPage: React.FC = () => {
     e.preventDefault();
     if (!enrollCandidateId || !enrollAssessmentId) {
       toastError('Missing Fields', 'Please select both a candidate and an assessment.');
+      return;
+    }
+    if (enrolledAssessmentIds.has(enrollAssessmentId)) {
+      toastError(
+        'Already Enrolled',
+        'This candidate is already registered for the selected assessment.',
+      );
       return;
     }
     try {
@@ -193,7 +340,7 @@ export const CandidatesPage: React.FC = () => {
   };
 
   const handleDeleteCandidate = async (caId: string) => {
-    if (!window.confirm("Are you sure you want to delete this candidate from the assessment? This will permanently delete their registration and all associated interview session history.")) {
+    if (!window.confirm("Are you sure you want to delete this candidate from the assessment? This will permanently delete their registration and all associated interview session history. If this is their only enrollment, the candidate record will also be removed so the email can be used again.")) {
       return;
     }
     try {
@@ -240,7 +387,7 @@ export const CandidatesPage: React.FC = () => {
     return (
       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-bold border transition-all hover:scale-105 cursor-default ${classes}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-        {d}
+        {d === 'APPROVED' ? 'HIRED' : d}
       </span>
     );
   };
@@ -248,22 +395,37 @@ export const CandidatesPage: React.FC = () => {
   const inputStyles = "rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all";
 
   // Filter candidates locally using the search query
-  const filteredCandidates = candidates.filter(c => {
-    const q = searchQuery.toLowerCase();
-    return (
-      c.full_name?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      (c.role_name || selectedAssessment?.role_name || '').toLowerCase().includes(q)
-    );
-  });
+  const filteredCandidates = useMemo(
+    () =>
+      candidates.filter((c) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          c.full_name?.toLowerCase().includes(q) ||
+          c.email?.toLowerCase().includes(q) ||
+          (c.role_name || selectedAssessment?.role_name || '').toLowerCase().includes(q)
+        );
+      }),
+    [candidates, searchQuery, selectedAssessment?.role_name],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [selectedCampaignId, searchQuery]);
+
+  const totalPages = Math.ceil(filteredCandidates.length / PAGE_SIZE);
+  const currentPage = Math.min(page, Math.max(totalPages - 1, 0));
+  const visibleCandidates = filteredCandidates.slice(
+    currentPage * PAGE_SIZE,
+    (currentPage + 1) * PAGE_SIZE,
+  );
 
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden animate-fadeIn">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden">
       {/* ── Header Bar & Toolbar ─────────────────────────────────────────── */}
-      <div className="ibot-command-panel relative z-20 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 flex-shrink-0 p-3 animate-slideDown">
+      <div className="ibot-section-toolbar relative z-20 mb-4 flex flex-shrink-0 flex-col justify-between gap-3 p-3 md:flex-row md:items-center">
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-            <Users className="h-4 w-4 text-emerald-500 animate-pulse" />
+            <Users className="h-4 w-4 text-emerald-500" />
             Candidates
           </h2>
 
@@ -278,7 +440,7 @@ export const CandidatesPage: React.FC = () => {
                 ? [{ value: 'all', label: 'No campaigns' }]
                 : [
                     { value: 'all', label: 'All Campaigns' },
-                    ...assessments.map((a) => ({ value: a.id, label: a.title })),
+                    ...assessmentSelectOptions,
                   ]
             }
             disabled={loadingCampaigns}
@@ -334,7 +496,7 @@ export const CandidatesPage: React.FC = () => {
       </div>
 
       {/* ── Table Container ──────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 ibot-panel overflow-hidden flex flex-col bg-white">
+      <div className="ibot-section-surface ibot-candidates-surface flex min-h-0 flex-1 flex-col overflow-hidden">
         {loadingCandidates ? (
           <div className="flex-1 flex flex-col items-center justify-center">
             <Loader2 className="h-7 w-7 text-emerald-500 animate-spin mb-2" />
@@ -362,7 +524,7 @@ export const CandidatesPage: React.FC = () => {
         ) : (
           <div className="ibot-scrollbar flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200 z-10">
+              <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
                 <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   <th className="px-4 py-3 cursor-pointer hover:text-slate-700 transition-colors">
                     Candidate <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
@@ -381,14 +543,22 @@ export const CandidatesPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {filteredCandidates.map((c, i) => (
+                {visibleCandidates.map((c) => (
                   <tr
                     key={c.id}
-                    className="group h-16 hover:bg-slate-50/70 transition-colors animate-slideUp"
-                    style={{ animationDelay: `${i * 0.03}s` }}
+                    className="group h-16 cursor-pointer transition-colors hover:bg-white/75 focus-within:bg-white/75"
+                    onClick={() => openCandidateDetails(c)}
                   >
                     <td className="px-4 py-2">
-                      <div className="flex items-center gap-2.5 transition-transform duration-200 group-hover:translate-x-0.5">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openCandidateDetails(c);
+                        }}
+                        className="flex w-full items-center gap-2.5 text-left transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-label={`View full details for ${c.full_name}`}
+                      >
                         {/* Avatar container with 2px ring highlight on hover */}
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200/50 text-emerald-600 font-bold text-[11px] shrink-0 group-hover:ring-2 group-hover:ring-emerald-300 transition-all duration-300">
                           {c.full_name.charAt(0).toUpperCase()}
@@ -400,7 +570,7 @@ export const CandidatesPage: React.FC = () => {
                             {c.email}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td className="px-4 py-2">
                       <span className="inline-flex items-center gap-1 rounded-md border border-emerald-100 bg-emerald-50/60 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 transition-all hover:scale-105">
@@ -427,42 +597,48 @@ export const CandidatesPage: React.FC = () => {
                       {getDecisionBadge(c.recruiter_decision)}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      {/* Ghost/icon action group: 32px circular hover buttons */}
-                      <div className="flex items-center justify-end gap-1.5 shrink-0">
+                      <div
+                        className="flex items-center justify-end gap-1.5 shrink-0"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         <button
-                          onClick={() => { setSelectedCandidate(c); setShowResumeModal(true); }}
-                          className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shadow-none hover:scale-110 active:scale-90"
-                          title="View Resume"
+                          onClick={() => openCandidateResume(c)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.97]"
+                          aria-label={`View ${c.full_name}'s resume`}
                         >
-                          <Eye className="h-4 w-4" />
+                          <FileText className="h-3 w-3" />
+                          Resume
                         </button>
 
                         {c.jd_text && (
                           <button
-                            onClick={() => { setSelectedCandidate(c); setShowJdModal(true); }}
-                            className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors shadow-none hover:scale-110 active:scale-90"
-                            title="View Campaign JD"
+                            onClick={() => openCandidateJd(c)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 active:scale-[0.97]"
+                            aria-label={`View the job description for ${c.full_name}`}
                           >
-                            <Briefcase className="h-4 w-4" />
+                            <Briefcase className="h-3 w-3" />
+                            JD
                           </button>
                         )}
 
                         {c.status === 'EVALUATED' && (
                           <button
                             onClick={() => navigate(`/candidates/${c.id}/report`)}
-                            className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-emerald-600 hover:bg-emerald-50 transition-colors shadow-none hover:scale-110 active:scale-90"
-                            title="View Report"
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-[10px] font-bold text-indigo-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-100 active:scale-[0.97]"
+                            aria-label={`View ${c.full_name}'s evaluation report`}
                           >
-                            <FileText className="h-4 w-4" />
+                            <ClipboardList className="h-3 w-3" />
+                            Report
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteCandidate(c.id)}
                           disabled={deleteMutation.isPending}
-                          className="h-8 w-8 rounded-full flex items-center justify-center border border-transparent bg-transparent text-red-500 hover:bg-red-50 disabled:opacity-30 transition-colors shadow-none hover:text-red-600 hover:scale-110 active:scale-90"
-                          title="Delete Candidate"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-red-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-90 disabled:opacity-30"
+                          aria-label={`Delete ${c.full_name}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
@@ -476,16 +652,271 @@ export const CandidatesPage: React.FC = () => {
         {/* Table Footer with Pagination Controls */}
         <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-500">
           <div>
-            Showing {filteredCandidates.length} of {candidates.length} candidates
+            {filteredCandidates.length > 0
+              ? `Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, filteredCandidates.length)} of ${filteredCandidates.length} candidates`
+              : `Showing 0 of ${candidates.length} candidates`}
           </div>
           <div className="flex items-center gap-1.5">
-            <button disabled className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 cursor-not-allowed transition-all">Previous</button>
-            <button disabled className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 cursor-not-allowed transition-all">Next</button>
+            <button
+              type="button"
+              disabled={currentPage === 0}
+              onClick={() => setPage(currentPage - 1)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-emerald-200 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="px-2 text-[10px] font-bold text-slate-400">
+              {totalPages > 0 ? `${currentPage + 1} / ${totalPages}` : '—'}
+            </span>
+            <button
+              type="button"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => setPage(currentPage + 1)}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-emerald-200 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ── CSV Upload Modal ──────────────────────────────────────────────── */}
+      {/* Candidate details */}
+      {showCandidateModal && activeCandidate && (
+        <div
+          className="ibot-overlay !items-center !overflow-hidden !p-4"
+          onMouseDown={() => setShowCandidateModal(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="candidate-detail-title"
+            className="ibot-modal max-h-[calc(100vh-2rem)] max-w-3xl !overflow-hidden"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
+
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white via-emerald-50/45 to-cyan-50/45 px-6 py-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-emerald-300 shadow-lg shadow-slate-900/15">
+                  {activeCandidate.full_name
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .map((part) => part[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase() || 'C'}
+                </div>
+                <div className="min-w-0">
+                  <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                    {getStatusBadge(activeCandidate.status)}
+                    {getDecisionBadge(activeCandidate.recruiter_decision)}
+                  </div>
+                  <h2 id="candidate-detail-title" className="truncate font-display text-xl font-black tracking-tight text-slate-950">
+                    {activeCandidate.full_name}
+                  </h2>
+                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs font-semibold text-slate-500">
+                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    {activeCandidate.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCandidateModal(false)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700"
+                aria-label="Close candidate details"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+
+            <div className="min-h-0 overflow-hidden px-6 py-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  {
+                    label: 'Campaign',
+                    value:
+                      (() => {
+                        const assessment = assessments.find(
+                          (item) => item.id === activeCandidate.assessment_id,
+                        );
+                        if (assessment) {
+                          return formatAssessmentTitle(assessment, instanceNumbers);
+                        }
+                        return selectedAssessment?.title || 'All campaigns';
+                      })(),
+                  },
+                  { label: 'Role', value: activeCandidate.role_name || selectedAssessment?.role_name || 'Not assigned' },
+                  { label: 'Interview', value: activeCandidate.status.replace(/_/g, ' ') },
+                  { label: 'Resume', value: activeCandidate.resume_parse_status.replace(/_/g, ' ') },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                    <p className="mt-1 truncate text-xs font-bold text-slate-800" title={item.value}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-3.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-emerald-600" />
+                      <h3 className="text-xs font-black text-slate-900">Resume intelligence</h3>
+                    </div>
+                    {typeof activeCandidate.resume_parsed?.experience_years === 'number' && (
+                      <span className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[9px] font-black text-emerald-700">
+                        {activeCandidate.resume_parsed.experience_years} yrs
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[10px] font-medium leading-4 text-slate-600">
+                    {activeCandidate.resume_parsed?.summary || 'Resume details are still being prepared.'}
+                  </p>
+                  <div className="mt-2 flex min-h-5 flex-wrap gap-1">
+                    {(activeCandidate.resume_parsed?.skills || []).slice(0, 6).map((skill) => (
+                      <span key={skill} className="rounded-md border border-emerald-100 bg-white px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
+                        {skill}
+                      </span>
+                    ))}
+                    {(activeCandidate.resume_parsed?.skills?.length || 0) > 6 && (
+                      <span className="px-1 py-0.5 text-[9px] font-bold text-slate-400">
+                        +{(activeCandidate.resume_parsed?.skills?.length || 0) - 6} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-white p-3.5">
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-cyan-700" />
+                    <h3 className="text-xs font-black text-slate-900">Job description</h3>
+                  </div>
+                  <p className="mt-2 line-clamp-4 whitespace-pre-line text-[10px] font-medium leading-4 text-slate-600">
+                    {activeCandidate.jd_text || 'No job description is attached to this campaign.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/75 via-white to-cyan-50/60 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 text-indigo-600" />
+                    <h3 className="text-xs font-black text-slate-900">Evaluation snapshot</h3>
+                  </div>
+                  {activeCandidate.status === 'EVALUATED' && (
+                    <span className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-indigo-700">
+                      Report ready
+                    </span>
+                  )}
+                </div>
+
+                {activeCandidate.status !== 'EVALUATED' ? (
+                  <p className="mt-2 text-[10px] font-semibold text-slate-500">
+                    The report and hiring actions unlock after evaluation is complete.
+                  </p>
+                ) : loadingCandidateEvaluation ? (
+                  <div className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-slate-500">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
+                    Loading evaluation summary…
+                  </div>
+                ) : candidateEvaluationError || !candidateEvaluation ? (
+                  <p className="mt-2 text-[10px] font-semibold text-amber-700">
+                    The full report is ready, but its summary could not be loaded here.
+                  </p>
+                ) : (
+                  <div className="mt-2 grid grid-cols-[auto_1fr] items-center gap-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-display text-3xl font-black text-indigo-700">
+                        {candidateEvaluation.overall_score.toFixed(1)}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400">/10</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-indigo-700">
+                        AI recommendation: {candidateEvaluation.hiring_recommendation}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-slate-600">
+                        {candidateEvaluation.overall_summary || candidateEvaluation.recommendation_reasoning}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center gap-4 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-[9px] font-semibold text-slate-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarClock className="h-3.5 w-3.5 text-slate-400" />
+                  Started: {formatDateTime(activeCandidate.interview_started_at)}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarClock className="h-3.5 w-3.5 text-slate-400" />
+                  Completed: {formatDateTime(activeCandidate.interview_ended_at)}
+                </span>
+              </div>
+            </div>
+
+            <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/90 px-6 py-3.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openCandidateResume(activeCandidate)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Resume
+                </button>
+                {activeCandidate.jd_text && (
+                  <button
+                    type="button"
+                    onClick={() => openCandidateJd(activeCandidate)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:text-cyan-700"
+                  >
+                    <Briefcase className="h-3.5 w-3.5" />
+                    JD
+                  </button>
+                )}
+                {activeCandidate.status === 'EVALUATED' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/candidates/${activeCandidate.id}/report`)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-black text-indigo-700 transition-colors hover:bg-indigo-100"
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Report
+                    <ArrowUpRight className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {activeCandidate.status === 'EVALUATED' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => requestCandidateDecision('REJECTED')}
+                    disabled={activeCandidate.recruiter_decision === 'REJECTED'}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-black text-rose-700 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <UserX className="h-3.5 w-3.5" />
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => requestCandidateDecision('APPROVED')}
+                    disabled={activeCandidate.recruiter_decision === 'APPROVED'}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-[10px] font-black text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <UserCheck className="h-3.5 w-3.5" />
+                    Hire
+                  </button>
+                </div>
+              )}
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {/* CSV upload */}
       {showUploadModal && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-lg max-h-[85vh]">
@@ -522,16 +953,18 @@ export const CandidatesPage: React.FC = () => {
                       <div className="mt-2 border border-slate-200 rounded-md overflow-hidden">
                         <div className="bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">Your Assessment IDs</div>
                         <div className="divide-y divide-slate-100 max-h-28 overflow-y-auto ibot-scrollbar">
-                          {assessments.map(a => (
-                            <div key={a.id} className="flex items-center justify-between px-2 py-1.5 hover:bg-white transition-colors gap-2">
-                              <span className="text-[9px] text-slate-600 font-semibold truncate">{a.title} ({a.role_name})</span>
+                          {assessments.map((assessment) => (
+                            <div key={assessment.id} className="flex items-center justify-between px-2 py-1.5 hover:bg-white transition-colors gap-2">
+                              <span className="text-[9px] text-slate-600 font-semibold truncate">
+                                {formatAssessmentTitle(assessment, instanceNumbers)} ({assessment.role_name})
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => { navigator.clipboard.writeText(a.id); toastSuccess('Copied', 'Assessment ID copied to clipboard.'); }}
+                                onClick={() => { navigator.clipboard.writeText(assessment.id); toastSuccess('Copied', 'Assessment ID copied to clipboard.'); }}
                                 className="shrink-0 font-mono text-[8px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded hover:bg-emerald-100 transition-colors"
                                 title="Click to copy"
                               >
-                                {a.id.slice(0, 8)}…
+                                {assessment.id.slice(0, 8)}…
                               </button>
                             </div>
                           ))}
@@ -721,22 +1154,19 @@ export const CandidatesPage: React.FC = () => {
                     placeholder="jane@example.com"
                     className={inputStyles}
                   />
+                  <p className="text-[9px] font-medium text-secondary">
+                    Each candidate is created once. To add an existing email to another assessment, use Enroll.
+                  </p>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assessment</label>
-                  <select
-                    required
+                  <CustomSelect
                     value={manualAssessmentId}
-                    onChange={(e) => setManualAssessmentId(e.target.value)}
-                    className={inputStyles}
-                  >
-                    <option value="">— Select an assessment —</option>
-                    {assessments.map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.title} ({a.role_name})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setManualAssessmentId}
+                    options={assessmentSelectOptions}
+                    placeholder="Select an assessment"
+                    className="w-full"
+                  />
                   <p className="text-[9px] text-slate-400 font-semibold">Select which assessment to assign this candidate to</p>
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
@@ -946,38 +1376,39 @@ export const CandidatesPage: React.FC = () => {
                   {uniqueCandidates.length === 0 ? (
                     <p className="text-[10px] text-slate-400 font-semibold italic">No candidates found. Add a candidate first.</p>
                   ) : (
-                    <select
-                      required
+                    <CustomSelect
                       value={enrollCandidateId}
-                      onChange={(e) => setEnrollCandidateId(e.target.value)}
-                      className={inputStyles}
-                    >
-                      <option value="">— Select a candidate —</option>
-                      {uniqueCandidates.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.full_name} ({c.email})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setEnrollCandidateId}
+                      options={uniqueCandidates.map((candidate) => ({
+                        value: candidate.id,
+                        label: candidate.full_name,
+                        description: candidate.email,
+                      }))}
+                      placeholder="Select a candidate"
+                      className="w-full"
+                    />
                   )}
                 </div>
+
+                {enrolledAssessmentsSummary && (
+                  <div className="p-3 rounded-lg bg-sky-50 border border-sky-100 flex items-start gap-2">
+                    <Info className="h-3.5 w-3.5 text-sky-500 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-sky-700 font-semibold leading-relaxed">
+                      Currently enrolled in: {enrolledAssessmentsSummary}
+                    </p>
+                  </div>
+                )}
 
                 {/* Assessment selector */}
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assessment</label>
-                  <select
-                    required
+                  <CustomSelect
                     value={enrollAssessmentId}
-                    onChange={(e) => setEnrollAssessmentId(e.target.value)}
-                    className={inputStyles}
-                  >
-                    <option value="">— Select an assessment —</option>
-                    {assessments.map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.title} ({a.role_name}) — {a.status}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setEnrollAssessmentId}
+                    options={enrollAssessmentSelectOptions}
+                    placeholder="Select an assessment"
+                    className="w-full"
+                  />
                 </div>
 
                 {/* Optional resume */}
@@ -1035,6 +1466,17 @@ export const CandidatesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <DecisionModal
+        key={`${decisionModal.candidateId}:${decisionModal.decision}:${decisionModal.open}`}
+        open={decisionModal.open}
+        candidateName={decisionModal.candidateName}
+        currentDecision={decisionModal.currentDecision}
+        decision={decisionModal.decision}
+        loading={isSavingDecision}
+        onClose={closeDecision}
+        onConfirm={saveDecision}
+      />
     </div>
   );
 };

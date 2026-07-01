@@ -7,14 +7,27 @@ import { useToast } from './useToast';
 export const useRecruiterRealtime = () => {
   const queryClient = useQueryClient();
   const { success, warning } = useToast();
+  const toastRef = useRef({ success, warning });
+  toastRef.current = { success, warning };
+
   const handledEventIds = useRef(new Set<string>());
+  const isInitialConnect = useRef(true);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const refreshDashboardState = () => {
-      void queryClient.invalidateQueries({ queryKey: ['assessments'] });
-      void queryClient.invalidateQueries({ queryKey: ['candidates'] });
-      void queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      if (isInitialConnect.current) {
+        isInitialConnect.current = false;
+        return;
+      }
+
+      clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: ['assessments'] });
+        void queryClient.invalidateQueries({ queryKey: ['candidates'] });
+        void queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      }, 750);
     };
 
     const handleEvent = (event: RecruiterRealtimeEvent) => {
@@ -30,12 +43,12 @@ export const useRecruiterRealtime = () => {
           });
         }
         if (event.event_type === 'ASSESSMENT_PROCESSING_COMPLETED') {
-          success(
+          toastRef.current.success(
             'Interview plan ready',
             `${payload.title ?? 'Your assessment'} is ready to use.`,
           );
         } else {
-          warning(
+          toastRef.current.warning(
             'Assessment processing failed',
             `${payload.title ?? 'The assessment'} could not be prepared.`,
           );
@@ -57,7 +70,7 @@ export const useRecruiterRealtime = () => {
             queryKey: ['candidate-evaluation', payload.candidate_assessment_id],
           });
         }
-        success(
+        toastRef.current.success(
           'Interview evaluation ready',
           `${payload.candidate_name ?? 'The candidate'}'s report is ready to review.`,
         );
@@ -66,11 +79,12 @@ export const useRecruiterRealtime = () => {
 
     const eventSource = openRecruiterEventStream({
       onEvent: handleEvent,
-      // Revalidate after every reconnect so no completion can be missed while
-      // the browser, gateway, or Redis connection was temporarily offline.
       onOpen: refreshDashboardState,
     });
 
-    return () => eventSource.close();
-  }, [queryClient, success, warning]);
+    return () => {
+      clearTimeout(refreshTimer.current);
+      eventSource.close();
+    };
+  }, [queryClient]);
 };

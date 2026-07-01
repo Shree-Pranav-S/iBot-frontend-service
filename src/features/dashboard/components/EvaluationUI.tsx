@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   Check,
   CheckCircle2,
   Loader2,
   ShieldCheck,
-  ThumbsDown,
-  ThumbsUp,
+  UserCheck,
+  UserX,
   X,
 } from 'lucide-react';
 import {
@@ -15,6 +16,62 @@ import {
   scoreTextClass,
 } from './evaluationUiUtils';
 import type { RecruiterDecision } from './evaluationUiUtils';
+
+interface CenteredDialogProps {
+  open?: boolean;
+  children: React.ReactNode;
+  onClose: () => void;
+  labelledBy: string;
+  className?: string;
+  closeDisabled?: boolean;
+}
+
+export const CenteredDialog: React.FC<CenteredDialogProps> = ({
+  open = true,
+  children,
+  onClose,
+  labelledBy,
+  className = '',
+  closeDisabled = false,
+}) => {
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !closeDisabled) onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closeDisabled, onClose, open]);
+
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="ibot-overlay !z-[100] !items-center !justify-center !overflow-hidden !p-4"
+      role="presentation"
+      onMouseDown={closeDisabled ? undefined : onClose}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        className={`ibot-modal mx-auto max-h-[calc(100dvh-2rem)] ${className}`}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        {children}
+      </section>
+    </div>,
+    document.body,
+  );
+};
 
 export const StatusPill: React.FC<{
   label: string;
@@ -252,26 +309,14 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   const isChange =
     currentDecision && currentDecision !== 'PENDING' && currentDecision !== decision;
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !loading) onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, loading, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div className="ibot-overlay" role="presentation" onMouseDown={loading ? undefined : onClose}>
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="decision-dialog-title"
-        className="ibot-modal max-w-lg"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+    <CenteredDialog
+      open={open}
+      onClose={onClose}
+      labelledBy="decision-dialog-title"
+      closeDisabled={loading}
+      className="max-w-xl"
+    >
         <div
           className={`h-1.5 w-full ${
             isApproval
@@ -279,7 +324,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               : 'bg-gradient-to-r from-rose-500 to-amber-400'
           }`}
         />
-        <div className="p-5 sm:p-6">
+        <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3.5">
               <div
@@ -289,14 +334,14 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                     : 'bg-rose-50 text-rose-700 ring-1 ring-rose-200'
                 }`}
               >
-                {isApproval ? <ThumbsUp className="h-5 w-5" /> : <ThumbsDown className="h-5 w-5" />}
+                {isApproval ? <UserCheck className="h-5 w-5" /> : <UserX className="h-5 w-5" />}
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                   Recruiter decision
                 </p>
                 <h2 id="decision-dialog-title" className="mt-1 text-xl font-black text-slate-950">
-                  {isApproval ? 'Approve candidate' : 'Reject candidate'}
+                  {isApproval ? 'Hire candidate' : 'Reject candidate'}
                 </h2>
                 <p className="mt-1 text-sm font-medium text-slate-500">{candidateName}</p>
               </div>
@@ -339,7 +384,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <textarea
               value={feedback}
               onChange={(event) => setFeedback(event.target.value.slice(0, 2000))}
-              rows={5}
+              rows={4}
               placeholder={
                 isApproval
                   ? 'Add an internal note about why this candidate is moving forward…'
@@ -353,7 +398,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </label>
         </div>
 
-        <footer className="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -379,11 +424,10 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             ) : (
               <Check className="h-4 w-4" />
             )}
-            Confirm {isApproval ? 'approval' : 'rejection'}
+            Confirm {isApproval ? 'hire' : 'rejection'}
           </button>
         </footer>
-      </section>
-    </div>
+    </CenteredDialog>
   );
 };
 
@@ -395,21 +439,36 @@ export const MetricTile: React.FC<{
   tone?: 'slate' | 'emerald' | 'indigo' | 'amber' | 'rose';
 }> = ({ label, value, helper, icon, tone = 'slate' }) => {
   const tones = {
-    slate: 'bg-slate-100 text-slate-600',
-    emerald: 'bg-emerald-50 text-emerald-700',
-    indigo: 'bg-indigo-50 text-indigo-700',
-    amber: 'bg-amber-50 text-amber-700',
-    rose: 'bg-rose-50 text-rose-700',
+    slate: {
+      icon: 'bg-slate-900 text-emerald-300',
+      card: 'border-slate-200 bg-gradient-to-br from-white to-slate-50',
+    },
+    emerald: {
+      icon: 'bg-emerald-600 text-white',
+      card: 'border-emerald-100 bg-gradient-to-br from-white to-emerald-50/80',
+    },
+    indigo: {
+      icon: 'bg-indigo-600 text-white',
+      card: 'border-indigo-100 bg-gradient-to-br from-white to-indigo-50/80',
+    },
+    amber: {
+      icon: 'bg-amber-500 text-white',
+      card: 'border-amber-100 bg-gradient-to-br from-white to-amber-50/80',
+    },
+    rose: {
+      icon: 'bg-rose-600 text-white',
+      card: 'border-rose-100 bg-gradient-to-br from-white to-rose-50/80',
+    },
   };
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm shadow-slate-200/40">
+    <div className={`rounded-xl border px-3.5 py-3 shadow-sm shadow-slate-200/40 ${tones[tone].card}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
           <p className="mt-1.5 font-display text-xl font-black tracking-tight text-slate-950">{value}</p>
           {helper && <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{helper}</p>}
         </div>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${tones[tone]}`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm ${tones[tone].icon}`}>
           {icon}
         </div>
       </div>

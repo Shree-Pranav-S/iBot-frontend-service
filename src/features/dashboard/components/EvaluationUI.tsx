@@ -79,7 +79,7 @@ export const StatusPill: React.FC<{
   dot?: string;
 }> = ({ label, className, dot }) => (
   <span
-    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black tracking-wide ${className}`}
+    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-extrabold tracking-[0.02em] ${className}`}
   >
     {dot && <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />}
     {label}
@@ -461,14 +461,14 @@ export const MetricTile: React.FC<{
     },
   };
   return (
-    <div className={`rounded-xl border px-3.5 py-3 shadow-sm shadow-slate-200/40 ${tones[tone].card}`}>
+    <div className={`rounded-2xl border px-4 py-3.5 shadow-sm shadow-slate-200/50 ${tones[tone].card}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
-          <p className="mt-1.5 font-display text-xl font-black tracking-tight text-slate-950">{value}</p>
-          {helper && <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{helper}</p>}
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
+          <p className="mt-1 font-display text-2xl font-black tracking-tight text-slate-950">{value}</p>
+          {helper && <p className="mt-1 text-[11px] font-semibold text-slate-500">{helper}</p>}
         </div>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm ${tones[tone].icon}`}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-sm ${tones[tone].icon}`}>
           {icon}
         </div>
       </div>

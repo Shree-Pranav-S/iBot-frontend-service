@@ -72,6 +72,7 @@ export const MainLayout: React.FC = () => {
         title: 'iBot Workspace',
         subtitle: 'Manage interviews and candidate decisions.',
       };
+  const isReportPage = location.pathname.endsWith('/report');
 
   return (
     <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-primary">
@@ -177,14 +178,18 @@ export const MainLayout: React.FC = () => {
 
       {/* ── Main content ── */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="ibot-page-header-band z-10 flex h-[72px] shrink-0 items-center justify-between px-4 sm:px-6 lg:px-7">
+        <header
+          className={`ibot-page-header-band z-10 flex shrink-0 items-center justify-between px-4 sm:px-6 lg:px-7 ${
+            isReportPage ? 'h-[64px]' : 'h-[72px]'
+          }`}
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-600">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700">
                 {user?.company_name || currentCopy.eyebrow}
               </p>
               <span className="hidden h-3.5 w-px bg-default sm:block" />
-              <p className="hidden truncate text-[10px] font-medium text-secondary sm:block">
+              <p className="hidden truncate text-xs font-medium text-secondary sm:block">
                 {currentCopy.subtitle}
               </p>
             </div>
@@ -201,7 +206,11 @@ export const MainLayout: React.FC = () => {
           </div>
         </header>
 
-        <main className="relative min-h-0 flex-1 overflow-hidden p-4 pb-20 sm:p-5 lg:p-5">
+        <main
+          className={`relative min-h-0 flex-1 overflow-hidden pb-20 sm:pb-5 ${
+            isReportPage ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
+          }`}
+        >
           <Outlet />
         </main>
       </div>

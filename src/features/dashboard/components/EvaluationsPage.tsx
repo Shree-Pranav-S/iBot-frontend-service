@@ -138,17 +138,17 @@ export const EvaluationsPage: React.FC = () => {
 
   return (
     <>
-      <div className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 overflow-hidden animate-fadeIn">
+      <div className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 overflow-hidden animate-fadeIn">
         {/* Header */}
-        <section className="ibot-section-toolbar relative z-20 shrink-0 overflow-visible px-4 py-3.5">
+        <section className="ibot-section-toolbar relative z-20 shrink-0 overflow-visible px-5 py-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-emerald-700">Decision center</span>
-                <span className="text-[10px] font-bold text-slate-400">{stats.pending} awaiting review</span>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">Decision center</span>
+                <span className="text-[11px] font-bold text-slate-500">{stats.pending} awaiting review</span>
               </div>
-              <h2 className="mt-1.5 font-display text-xl font-black tracking-tight text-slate-950">Candidate Intelligence</h2>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">Review evidence, compare outcomes, and finalize hiring decisions.</p>
+              <h2 className="mt-2 font-display text-2xl font-black tracking-tight text-slate-950">Candidate Intelligence</h2>
+              <p className="mt-1 text-sm font-medium text-slate-600">Review evidence, compare outcomes, and finalize hiring decisions.</p>
             </div>
             <div className="flex gap-2">
               <div className="relative">
@@ -167,7 +167,7 @@ export const EvaluationsPage: React.FC = () => {
         </section>
 
         {/* Stats */}
-        <section className="grid shrink-0 grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <section className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
           <MetricTile label="Evaluated" value={String(stats.total)} helper="completed reports" icon={<Award className="h-4 w-4" />} />
           <MetricTile label="Average score" value={stats.average.toFixed(1)} helper="out of 10" icon={<BarChart3 className="h-4 w-4" />} tone="indigo" />
           <MetricTile label="Pending" value={String(stats.pending)} helper="need a decision" icon={<Users className="h-4 w-4" />} tone="amber" />
@@ -176,10 +176,10 @@ export const EvaluationsPage: React.FC = () => {
 
         {/* Candidate Grid */}
         <section className="ibot-section-surface flex min-h-0 flex-col overflow-hidden">
-          <header className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3">
+          <header className="flex items-center justify-between border-b border-slate-200/80 bg-white/75 px-5 py-3.5">
             <div>
-              <p className="text-xs font-black text-slate-900">Candidate reports</p>
-              <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+              <p className="text-sm font-black text-slate-900">Candidate reports</p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-500">
                 {sortedEvaluations.length} shown · click to review
               </p>
             </div>
@@ -198,10 +198,10 @@ export const EvaluationsPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
-              <table className="w-full min-w-[880px] border-collapse text-left">
+              <div className="ibot-scrollbar min-h-0 flex-1 overflow-auto">
+              <table className="w-full min-w-[940px] border-collapse text-left">
                 <thead className="bg-slate-50/95 border-b border-slate-200">
-                  <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <th className="px-4 py-3">Candidate</th>
                     <th className="px-4 py-3 hidden md:table-cell">Assessment</th>
                     <th className="px-4 py-3">Score</th>
@@ -218,24 +218,24 @@ export const EvaluationsPage: React.FC = () => {
                     return (
                       <tr
                         key={evaluation.candidate_assessment_id}
-                        className="group h-[54px] cursor-pointer transition-colors hover:bg-emerald-50/40"
+                        className="group h-[64px] cursor-pointer transition-colors hover:bg-emerald-50/50"
                         onClick={() => setSelectedEvaluation(evaluation)}
                       >
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 font-black text-[11px] text-emerald-300">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 font-black text-xs text-emerald-300 shadow-sm">
                               {candidateInitials(evaluation.candidate_name)}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold text-slate-800 text-xs truncate group-hover:text-emerald-700 transition-colors">{evaluation.candidate_name}</p>
-                              <p className="text-[10px] text-slate-400 font-medium truncate">{evaluation.candidate_email}</p>
+                              <p className="truncate text-sm font-bold text-slate-900 transition-colors group-hover:text-emerald-700">{evaluation.candidate_name}</p>
+                              <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{evaluation.candidate_email}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-2 hidden md:table-cell">
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-700 truncate max-w-[160px]">{evaluation.assessment_title}</p>
-                            <p className="text-[10px] text-slate-400 font-medium truncate max-w-[160px]">{evaluation.role_name}</p>
+                            <p className="max-w-[180px] truncate text-xs font-bold text-slate-700">{evaluation.assessment_title}</p>
+                            <p className="mt-0.5 max-w-[180px] truncate text-[11px] font-medium text-slate-500">{evaluation.role_name}</p>
                           </div>
                         </td>
                         <td className="px-4 py-2">
@@ -255,14 +255,14 @@ export const EvaluationsPage: React.FC = () => {
                           <StatusPill {...decision} />
                         </td>
                         <td className="px-4 py-2 hidden lg:table-cell">
-                          <p className="text-[10px] text-slate-400 font-medium">{formatDateTime(evaluation.generated_at)}</p>
+                          <p className="text-[11px] font-medium text-slate-500">{formatDateTime(evaluation.generated_at)}</p>
                         </td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => setSelectedEvaluation(evaluation)}
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-2.5 text-[9px] font-black text-white transition-colors hover:bg-indigo-700"
+                              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-indigo-700"
                               aria-label={`Review ${evaluation.candidate_name}'s evaluation summary`}
                             >
                               <Eye className="h-3.5 w-3.5" />
@@ -309,7 +309,7 @@ export const EvaluationsPage: React.FC = () => {
               {/* Pagination footer */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-4 py-3">
-                  <p className="text-[10px] font-semibold text-slate-500">
+                  <p className="text-[11px] font-semibold text-slate-500">
                     Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, sortedEvaluations.length)} of {sortedEvaluations.length}
                   </p>
                   <div className="flex items-center gap-1">
@@ -321,7 +321,7 @@ export const EvaluationsPage: React.FC = () => {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="inline-flex h-8 min-w-20 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600">
+                    <span className="inline-flex h-8 min-w-20 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-black text-slate-600">
                       Page {currentPage + 1} of {totalPages}
                     </span>
                     <button

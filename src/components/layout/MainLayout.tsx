@@ -75,17 +75,17 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-primary">
-      {/* ── Sidebar – expands via transform overlay so main content never reflows ── */}
+      {/* ── Sidebar – expands as a width overlay so main content never reflows ── */}
       <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 sm:block">
-        <div className="absolute inset-y-0 left-0 z-30 flex w-[304px] -translate-x-[216px] flex-col overflow-hidden border-r border-emerald-900/30 bg-sidebar text-white shadow-[18px_0_48px_rgba(2,44,34,0.2)] transition-transform duration-300 ease-out will-change-transform group-hover/sidebar:translate-x-0">
+        <div className="absolute inset-y-0 left-0 z-30 flex w-[88px] flex-col overflow-hidden border-r border-emerald-900/30 bg-sidebar text-white shadow-[18px_0_48px_rgba(2,44,34,0.2)] transition-[width] duration-300 ease-out will-change-[width] group-hover/sidebar:w-[304px]">
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-500/20 via-sidebar-alt/50 to-transparent pointer-events-none" />
 
         {/* Logo */}
-        <div className="relative flex h-[76px] items-center gap-3 border-b border-white/10 px-4">
+        <div className="relative flex h-[76px] w-[304px] items-center gap-3 border-b border-white/10 px-5 transition-[padding] duration-300 ease-out group-hover/sidebar:px-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20">
             <Bot className="h-6 w-6" />
           </div>
-          <div className="min-w-[180px]">
+          <div className="min-w-[180px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
             <div className="flex items-center gap-2">
               <p className="font-display text-lg font-bold tracking-tight">iBot</p>
               <span className="rounded-full border border-emerald-300/[0.35] bg-emerald-300/[0.12] px-2 py-0.5 text-[10px] font-black uppercase text-emerald-200">
@@ -99,7 +99,7 @@ export const MainLayout: React.FC = () => {
         </div>
 
         {/* Nav items — tabIndex=-1 prevents focus from keeping sidebar open */}
-        <nav className="relative flex-1 space-y-1.5 px-3 py-4">
+        <nav className="relative w-[304px] flex-1 space-y-1.5 px-3 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -109,7 +109,7 @@ export const MainLayout: React.FC = () => {
                 title={item.label}
                 tabIndex={-1}
                 className={({ isActive }) =>
-                  `group/item flex h-[58px] items-center gap-3 rounded-xl px-3 text-sm font-bold transition-colors duration-200 ${
+                  `group/item flex h-[58px] w-16 items-center gap-3 rounded-xl px-3 text-sm font-bold transition-[width,background-color,color] duration-300 group-hover/sidebar:w-[280px] ${
                     isActive
                       ? 'bg-white text-slate-950 shadow-lg shadow-black/20'
                       : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
@@ -127,14 +127,14 @@ export const MainLayout: React.FC = () => {
                     >
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="min-w-[150px] flex-1">
+                    <span className="min-w-[150px] flex-1 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
                       <span className="block truncate">{item.label}</span>
                       <span className="mt-0.5 block truncate text-[10px] font-semibold text-slate-500">
                         {item.helper}
                       </span>
                     </span>
                     <ChevronRight
-                      className={`h-4 w-4 shrink-0 ${
+                      className={`h-4 w-4 shrink-0 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 ${
                         isActive ? 'text-emerald-500' : 'text-slate-500 group-hover/item:text-emerald-200'
                       }`}
                     />
@@ -146,12 +146,12 @@ export const MainLayout: React.FC = () => {
         </nav>
 
         {/* Bottom: user profile + logout */}
-        <div className="relative border-t border-white/10 p-3">
-          <div className="mb-2 flex h-[58px] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3">
+        <div className="relative w-[304px] border-t border-white/10 p-3">
+          <div className="mb-2 flex h-[58px] w-16 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3 transition-[width] duration-300 group-hover/sidebar:w-[280px]">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-400 text-xs font-black text-slate-950">
               {initials}
             </div>
-            <div className="min-w-[170px]">
+            <div className="min-w-[170px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
               <p className="truncate text-xs font-semibold text-white">{user?.full_name || 'Recruiter'}</p>
               <p className="truncate text-[10px] font-semibold text-slate-500">{user?.email}</p>
             </div>
@@ -162,12 +162,12 @@ export const MainLayout: React.FC = () => {
             tabIndex={-1}
             id="btn-logout"
             title="Sign Out"
-            className="flex h-[54px] w-full items-center gap-3 rounded-xl px-3 text-sm font-bold text-slate-400 transition-colors duration-200 hover:bg-red-500/10 hover:text-red-200"
+            className="flex h-[54px] w-16 items-center gap-3 rounded-xl px-3 text-sm font-bold text-slate-400 transition-[width,background-color,color] duration-300 hover:bg-red-500/10 hover:text-red-200 group-hover/sidebar:w-[280px]"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
               <LogOut className="h-4 w-4" />
             </span>
-            <span className="min-w-[160px] text-left">
+            <span className="min-w-[160px] text-left opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
               Sign Out
             </span>
           </button>

@@ -24,6 +24,7 @@ import {
   formatAssessmentTitle,
   formatEnrolledAssessmentsList,
 } from '../utils/assessmentDisplay';
+import { groupCandidatesByIdentity } from '../utils/candidateDisplay';
 import {
   Users,
   Mail,
@@ -71,6 +72,12 @@ export const CandidatesPage: React.FC = () => {
 
   // Candidates query & mutations
   const { data: candidates = [], isLoading: loadingCandidates } = useCandidates(selectedCampaignId || null);
+  const displayCandidates = useMemo(
+    () => selectedCampaignId === 'all'
+      ? groupCandidatesByIdentity(candidates)
+      : candidates,
+    [candidates, selectedCampaignId],
+  );
   const { data: uniqueCandidates = [] } = useUniqueCandidates();
   const selectedAssessment = assessments.find(a => a.id === selectedCampaignId) || null;
   const bulkUploadMutation = useBulkUploadCandidates();
@@ -91,7 +98,7 @@ export const CandidatesPage: React.FC = () => {
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
   const activeCandidate = selectedCandidate
-    ? candidates.find((candidate) => candidate.id === selectedCandidate.id) ?? selectedCandidate
+    ? displayCandidates.find((candidate) => candidate.id === selectedCandidate.id) ?? selectedCandidate
     : null;
   const {
     data: candidateEvaluation,
@@ -397,7 +404,7 @@ export const CandidatesPage: React.FC = () => {
   // Filter candidates locally using the search query
   const filteredCandidates = useMemo(
     () =>
-      candidates.filter((c) => {
+      displayCandidates.filter((c) => {
         const q = searchQuery.toLowerCase();
         return (
           c.full_name?.toLowerCase().includes(q) ||
@@ -405,7 +412,7 @@ export const CandidatesPage: React.FC = () => {
           (c.role_name || selectedAssessment?.role_name || '').toLowerCase().includes(q)
         );
       }),
-    [candidates, searchQuery, selectedAssessment?.role_name],
+    [displayCandidates, searchQuery, selectedAssessment?.role_name],
   );
 
   useEffect(() => {

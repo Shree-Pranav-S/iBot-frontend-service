@@ -94,16 +94,16 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="theme-dark min-h-screen bg-mesh-dark text-primary font-sans relative overflow-x-hidden flex flex-col justify-between">
+    <div className="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-gradient-to-b from-emerald-50/70 via-slate-50 to-white font-sans text-slate-900">
       {/* ── Drifting Blur Blobs ───────────────────────────────────────────── */}
-      <div className="absolute top-[10%] left-[-10%] w-[300px] h-[300px] sm:w-[450px] sm:h-[450px] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none blob-drift-1 z-0" />
-      <div className="absolute bottom-[20%] right-[-10%] w-[350px] h-[350px] sm:w-[500px] sm:h-[500px] rounded-full bg-teal-400/10 blur-[120px] pointer-events-none blob-drift-2 z-0" />
+      <div className="blob-drift-1 pointer-events-none absolute left-[-10%] top-[10%] z-0 h-[300px] w-[300px] rounded-full bg-emerald-300/25 blur-[120px] sm:h-[450px] sm:w-[450px]" />
+      <div className="blob-drift-2 pointer-events-none absolute bottom-[20%] right-[-10%] z-0 h-[350px] w-[350px] rounded-full bg-cyan-200/35 blur-[120px] sm:h-[500px] sm:w-[500px]" />
 
       {/* ── Navbar ───────────────────────────────────────────────────────── */}
       <header
         className={`sticky top-0 left-0 right-0 z-50 h-[76px] transition-all duration-300 flex items-center px-6 sm:px-12 ${
           isScrolled
-            ? 'bg-base/85 border-b border-subtle backdrop-blur-md'
+            ? 'border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur-md'
             : 'bg-transparent border-b border-transparent'
         }`}
       >
@@ -116,7 +116,7 @@ export const LandingPage: React.FC = () => {
             >
               <Bot className="h-4.5 w-4.5" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white font-display">iBot</span>
+            <span className="font-display text-xl font-bold tracking-tight text-slate-950">iBot</span>
           </div>
 
           {/* Center Links (Session Protected) */}
@@ -124,21 +124,21 @@ export const LandingPage: React.FC = () => {
             <a
               href="/dashboard"
               onClick={(e) => handleProtectedNavigation(e, '/dashboard')}
-              className="text-secondary hover:text-white transition-all hover:scale-105 active:scale-95 py-1 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-emerald-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-180"
+              className="relative py-1 text-slate-600 transition-all after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:scale-x-0 after:bg-emerald-500 after:transition-transform after:duration-180 hover:scale-105 hover:text-emerald-700 hover:after:scale-x-100 active:scale-95"
             >
               Dashboard
             </a>
             <a
               href="/assessments"
               onClick={(e) => handleProtectedNavigation(e, '/assessments')}
-              className="text-secondary hover:text-white transition-all hover:scale-105 active:scale-95 py-1 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-emerald-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-180"
+              className="relative py-1 text-slate-600 transition-all after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:scale-x-0 after:bg-emerald-500 after:transition-transform after:duration-180 hover:scale-105 hover:text-emerald-700 hover:after:scale-x-100 active:scale-95"
             >
               Assessments
             </a>
             <a
               href="/candidates"
               onClick={(e) => handleProtectedNavigation(e, '/candidates')}
-              className="text-secondary hover:text-white transition-all hover:scale-105 active:scale-95 py-1 relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-emerald-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-180"
+              className="relative py-1 text-slate-600 transition-all after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:scale-x-0 after:bg-emerald-500 after:transition-transform after:duration-180 hover:scale-105 hover:text-emerald-700 hover:after:scale-x-100 active:scale-95"
             >
               Candidates
             </a>
@@ -157,7 +157,7 @@ export const LandingPage: React.FC = () => {
               <>
                 <button
                   onClick={() => navigate('/login')}
-                  className="text-sm font-semibold text-secondary hover:text-white transition-colors hover:scale-105 active:scale-95"
+                  className="text-sm font-semibold text-slate-600 transition-all hover:scale-105 hover:text-emerald-700 active:scale-95"
                 >
                   Log in
                 </button>
@@ -177,28 +177,28 @@ export const LandingPage: React.FC = () => {
       <main className="flex-1 w-full max-w-7xl mx-auto px-6 sm:px-12 flex flex-col items-center justify-center pt-24 pb-16 text-center z-10">
         
         {/* Eyebrow Pill */}
-        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-elevated/60 border border-subtle backdrop-blur-sm animate-fadeIn hover:border-emerald-500/30 hover:bg-elevated/80 transition-all duration-200">
+        <div className="animate-fadeIn inline-flex items-center gap-2.5 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-emerald-300 hover:bg-white">
           <div className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </div>
-          <span className="text-xs sm:text-sm font-semibold text-secondary">
+          <span className="text-xs font-semibold text-slate-600 sm:text-sm">
             Live AI screening · initialized, generated, evaluated
           </span>
         </div>
 
         {/* Display Headline */}
-        <h1 className="mt-8 max-w-[880px] font-display text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.05] animate-slideUp stagger-1 select-none">
+        <h1 className="animate-slideUp stagger-1 mt-8 max-w-[920px] select-none font-display text-4xl font-extrabold leading-[1.06] tracking-tight text-slate-950 sm:text-5xl md:text-6xl">
           Hire Smarter with<br />
-          <span className="relative inline-block bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-200 bg-clip-text text-transparent pb-3 hover:scale-[1.01] transition-transform duration-300 cursor-default">
+          <span className="relative inline-block cursor-default bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 bg-clip-text pb-3 text-transparent transition-transform duration-300 hover:scale-[1.01]">
             AI Interviews
-            <span className="absolute left-0 right-0 bottom-1 h-[4px] rounded bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-200 opacity-90 shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
+            <span className="absolute bottom-1 left-0 right-0 h-[4px] rounded bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 opacity-75" />
           </span>
           {' '}that Scale
         </h1>
 
         {/* Subtext */}
-        <p className="mt-6 max-w-[640px] text-base sm:text-lg md:text-xl leading-relaxed text-secondary animate-slideUp stagger-2">
+        <p className="animate-slideUp stagger-2 mt-6 max-w-[640px] text-base leading-relaxed text-slate-600 sm:text-lg md:text-xl">
           One link. A real conversational interview.
         </p>
 
@@ -215,14 +215,14 @@ export const LandingPage: React.FC = () => {
 
         {/* Trust checkmarks */}
         <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 animate-slideUp stagger-4 text-sm font-medium">
-          <div className="flex items-center gap-1.5 text-secondary hover:text-white transition-colors duration-200 cursor-default">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Easy to setup
+          <div className="flex cursor-default items-center gap-1.5 text-slate-600 transition-colors duration-200 hover:text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Easy to setup
           </div>
-          <div className="flex items-center gap-1.5 text-secondary hover:text-white transition-colors duration-200 cursor-default">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Fast evaluations
+          <div className="flex cursor-default items-center gap-1.5 text-slate-600 transition-colors duration-200 hover:text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Fast evaluations
           </div>
-          <div className="flex items-center gap-1.5 text-secondary hover:text-white transition-colors duration-200 cursor-default">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Low cost
+          <div className="flex cursor-default items-center gap-1.5 text-slate-600 transition-colors duration-200 hover:text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Low cost
           </div>
         </div>
 
@@ -230,7 +230,7 @@ export const LandingPage: React.FC = () => {
         <div className="mt-20 flex justify-center animate-fadeIn stagger-4">
           <div
             onClick={handleScrollToFeatures}
-            className="w-[24px] h-[36px] rounded-full border-2 border-secondary/20 flex items-start justify-center p-1.5 cursor-pointer hover:border-secondary/40 hover:scale-105 active:scale-95 transition-all duration-200"
+            className="flex h-[36px] w-[24px] cursor-pointer items-start justify-center rounded-full border-2 border-slate-300 p-1.5 transition-all duration-200 hover:scale-105 hover:border-emerald-400 active:scale-95"
           >
             <div className="w-[3px] h-[6px] rounded-full bg-emerald-400 animate-scroll-mouse" />
           </div>
@@ -238,12 +238,12 @@ export const LandingPage: React.FC = () => {
       </main>
 
       {/* ── Features Anchor Section ───────────────────────────────────────── */}
-      <section id="features" className="w-full max-w-7xl mx-auto px-6 sm:px-12 py-24 border-t border-subtle z-10 relative">
+      <section id="features" className="relative z-10 mx-auto w-full max-w-7xl border-t border-slate-200 px-6 py-24 sm:px-12">
         <div className="text-center max-w-3xl mx-auto mb-16 animate-fadeIn">
-          <h2 className="text-3xl sm:text-4xl font-bold font-display text-white tracking-tight">
+          <h2 className="font-display text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
             Everything you need to screen at scale
           </h2>
-          <p className="mt-3 text-secondary text-sm sm:text-base leading-relaxed">
+          <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
             Run complete candidate cycles, from parsing resumes to conducting custom voice/text screening and comparative analytics.
           </p>
         </div>
@@ -254,19 +254,19 @@ export const LandingPage: React.FC = () => {
             return (
               <div
                 key={f.title}
-                className="ibot-card border border-subtle bg-elevated/40 p-6 flex flex-col sm:flex-row gap-5 transition-all duration-350 hover:bg-elevated/65 hover:border-emphasis hover:-translate-y-1.5 hover:scale-[1.02] shadow-sm hover:shadow-glow-emerald/30 group rounded-card cursor-default"
+                className="group relative flex cursor-default flex-col gap-5 overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.01] hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100/60 sm:flex-row"
               >
                 {/* Visual Top Border Highlight on Hover */}
                 <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 {/* Icon Container */}
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 transition-transform group-hover:scale-110 duration-300">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition-transform duration-300 group-hover:scale-110">
                   <Icon className="h-5.5 w-5.5" />
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors duration-200">{f.title}</h3>
-                  <p className="mt-2 text-sm text-secondary leading-relaxed">{f.desc}</p>
+                  <h3 className="text-lg font-bold text-slate-900 transition-colors duration-200 group-hover:text-emerald-700">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.desc}</p>
                 </div>
               </div>
             );
@@ -275,7 +275,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="w-full border-t border-subtle bg-base/50 py-8 px-6 sm:px-12 z-10">
+      <footer className="z-10 w-full border-t border-slate-200 bg-white/80 px-6 py-8 sm:px-12">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div
@@ -284,12 +284,12 @@ export const LandingPage: React.FC = () => {
             >
               <Bot className="h-3 w-3" />
             </div>
-            <span className="text-sm font-semibold text-white">© 2026 IBot</span>
+            <span className="text-sm font-semibold text-slate-700">© 2026 IBot</span>
           </div>
-          <div className="flex items-center gap-6 text-xs text-muted">
-            <a href="#" className="hover:text-white transition-colors hover:underline">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors hover:underline">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors hover:underline">Contact Support</a>
+          <div className="flex items-center gap-6 text-xs text-slate-500">
+            <a href="#" className="transition-colors hover:text-emerald-700 hover:underline">Privacy Policy</a>
+            <a href="#" className="transition-colors hover:text-emerald-700 hover:underline">Terms of Service</a>
+            <a href="#" className="transition-colors hover:text-emerald-700 hover:underline">Contact Support</a>
           </div>
         </div>
       </footer>

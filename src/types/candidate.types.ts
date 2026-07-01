@@ -66,6 +66,26 @@ export interface EvaluationSkillBreakdown {
   confidence: number;
 }
 
+export interface QuestionEvaluationBreakdown {
+  question_id: string;
+  section: string;
+  skill: string | null;
+  difficulty: string;
+  question_text: string;
+  answered: boolean;
+  answer_summary: string;
+  score: number;
+  relevance_class:
+    | 'direct_match'
+    | 'close_equivalent'
+    | 'transferable_similar'
+    | 'adjacent_but_not_equivalent'
+    | 'unrelated'
+    | 'not_applicable';
+  evidence: string[];
+  confidence: number;
+}
+
 export interface SectionCommunicationBreakdown {
   score: number;
   summary: string;
@@ -107,6 +127,7 @@ export interface InterviewEvaluationResponse {
   overall_technical_skill_score: number;
   skill_summary: Record<string, string>;
   skill_evidence: Record<string, string[]>;
+  question_evaluations: QuestionEvaluationBreakdown[];
 
   behavioural_cultural_score: number;
   behavioural_cultural_summary: string;
@@ -192,9 +213,18 @@ export interface EnrollCandidateResponse {
 
 export interface TranscriptTurn {
   turn_number: number;
+  turn_id?: string | null;
   speaker: string;
   text: string;
   tone?: string | null;
+  timestamp?: string | null;
+  elapsed_secs?: number | null;
+  question_id?: string | null;
+  section?: string | null;
+  skill?: string | null;
+  difficulty?: string | null;
+  question_type?: string | null;
+  response_type?: string | null;
 }
 
 export interface InterviewTranscriptResponse {

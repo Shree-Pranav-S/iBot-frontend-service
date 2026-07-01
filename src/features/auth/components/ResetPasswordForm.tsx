@@ -176,22 +176,22 @@ export const ResetPasswordForm: React.FC = () => {
   };
 
   const inputClass =
-    'w-full rounded-input-btn border border-subtle bg-white py-2.5 pl-11 pr-4 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white';
+    'w-full rounded-input-btn border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 ';
 
   // ── Success step ────────────────────────────────────────────────────────────
   if (step === 'success') {
     return (
-      <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden">
+      <div className="relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         <div className="flex flex-col items-center justify-center py-8 animate-slideUp">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30 mb-5">
             <ShieldCheck className="h-8 w-8 text-emerald-400" />
           </div>
-          <h2 className="text-xl font-bold text-white font-display mb-2">Password Updated!</h2>
-          <p className="text-sm text-secondary text-center mb-4">
+          <h2 className="text-xl font-bold text-slate-950 font-display mb-2">Password Updated!</h2>
+          <p className="text-sm text-slate-500 text-center mb-4">
             Your password has been reset successfully.
           </p>
-          <p className="text-xs text-muted animate-pulse">Redirecting to sign in...</p>
+          <p className="text-xs text-slate-400 animate-pulse">Redirecting to sign in...</p>
         </div>
       </div>
     );
@@ -203,7 +203,7 @@ export const ResetPasswordForm: React.FC = () => {
     const timerExpired = countdown === 0;
 
     return (
-      <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">
+      <div className="group relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
 
         {/* Header */}
@@ -213,10 +213,10 @@ export const ResetPasswordForm: React.FC = () => {
               <KeyRound className="h-6 w-6 text-emerald-400" />
             </div>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-white font-display">
+          <h2 className="text-xl font-bold tracking-tight text-slate-950 font-display">
             Verify OTP
           </h2>
-          <p className="mt-1 text-sm text-secondary">
+          <p className="mt-1 text-sm text-slate-500">
             Enter the 4-digit code sent to your email
           </p>
         </div>
@@ -234,7 +234,7 @@ export const ResetPasswordForm: React.FC = () => {
               value={digit}
               onChange={(e) => handleOtpChange(i, e.target.value)}
               onKeyDown={(e) => handleOtpKeyDown(i, e)}
-              className="h-14 w-14 rounded-xl border-2 border-subtle bg-white text-center text-2xl font-bold text-black outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-elevated-2 focus:text-white"
+              className="h-14 w-14 rounded-xl border-2 border-slate-200 bg-white text-center text-2xl font-bold text-slate-900 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             />
           ))}
         </div>
@@ -242,7 +242,7 @@ export const ResetPasswordForm: React.FC = () => {
         {/* Countdown Timer */}
         <div className="flex justify-center mb-6">
           {!timerExpired ? (
-            <div className="flex items-center gap-2 rounded-lg border border-subtle bg-elevated-2/40 px-4 py-2">
+            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
               <div className="relative h-5 w-5">
                 <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
                   <circle
@@ -268,7 +268,7 @@ export const ResetPasswordForm: React.FC = () => {
                   />
                 </svg>
               </div>
-              <span className="text-xs font-semibold text-secondary tabular-nums">
+              <span className="text-xs font-semibold text-slate-500 tabular-nums">
                 {String(Math.floor(countdown / 60)).padStart(2, '0')}:
                 {String(countdown % 60).padStart(2, '0')}
               </span>
@@ -316,7 +316,7 @@ export const ResetPasswordForm: React.FC = () => {
         <div className="mt-5 flex items-center justify-center">
           <button
             onClick={() => setStep('form')}
-            className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-emerald-400 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-emerald-700 transition-colors"
           >
             <ArrowLeft className="h-3 w-3" />
             Back to reset form
@@ -329,7 +329,7 @@ export const ResetPasswordForm: React.FC = () => {
   // ── Password reset form (Step 2 — only password fields, no email) ───────────
   if (step === 'form') {
     return (
-      <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">
+      <div className="group relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
         {/* Subtle top edge glow */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
 
@@ -340,10 +340,10 @@ export const ResetPasswordForm: React.FC = () => {
               <KeyRound className="h-6 w-6 text-emerald-400" />
             </div>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-white font-display">
+          <h2 className="text-xl font-bold tracking-tight text-slate-950 font-display">
             Reset Password
           </h2>
-          <p className="mt-1 text-sm text-secondary">
+          <p className="mt-1 text-sm text-slate-500">
             Set a new password for your account
           </p>
         </div>
@@ -351,11 +351,11 @@ export const ResetPasswordForm: React.FC = () => {
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           {/* New Password */}
           <div>
-            <label className="block text-[10px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
+            <label className="block text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
               New Password
             </label>
             <div className="relative group">
-              <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+              <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-400 transition-colors" />
               <input
                 id="reset-new-password"
                 type={showPassword ? 'text' : 'password'}
@@ -368,7 +368,7 @@ export const ResetPasswordForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
               >
                 {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               </button>
@@ -376,7 +376,7 @@ export const ResetPasswordForm: React.FC = () => {
 
             {/* Password rules */}
             {newPassword.length > 0 && (
-              <div className="mt-2 flex gap-2 text-[10px] rounded-lg border border-subtle bg-elevated-2/40 px-3 py-2 animate-slideDown">
+              <div className="mt-2 flex gap-2 text-[10px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 animate-slideDown">
                 {[
                   { ok: isMinLength, label: '8+ chars' },
                   { ok: hasUppercase, label: 'Uppercase' },
@@ -386,9 +386,9 @@ export const ResetPasswordForm: React.FC = () => {
                     {ok ? (
                       <Check className="h-3 w-3 text-emerald-400" />
                     ) : (
-                      <X className="h-3 w-3 text-muted" />
+                      <X className="h-3 w-3 text-slate-400" />
                     )}
-                    <span className={ok ? 'text-emerald-400' : 'text-muted'}>{label}</span>
+                    <span className={ok ? 'text-emerald-600' : 'text-slate-400'}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -397,11 +397,11 @@ export const ResetPasswordForm: React.FC = () => {
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-[10px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
+            <label className="block text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
               Confirm Password
             </label>
             <div className="relative group">
-              <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+              <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-400 transition-colors" />
               <input
                 id="reset-confirm-password"
                 type={showConfirm ? 'text' : 'password'}
@@ -414,7 +414,7 @@ export const ResetPasswordForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
               >
                 {showConfirm ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               </button>
@@ -463,7 +463,7 @@ export const ResetPasswordForm: React.FC = () => {
         <div className="mt-5 flex items-center justify-center">
           <button
             onClick={() => { setStep('email'); setNewPassword(''); setConfirmPassword(''); }}
-            className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-emerald-400 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-emerald-700 transition-colors"
           >
             <ArrowLeft className="h-3 w-3" />
             Change email
@@ -475,7 +475,7 @@ export const ResetPasswordForm: React.FC = () => {
 
   // ── Email identification step (Step 1) ──────────────────────────────────────
   return (
-    <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">
+    <div className="group relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
       {/* Subtle top edge glow */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
 
@@ -486,10 +486,10 @@ export const ResetPasswordForm: React.FC = () => {
             <KeyRound className="h-6 w-6 text-emerald-400" />
           </div>
         </div>
-        <h2 className="text-xl font-bold tracking-tight text-white font-display">
+        <h2 className="text-xl font-bold tracking-tight text-slate-950 font-display">
           Forgot Password?
         </h2>
-        <p className="mt-1 text-sm text-secondary">
+        <p className="mt-1 text-sm text-slate-500">
           Enter your email to get started
         </p>
       </div>
@@ -497,11 +497,11 @@ export const ResetPasswordForm: React.FC = () => {
       <form onSubmit={handleEmailSubmit} className="space-y-5">
         {/* Email */}
         <div>
-          <label className="block text-[11px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
+          <label className="block text-[11px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
             Email
           </label>
           <div className="relative group">
-            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-400 transition-colors" />
             <input
               id="reset-email"
               type="email"
@@ -509,7 +509,7 @@ export const ResetPasswordForm: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className="w-full rounded-input-btn border border-subtle bg-white py-3 pl-11 pr-4 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white"
+              className="w-full rounded-input-btn border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 "
             />
           </div>
         </div>
@@ -532,15 +532,15 @@ export const ResetPasswordForm: React.FC = () => {
 
       {/* Divider */}
       <div className="my-6 flex items-center">
-        <div className="flex-1 h-px bg-subtle" />
-        <span className="px-3 text-[10px] font-medium text-muted">Remember your password?</span>
-        <div className="flex-1 h-px bg-subtle" />
+        <div className="flex-1 h-px bg-slate-200" />
+        <span className="px-3 text-[10px] font-medium text-slate-400">Remember your password?</span>
+        <div className="flex-1 h-px bg-slate-200" />
       </div>
 
       <button
         id="btn-back-to-login"
         onClick={() => navigate('/login')}
-        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-emerald-500/20 bg-transparent py-2.5 text-sm font-semibold text-secondary transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-400"
+        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-emerald-500/20 bg-transparent py-2.5 text-sm font-semibold text-slate-500 transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-700"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Sign In

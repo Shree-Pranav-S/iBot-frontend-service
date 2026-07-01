@@ -51,26 +51,26 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
     }
   };
 
-  const inputClass = "w-full rounded-input-btn border border-subtle bg-white py-2.5 pl-10 pr-4 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white";
+  const inputClass = "w-full rounded-input-btn border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
 
   return (
-    <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">
+    <div className="group relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
       {/* Subtle top edge glow */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
 
       {/* Header */}
       <div className="mb-6 text-center">
-        <h2 className="text-xl font-bold tracking-tight text-white font-display">Create Account</h2>
-        <p className="mt-1 text-sm text-secondary">Get started with AI interviews</p>
+        <h2 className="font-display text-xl font-bold tracking-tight text-slate-950">Create Account</h2>
+        <p className="mt-1 text-sm text-slate-500">Get started with AI interviews</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Row: Full Name + Company */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[10px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">Full Name</label>
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-600">Full Name</label>
             <div className="relative group">
-              <User className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+              <User className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
               <input
                 id="reg-fullname"
                 type="text"
@@ -84,9 +84,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">Company</label>
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-600">Company</label>
             <div className="relative group">
-              <Building className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+              <Building className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
               <input
                 id="reg-company"
                 type="text"
@@ -103,9 +103,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
 
         {/* Email */}
         <div>
-          <label className="block text-[10px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">Email</label>
+          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-600">Email</label>
           <div className="relative group">
-            <Mail className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+            <Mail className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
             <input
               id="reg-email"
               type="email"
@@ -120,9 +120,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
 
         {/* Password */}
         <div>
-          <label className="block text-[10px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">Password</label>
+          <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-600">Password</label>
           <div className="relative group">
-            <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+            <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
             <input
               id="reg-password"
               type={showPassword ? 'text' : 'password'}
@@ -135,7 +135,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
             >
               {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </button>
@@ -143,7 +143,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
 
           {/* Password rules */}
           {password.length > 0 && (
-            <div className="mt-2 flex gap-2 text-[10px] rounded-lg border border-subtle bg-elevated-2/40 px-3 py-2 animate-slideDown">
+            <div className="animate-slideDown mt-2 flex gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[10px]">
               {[
                 { ok: isMinLength, label: '8+ chars' },
                 { ok: hasUppercase, label: 'Uppercase' },
@@ -152,8 +152,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
                 <div key={label} className="flex items-center gap-1 font-medium">
                   {ok
                     ? <Check className="h-3 w-3 text-emerald-400" />
-                    : <X className="h-3 w-3 text-muted" />}
-                  <span className={ok ? 'text-emerald-400' : 'text-muted'}>{label}</span>
+                    : <X className="h-3 w-3 text-slate-400" />}
+                  <span className={ok ? 'text-emerald-600' : 'text-slate-400'}>{label}</span>
                 </div>
               ))}
             </div>
@@ -182,15 +182,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = () => {
 
       {/* Divider */}
       <div className="my-5 flex items-center">
-        <div className="flex-1 h-px bg-subtle" />
-        <span className="px-3 text-[10px] font-medium text-muted">Already registered?</span>
-        <div className="flex-1 h-px bg-subtle" />
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="px-3 text-[10px] font-medium text-slate-400">Already registered?</span>
+        <div className="h-px flex-1 bg-slate-200" />
       </div>
 
       <button
         id="btn-goto-login"
         onClick={() => { clearError(); navigate('/login'); }}
-        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-emerald-500/20 bg-transparent py-2.5 text-sm font-semibold text-secondary transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-400"
+        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
       >
         Sign In
       </button>

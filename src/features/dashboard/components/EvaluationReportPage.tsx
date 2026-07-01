@@ -3,19 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertOctagon,
   AlertTriangle,
+  ArrowRight,
   ArrowLeft,
   BarChart3,
   Bot,
   BrainCircuit,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
   CircleGauge,
-  Download,
+  FileDown,
   FileCheck2,
+  ListChecks,
   Loader2,
   Mail,
   MessageSquareText,
+  Printer,
   Scale,
+  Search,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -31,6 +34,7 @@ import { useCandidateEvaluation, useInterviewTranscript } from '../../../hooks/q
 import type {
   EvaluationSkillBreakdown,
   InterviewEvaluationResponse,
+  QuestionEvaluationBreakdown,
   SectionCommunicationBreakdown,
   TranscriptTurn,
 } from '../../../types/candidate.types';
@@ -52,24 +56,52 @@ import {
   scoreTextClass,
   useEvaluationDecision,
 } from './evaluationUiUtils';
+import { EvaluationPrintReport } from './EvaluationPrintReport';
+import {
+  buildTranscriptText,
+  downloadTextFile,
+  isInterviewerTurn,
+  transcriptFileName,
+  transcriptTurnTime,
+} from './evaluationReportUtils';
 
-type ReportTab = 'overview' | 'skills' | 'dimensions' | 'integrity' | 'transcript';
+type ReportTab = 'overview' | 'skills' | 'questions' | 'dimensions' | 'integrity' | 'transcript';
 
 const TABS: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
   { id: 'overview', label: 'Overview', icon: <Sparkles className="h-3.5 w-3.5" /> },
   { id: 'skills', label: 'Technical Skills', icon: <BrainCircuit className="h-3.5 w-3.5" /> },
+  { id: 'questions', label: 'Q&A Review', icon: <ListChecks className="h-3.5 w-3.5" /> },
   { id: 'dimensions', label: 'Dimensions', icon: <Users className="h-3.5 w-3.5" /> },
   { id: 'integrity', label: 'Integrity', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
   { id: 'transcript', label: 'Transcript', icon: <MessageSquareText className="h-3.5 w-3.5" /> },
 ];
 
-const TURNS_PER_PAGE = 8;
+const reportTabCount = (
+  tab: ReportTab,
+  evaluation: InterviewEvaluationResponse,
+  transcript: { turns: TranscriptTurn[] } | null | undefined,
+) => {
+  if (tab === 'skills') return Object.keys(evaluation.skill_scores ?? {}).length;
+  if (tab === 'questions') return evaluation.question_evaluations?.length ?? 0;
+  if (tab === 'integrity') {
+    return evaluation.violation_summary?.validated_violation_count ?? 0;
+  }
+  if (tab === 'transcript') return transcript?.turns.length ?? 0;
+  return null;
+};
+
+const skillElementId = (skill: string) =>
+  `evaluation-skill-${skill.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
 export const EvaluationReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: evaluation, isLoading, isError, isFetching, refetch } = useCandidateEvaluation(id || null);
-  const { data: transcript } = useInterviewTranscript(id || null);
+  const {
+    data: transcript,
+    isLoading: isTranscriptLoading,
+    isError: isTranscriptError,
+  } = useInterviewTranscript(id || null);
   const {
     modal,
     requestDecision,
@@ -78,7 +110,6 @@ export const EvaluationReportPage: React.FC = () => {
     isSaving,
   } = useEvaluationDecision();
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
-  const [transcriptPage, setTranscriptPage] = useState(0);
   const [detailModal, setDetailModal] = useState<{ title: string; content: React.ReactNode } | null>(null);
 
   const skills = useMemo(() => {
@@ -89,16 +120,6 @@ export const EvaluationReportPage: React.FC = () => {
     });
   }, [evaluation]);
 
-  const transcriptPages = useMemo(() => {
-    if (!transcript) return [];
-    const turns = transcript.turns;
-    const pages: TranscriptTurn[][] = [];
-    for (let i = 0; i < turns.length; i += TURNS_PER_PAGE) {
-      pages.push(turns.slice(i, i + TURNS_PER_PAGE));
-    }
-    return pages;
-  }, [transcript]);
-
   if (isLoading) return <ReportLoadingState />;
 
   if (isError || !evaluation) {
@@ -107,14 +128,14 @@ export const EvaluationReportPage: React.FC = () => {
         <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-9 text-center shadow-xl shadow-slate-200/60">
           <FileCheck2 className="mx-auto h-11 w-11 text-slate-300" />
           <h2 className="mt-4 text-lg font-black text-slate-950">Report not available yet</h2>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+          <p className="mt-2 text-[13px] font-medium leading-relaxed text-slate-500">
             The holistic evaluation may still be processing. Return to evaluations or retry.
           </p>
           <div className="mt-5 flex justify-center gap-2">
-            <button type="button" onClick={() => navigate('/evaluations')} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600 hover:bg-slate-50">
+            <button type="button" onClick={() => navigate('/evaluations')} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-black text-slate-600 hover:bg-slate-50">
               Back to evaluations
             </button>
-            <button type="button" onClick={() => refetch()} className="rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-black text-white hover:bg-slate-800">
+            <button type="button" onClick={() => refetch()} className="rounded-lg bg-slate-950 px-4 py-2.5 text-[11px] font-black text-white hover:bg-slate-800">
               Retry
             </button>
           </div>
@@ -129,14 +150,36 @@ export const EvaluationReportPage: React.FC = () => {
   const hiringRedFlag = recruiterFacingRedFlag(evaluation.recommendation_override_reason);
   const recommendationReasoning = evaluation.recommendation_reasoning.replace(/\s*Deterministic override:.*$/i, '').trim();
 
+  const navigateToTab = (tab: ReportTab) => {
+    setActiveTab(tab);
+    window.requestAnimationFrame(() => {
+      document.getElementById('evaluation-tab-content')?.focus({ preventScroll: true });
+    });
+  };
+
+  const handleDownloadTranscript = () => {
+    if (!transcript?.turns.length) return;
+    downloadTextFile(
+      buildTranscriptText(transcript),
+      transcriptFileName(candidateName),
+    );
+  };
+
+  const handlePrintReport = () => {
+    if (isTranscriptLoading) return;
+    setDetailModal(null);
+    closeDecision();
+    window.requestAnimationFrame(() => window.print());
+  };
+
   return (
     <>
-      <div className="h-full min-h-0 overflow-hidden animate-fadeIn print:h-auto print:overflow-visible">
-        <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-3 print:h-auto print:max-w-none">
+      <div className="h-full min-h-0 overflow-hidden animate-fadeIn print:hidden">
+        <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-3">
 
           {/* ── Top Nav Bar ─────────────────────────────────────────── */}
-          <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 print:hidden">
-            <button type="button" onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 text-xs font-black text-slate-500 transition-colors hover:text-emerald-700">
+          <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+            <button type="button" onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 text-[11px] font-black text-slate-500 transition-colors hover:text-emerald-700">
               <ArrowLeft className="h-4 w-4" />
               Back to Evaluations
             </button>
@@ -147,11 +190,17 @@ export const EvaluationReportPage: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => window.print()}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-600 shadow-sm hover:bg-slate-50"
+                onClick={handlePrintReport}
+                disabled={isTranscriptLoading}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-wait disabled:opacity-55"
+                title={
+                  isTranscriptLoading
+                    ? 'Preparing the complete report'
+                    : 'Print or save the complete evaluation report as PDF'
+                }
               >
-                <Download className="h-3.5 w-3.5" />
-                Download PDF
+                <Printer className="h-3.5 w-3.5" />
+                Print report
               </button>
             </div>
           </header>
@@ -167,14 +216,28 @@ export const EvaluationReportPage: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap gap-2">
-                      <StatusPill {...recommendation} />
+                      <button
+                        type="button"
+                        onClick={() => navigateToTab('overview')}
+                        className="rounded-full transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
+                        title="Open recommendation overview"
+                      >
+                        <StatusPill {...recommendation} />
+                      </button>
                       <StatusPill {...decision} />
                       {evaluation.violation_summary?.has_violation && (
-                        <StatusPill
-                          label={`${evaluation.violation_summary.validated_violation_count} integrity concern${evaluation.violation_summary.validated_violation_count === 1 ? '' : 's'}`}
-                          className="border-rose-200 bg-rose-50 text-rose-800"
-                          dot="bg-rose-500"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => navigateToTab('integrity')}
+                          className="rounded-full transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2"
+                          title="Open integrity findings"
+                        >
+                          <StatusPill
+                            label={`${evaluation.violation_summary.validated_violation_count} integrity concern${evaluation.violation_summary.validated_violation_count === 1 ? '' : 's'}`}
+                            className="border-rose-200 bg-rose-50 text-rose-800"
+                            dot="bg-rose-500"
+                          />
+                        </button>
                       )}
                     </div>
                     <h1 className="mt-2 font-display text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{candidateName}</h1>
@@ -192,10 +255,13 @@ export const EvaluationReportPage: React.FC = () => {
                         </span>
                       )}
                       {evaluation.candidate_email && (
-                        <span className="inline-flex items-center gap-1.5">
+                        <a
+                          href={`mailto:${evaluation.candidate_email}`}
+                          className="inline-flex items-center gap-1.5 transition-colors hover:text-emerald-700"
+                        >
                           <Mail className="h-3.5 w-3.5 text-slate-400" />
                           {evaluation.candidate_email}
-                        </span>
+                        </a>
                       )}
                     </div>
                     {evaluation.recruiter_feedback && (
@@ -211,7 +277,7 @@ export const EvaluationReportPage: React.FC = () => {
                     type="button"
                     onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'APPROVED')}
                     disabled={evaluation.recruiter_decision === 'APPROVED'}
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-[11px] font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <UserCheck className="h-4 w-4" />
                     Hire
@@ -220,7 +286,7 @@ export const EvaluationReportPage: React.FC = () => {
                     type="button"
                     onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'REJECTED')}
                     disabled={evaluation.recruiter_decision === 'REJECTED'}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-[11px] font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <UserX className="h-4 w-4" />
                     Reject
@@ -230,12 +296,19 @@ export const EvaluationReportPage: React.FC = () => {
             </div>
 
             {/* Tab navigation */}
-            <nav className="grid grid-cols-5 gap-1 border-t border-slate-200 bg-slate-50/80 px-3 py-2 print:hidden">
+            <nav
+              className="grid grid-cols-3 gap-1 border-t border-slate-200 bg-slate-50/80 px-3 py-2 sm:grid-cols-6"
+              role="tablist"
+              aria-label="Evaluation report sections"
+            >
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls="evaluation-tab-content"
+                  onClick={() => navigateToTab(tab.id)}
                   className={`inline-flex min-w-0 items-center justify-center gap-1.5 truncate rounded-lg px-2.5 py-2 text-[10px] font-black transition-all ${
                     activeTab === tab.id
                       ? 'bg-slate-950 text-emerald-300 shadow-sm'
@@ -243,14 +316,32 @@ export const EvaluationReportPage: React.FC = () => {
                   }`}
                 >
                   {tab.icon}
-                  {tab.label}
+                  <span className="truncate">{tab.label}</span>
+                  {reportTabCount(tab.id, evaluation, transcript) !== null && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[8px] ${
+                        activeTab === tab.id
+                          ? 'bg-white/10 text-white'
+                          : 'bg-slate-200/80 text-slate-500'
+                      }`}
+                    >
+                      {reportTabCount(tab.id, evaluation, transcript)}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
           </section>
 
           {/* ── Tab Content ─────────────────────────────────────────── */}
-          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1 pb-3 print:overflow-visible">
+          <div
+            id="evaluation-tab-content"
+            role="tabpanel"
+            tabIndex={-1}
+            className={`ibot-scrollbar min-h-0 flex-1 pr-1 pb-3 outline-none ${
+              activeTab === 'transcript' ? 'overflow-hidden' : 'overflow-y-auto'
+            }`}
+          >
           {activeTab === 'overview' && (
             <OverviewTab
               evaluation={evaluation}
@@ -258,24 +349,33 @@ export const EvaluationReportPage: React.FC = () => {
               recommendationReasoning={recommendationReasoning}
               recommendation={recommendation}
               onDetailModal={setDetailModal}
+              onNavigate={navigateToTab}
             />
           )}
           {activeTab === 'skills' && (
-            <SkillsTab evaluation={evaluation} skills={skills} onDetailModal={setDetailModal} />
+            <SkillsTab
+              evaluation={evaluation}
+              skills={skills}
+              onDetailModal={setDetailModal}
+              onNavigate={navigateToTab}
+            />
+          )}
+          {activeTab === 'questions' && (
+            <QuestionsTab questions={evaluation.question_evaluations ?? []} />
           )}
           {activeTab === 'dimensions' && (
-            <DimensionsTab evaluation={evaluation} />
+            <DimensionsTab evaluation={evaluation} onDetailModal={setDetailModal} />
           )}
           {activeTab === 'integrity' && (
-            <IntegrityTab evaluation={evaluation} />
+            <IntegrityTab evaluation={evaluation} onNavigate={navigateToTab} />
           )}
           {activeTab === 'transcript' && (
             <TranscriptTab
-              transcript={transcriptPages}
-              currentPage={transcriptPage}
-              totalTurns={transcript?.turns.length ?? 0}
+              transcript={transcript?.turns ?? []}
               totalElapsed={transcript?.total_elapsed_secs ?? 0}
-              onPage={setTranscriptPage}
+              isLoading={isTranscriptLoading}
+              isError={isTranscriptError}
+              onDownload={handleDownloadTranscript}
             />
           )}
 
@@ -285,6 +385,15 @@ export const EvaluationReportPage: React.FC = () => {
       </div>
 
       {/* ── Detail Modal ─────────────────────────────────────────────── */}
+      <div className="hidden print:block">
+        <EvaluationPrintReport
+          evaluation={evaluation}
+          transcript={transcript}
+          recommendationReasoning={recommendationReasoning}
+          hiringRedFlag={hiringRedFlag}
+        />
+      </div>
+
       {detailModal && (
         <CenteredDialog
           onClose={() => setDetailModal(null)}
@@ -294,7 +403,7 @@ export const EvaluationReportPage: React.FC = () => {
           <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
           <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/50 px-5 py-4">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-700">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">
                 Evaluation detail
               </p>
               <h2 id="evaluation-detail-title" className="mt-0.5 text-base font-black text-slate-950">
@@ -337,7 +446,15 @@ const OverviewTab: React.FC<{
   recommendationReasoning: string;
   recommendation: ReturnType<typeof recommendationMeta>;
   onDetailModal: (m: { title: string; content: React.ReactNode }) => void;
-}> = ({ evaluation, hiringRedFlag, recommendationReasoning, recommendation, onDetailModal }) => (
+  onNavigate: (tab: ReportTab) => void;
+}> = ({
+  evaluation,
+  hiringRedFlag,
+  recommendationReasoning,
+  recommendation,
+  onDetailModal,
+  onNavigate,
+}) => (
   <div className="space-y-4 animate-fadeIn">
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
       <div className="space-y-4">
@@ -351,13 +468,13 @@ const OverviewTab: React.FC<{
               title: 'Executive Summary',
               content: (
                 <div className="space-y-4">
-                  <p className="text-sm font-medium leading-7 text-slate-600">{evaluation.overall_summary}</p>
+                  <p className="text-[13px] font-medium leading-7 text-slate-600">{evaluation.overall_summary}</p>
                   <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
                     <div className="flex items-start gap-3">
                       <Scale className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
                       <div>
-                        <p className="text-xs font-black text-indigo-950">Recommendation reasoning</p>
-                        <p className="mt-1.5 text-xs font-medium leading-6 text-indigo-900/80">{recommendationReasoning}</p>
+                        <p className="text-[11px] font-black text-indigo-950">Recommendation reasoning</p>
+                        <p className="mt-1.5 text-[11px] font-medium leading-6 text-indigo-900/80">{recommendationReasoning}</p>
                       </div>
                     </div>
                   </div>
@@ -371,8 +488,8 @@ const OverviewTab: React.FC<{
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
               <div>
-                <p className="text-xs font-black text-amber-950">Hiring red flag</p>
-                <p className="mt-1.5 text-xs font-semibold leading-5 text-amber-900/80">{hiringRedFlag}</p>
+                <p className="text-[11px] font-black text-amber-950">Hiring red flag</p>
+                <p className="mt-1.5 text-[11px] font-semibold leading-5 text-amber-900/80">{hiringRedFlag}</p>
               </div>
             </div>
           </div>
@@ -380,20 +497,41 @@ const OverviewTab: React.FC<{
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <SectionTitle icon={<CircleGauge className="h-4 w-4 text-indigo-600" />} title="Score overview" subtitle="Interview performance and integrity findings." />
           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
-            <CalculationStep label="Performance score" value={evaluation.raw_overall_score} helper="Combined interview performance" />
+            <CalculationStep
+              label="Performance score"
+              value={evaluation.raw_overall_score}
+              helper="Combined interview performance"
+              onClick={() => onNavigate('questions')}
+            />
             <span className="hidden text-xl font-black text-slate-300 md:block">−</span>
-            <CalculationStep label="Integrity adjustment" value={evaluation.violation_penalty} helper="Adjustment for confirmed concerns" penalty />
+            <CalculationStep
+              label="Integrity adjustment"
+              value={evaluation.violation_penalty}
+              helper="Adjustment for confirmed concerns"
+              penalty
+              onClick={() => onNavigate('integrity')}
+            />
             <span className="hidden text-xl font-black text-slate-300 md:block">=</span>
-            <CalculationStep label="Final score" value={evaluation.overall_score} helper="Overall interview result" final />
+            <CalculationStep
+              label="Final score"
+              value={evaluation.overall_score}
+              helper="Overall interview result"
+              final
+              onClick={() => onNavigate('questions')}
+            />
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onNavigate('questions')}
+          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+        >
           <div className="grid place-items-center">
             <ScoreRing score={evaluation.overall_score} size={164} />
-            <p className="mt-2 text-xs font-black text-slate-900">{recommendation.label} recommendation</p>
+            <p className="mt-2 text-[11px] font-black text-slate-900">{recommendation.label} recommendation</p>
             <p className="mt-1 text-center text-[10px] font-semibold text-slate-400">
               {scoreLabel(evaluation.overall_score)} overall performance
             </p>
@@ -403,11 +541,19 @@ const OverviewTab: React.FC<{
             <MiniStat label="Percentile" value={evaluation.percentile_in_assessment === null ? '—' : `${evaluation.percentile_in_assessment}%`} />
             <MiniStat label="Cohort" value={evaluation.total_candidates_evaluated ? String(evaluation.total_candidates_evaluated) : '—'} />
           </div>
-        </div>
+          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-emerald-700">
+            Review scoring evidence
+            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+          </p>
+        </button>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => onNavigate('dimensions')}
+          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+        >
           <div className="px-1">
-            <p className="text-xs font-black text-slate-900">Competency radar</p>
+            <p className="text-[11px] font-black text-slate-900">Competency radar</p>
             <p className="mt-1 text-[10px] font-semibold text-slate-400">Balance across scoring dimensions</p>
           </div>
           <CompetencyRadar
@@ -418,22 +564,31 @@ const OverviewTab: React.FC<{
               { label: 'Introduction', score: evaluation.intro_section_score },
             ]}
           />
-        </div>
+          <p className="mt-1 inline-flex items-center gap-1 px-1 text-[10px] font-black text-indigo-700">
+            Explore dimensions
+            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+          </p>
+        </button>
       </div>
     </div>
 
     {/* Score metrics */}
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {[
-        { label: 'Technical', score: evaluation.overall_technical_skill_score, icon: <BrainCircuit className="h-4 w-4" /> },
-        { label: 'Behaviour & culture', score: evaluation.behavioural_cultural_score, icon: <Users className="h-4 w-4" /> },
-        { label: 'Communication', score: evaluation.communication_score, icon: <MessageSquareText className="h-4 w-4" /> },
-        { label: 'Self introduction', score: evaluation.intro_section_score, icon: <UserRound className="h-4 w-4" /> },
+        { label: 'Technical', score: evaluation.overall_technical_skill_score, icon: <BrainCircuit className="h-4 w-4" />, tab: 'skills' as const },
+        { label: 'Behaviour & culture', score: evaluation.behavioural_cultural_score, icon: <Users className="h-4 w-4" />, tab: 'dimensions' as const },
+        { label: 'Communication', score: evaluation.communication_score, icon: <MessageSquareText className="h-4 w-4" />, tab: 'dimensions' as const },
+        { label: 'Self introduction', score: evaluation.intro_section_score, icon: <UserRound className="h-4 w-4" />, tab: 'dimensions' as const },
       ].map((m) => (
-        <div key={m.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <button
+          key={m.label}
+          type="button"
+          onClick={() => onNavigate(m.tab)}
+          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">{m.label}</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">{m.label}</p>
               <p className={`mt-1.5 font-display text-2xl font-black ${scoreTextClass(m.score)}`}>
                 {m.score.toFixed(1)}<span className="ml-1 text-[10px] text-slate-400">/10</span>
               </p>
@@ -442,7 +597,11 @@ const OverviewTab: React.FC<{
             <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 ${scoreTextClass(m.score)}`}>{m.icon}</div>
           </div>
           <div className="mt-3"><ScoreBar score={m.score} compact /></div>
-        </div>
+          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-emerald-700">
+            Open section
+            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+          </p>
+        </button>
       ))}
     </div>
   </div>
@@ -453,12 +612,22 @@ const SkillsTab: React.FC<{
   evaluation: InterviewEvaluationResponse;
   skills: Array<[string, EvaluationSkillBreakdown]>;
   onDetailModal: (m: { title: string; content: React.ReactNode }) => void;
-}> = ({ evaluation, skills, onDetailModal }) => (
+  onNavigate: (tab: ReportTab) => void;
+}> = ({ evaluation, skills, onDetailModal, onNavigate }) => (
   <div className="space-y-4 animate-fadeIn">
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <SectionTitle icon={<BarChart3 className="h-4 w-4 text-emerald-600" />} title="Technical skill portfolio" subtitle="Performance across assessed technical areas." />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <SectionTitle icon={<BarChart3 className="h-4 w-4 text-emerald-600" />} title="Technical skill portfolio" subtitle="Performance across assessed technical areas." />
+        <button
+          type="button"
+          onClick={() => onNavigate('questions')}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-black text-indigo-700 transition-colors hover:bg-indigo-100"
+        >
+          Review all answers <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
       <div className="space-y-4">
-        <div className="grid grid-cols-[minmax(120px,0.65fr)_minmax(0,1.35fr)_68px] gap-3 text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">
+        <div className="grid grid-cols-[minmax(120px,0.65fr)_minmax(0,1.35fr)_68px] gap-3 text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
           <span>Skill</span>
           <span className="flex justify-between px-1"><span>0</span><span>2.5</span><span>5</span><span>7.5</span><span>10</span></span>
           <span className="text-right">Score</span>
@@ -466,6 +635,7 @@ const SkillsTab: React.FC<{
         {skills.map(([skill, details]) => (
           <button
             key={skill}
+            id={skillElementId(skill)}
             type="button"
             className="grid w-full grid-cols-[minmax(120px,0.65fr)_minmax(0,1.35fr)_68px] items-center gap-3 text-left hover:bg-slate-50/80 rounded-lg px-2 py-1 transition-colors group"
             onClick={() =>
@@ -484,7 +654,7 @@ const SkillsTab: React.FC<{
                       </div>
                     </div>
                     <ScoreBar score={details.score} />
-                    <p className="text-xs font-medium leading-6 text-slate-600">{evaluation.skill_summary?.[skill] || 'No summary generated.'}</p>
+                    <p className="text-[11px] font-medium leading-6 text-slate-600">{evaluation.skill_summary?.[skill] || 'No summary generated.'}</p>
                     <div>
                       <p className="mb-2 text-[8px] font-black uppercase tracking-wider text-slate-400">Evidence</p>
                       <ul className="space-y-2">
@@ -502,8 +672,8 @@ const SkillsTab: React.FC<{
             }
           >
             <div className="min-w-0">
-              <p className="truncate text-xs font-black text-slate-800 group-hover:text-emerald-700 transition-colors" title={skill}>{skill}</p>
-              <p className="mt-0.5 text-[9px] font-bold text-slate-400">Priority {details.priority_score.toFixed(1)} · {details.questions_evaluated}q · {Math.round(details.confidence * 100)}% conf.</p>
+              <p className="truncate text-[11px] font-black text-slate-800 group-hover:text-emerald-700 transition-colors" title={skill}>{skill}</p>
+              <p className="mt-0.5 text-[10px] font-bold text-slate-400">Priority {details.priority_score.toFixed(1)} · {details.questions_evaluated}q · {Math.round(details.confidence * 100)}% conf.</p>
             </div>
             <div className="relative">
               <div className="absolute inset-0 flex justify-between px-[25%]">
@@ -512,7 +682,7 @@ const SkillsTab: React.FC<{
               <ScoreBar score={details.score} />
             </div>
             <div className="text-right">
-              <p className={`text-sm font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</p>
+              <p className={`text-[13px] font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</p>
               <p className="text-[8px] font-bold text-slate-400">{Math.round(details.confidence * 100)}%</p>
             </div>
           </button>
@@ -522,14 +692,308 @@ const SkillsTab: React.FC<{
     </div>
 
     <div className="grid gap-4 lg:grid-cols-2">
-      <SignalPanel title="Demonstrated strengths" subtitle="Technical skills scoring 7.5 or above." items={evaluation.strengths} icon={<ShieldCheck className="h-4 w-4" />} tone="emerald" />
-      <SignalPanel title="Technical concerns" subtitle="Low-scoring or high-priority risk skills." items={evaluation.concerns} icon={<ShieldAlert className="h-4 w-4" />} tone="rose" />
+      <SignalPanel
+        title="Demonstrated strengths"
+        subtitle="Technical skills scoring 7.5 or above."
+        items={evaluation.strengths}
+        icon={<ShieldCheck className="h-4 w-4" />}
+        tone="emerald"
+        onSelect={(skill) =>
+          document.getElementById(skillElementId(skill))?.click()
+        }
+      />
+      <SignalPanel
+        title="Technical concerns"
+        subtitle="Low-scoring or high-priority risk skills."
+        items={evaluation.concerns}
+        icon={<ShieldAlert className="h-4 w-4" />}
+        tone="rose"
+        onSelect={(skill) =>
+          document.getElementById(skillElementId(skill))?.click()
+        }
+      />
     </div>
   </div>
 );
 
 /* ── Dimensions Tab ─────────────────────────────────────────────────────── */
-const DimensionsTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ evaluation }) => (
+const QuestionsTab: React.FC<{
+  questions: QuestionEvaluationBreakdown[];
+}> = ({ questions }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('all');
+  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(
+    questions[0]?.question_id ?? null,
+  );
+  const answeredCount = questions.filter((item) => item.answered).length;
+  const averageScore = questions.length
+    ? questions.reduce((total, item) => total + item.score, 0) / questions.length
+    : 0;
+  const sections = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          questions.map((question) => question.skill || formatLabel(question.section)),
+        ),
+      ),
+    [questions],
+  );
+  const filteredQuestions = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return questions.filter((question) => {
+      const section = question.skill || formatLabel(question.section);
+      const matchesSection = sectionFilter === 'all' || section === sectionFilter;
+      const matchesQuery =
+        !normalizedQuery ||
+        [
+          question.question_text,
+          question.answer_summary,
+          question.skill,
+          question.section,
+          question.difficulty,
+          ...question.evidence,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedQuery);
+      return matchesSection && matchesQuery;
+    });
+  }, [questions, searchQuery, sectionFilter]);
+
+  return (
+    <div className="space-y-4 animate-fadeIn">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <SectionTitle
+          icon={<ListChecks className="h-4 w-4 text-indigo-600" />}
+          title="Question-by-question review"
+          subtitle="Every answer with its score, relevance, confidence, and supporting evidence."
+        />
+        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+          <QuestionMetric label="Questions assessed" value={String(questions.length)} />
+          <QuestionMetric
+            label="Substantive answers"
+            value={`${answeredCount}/${questions.length}`}
+          />
+          <QuestionMetric
+            label="Average question score"
+            value={questions.length ? `${averageScore.toFixed(1)}/10` : '—'}
+          />
+        </div>
+
+        {questions.length > 0 && (
+          <div className="mb-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search questions, answers, skills, or evidence"
+                aria-label="Search question evaluations"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-[11px] font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Clear question search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2" aria-label="Filter questions by skill">
+              {['all', ...sections].map((section) => (
+                <button
+                  key={section}
+                  type="button"
+                  onClick={() => setSectionFilter(section)}
+                  className={`rounded-full border px-3 py-1.5 text-[10px] font-black transition-colors ${
+                    sectionFilter === section
+                      ? 'border-slate-950 bg-slate-950 text-white'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:text-emerald-700'
+                  }`}
+                >
+                  {section === 'all' ? 'All sections' : section}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {questions.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
+            <ListChecks className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-[11px] font-black text-slate-600">
+              No structured question evaluations are available.
+            </p>
+            <p className="mt-1 text-[10px] font-semibold text-slate-400">
+              Older reports will show question detail after re-evaluation.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold text-slate-400">
+              Showing {filteredQuestions.length} of {questions.length} questions
+            </p>
+            {filteredQuestions.map((question) => (
+              <QuestionEvaluationCard
+                key={question.question_id}
+                question={question}
+                index={questions.findIndex(
+                  (item) => item.question_id === question.question_id,
+                )}
+                expanded={expandedQuestionId === question.question_id}
+                onToggle={() =>
+                  setExpandedQuestionId((current) =>
+                    current === question.question_id ? null : question.question_id,
+                  )
+                }
+              />
+            ))}
+            {filteredQuestions.length === 0 && (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                <Search className="mx-auto h-7 w-7 text-slate-300" />
+                <p className="mt-2 text-[11px] font-black text-slate-600">
+                  No questions match these filters
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSectionFilter('all');
+                  }}
+                  className="mt-3 text-[10px] font-black text-emerald-700 hover:text-emerald-800"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const QuestionMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+    <p className="text-[8px] font-black uppercase tracking-[0.13em] text-slate-400">
+      {label}
+    </p>
+    <p className="mt-1 font-display text-lg font-black text-slate-900">{value}</p>
+  </div>
+);
+
+const QuestionEvaluationCard: React.FC<{
+  question: QuestionEvaluationBreakdown;
+  index: number;
+  expanded: boolean;
+  onToggle: () => void;
+}> = ({ question, index, expanded, onToggle }) => (
+  <article
+    className={`overflow-hidden rounded-xl border bg-white transition-all ${
+      expanded ? 'border-indigo-200 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+    }`}
+  >
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className="flex w-full flex-col gap-4 p-4 text-left lg:flex-row lg:items-start"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-md bg-slate-950 px-1.5 text-[10px] font-black text-emerald-300">
+            Q{index + 1}
+          </span>
+          <span className="rounded-md bg-indigo-50 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-indigo-700">
+            {question.skill || formatLabel(question.section)}
+          </span>
+          <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500">
+            {formatLabel(question.difficulty)}
+          </span>
+          <span
+            className={`rounded-md px-2 py-1 text-[8px] font-black uppercase tracking-wide ${
+              question.answered
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-rose-50 text-rose-700'
+            }`}
+          >
+            {question.answered ? 'Answered' : 'No answer'}
+          </span>
+        </div>
+        <h3 className="mt-3 text-[13px] font-black leading-6 text-slate-950">
+          {question.question_text}
+        </h3>
+        <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3.5 py-3">
+          <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
+            Answer assessment
+          </p>
+          <p className="mt-1.5 text-[11px] font-medium leading-5 text-slate-600">
+            {question.answer_summary}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative w-full shrink-0 rounded-xl border border-slate-200 bg-slate-50 p-3 lg:w-44">
+        <ChevronDown
+          className={`absolute right-2 top-2 h-3.5 w-3.5 text-slate-400 transition-transform ${
+            expanded ? 'rotate-180' : ''
+          }`}
+        />
+        <div className="flex items-end justify-between">
+          <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">
+            Score
+          </span>
+          <span className={`font-display text-xl font-black ${scoreTextClass(question.score)}`}>
+            {question.score.toFixed(1)}
+            <span className="ml-0.5 text-[10px] text-slate-400">/10</span>
+          </span>
+        </div>
+        <div className="mt-2">
+          <ScoreBar score={question.score} compact />
+        </div>
+        <dl className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-[10px]">
+          <div className="flex justify-between gap-3">
+            <dt className="font-bold text-slate-400">Relevance</dt>
+            <dd className="text-right font-black text-slate-600">
+              {formatLabel(question.relevance_class)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="font-bold text-slate-400">Confidence</dt>
+            <dd className="font-black text-slate-600">
+              {Math.round(question.confidence * 100)}%
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </button>
+
+    {expanded && <div className="border-t border-slate-100 bg-slate-50/45 px-4 py-3">
+      <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">
+        Evidence
+      </p>
+      <ul className="mt-2 grid gap-2 lg:grid-cols-2">
+        {question.evidence.map((item, evidenceIndex) => (
+          <li
+            key={`${question.question_id}-${evidenceIndex}`}
+            className="border-l-2 border-indigo-300 pl-2.5 text-[10px] font-medium leading-5 text-slate-600"
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>}
+  </article>
+);
+
+const DimensionsTab: React.FC<{
+  evaluation: InterviewEvaluationResponse;
+  onDetailModal: (m: { title: string; content: React.ReactNode }) => void;
+}> = ({ evaluation, onDetailModal }) => (
   <div className="space-y-4 animate-fadeIn">
     <div className="grid gap-4 xl:grid-cols-3">
       {[
@@ -537,18 +1001,49 @@ const DimensionsTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ 
         { title: 'Behaviour & culture', score: evaluation.behavioural_cultural_score, summary: evaluation.behavioural_cultural_summary, evidence: evaluation.behavioural_cultural_evidence, icon: <Users className="h-4 w-4" /> },
         { title: 'Communication', score: evaluation.communication_score, summary: evaluation.communication_summary, evidence: evaluation.communication_evidence, icon: <MessageSquareText className="h-4 w-4" /> },
       ].map((dim) => (
-        <article key={dim.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <button
+          key={dim.title}
+          type="button"
+          onClick={() =>
+            onDetailModal({
+              title: dim.title,
+              content: (
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-black text-slate-700">Section score</p>
+                    <p className={`text-2xl font-black ${scoreTextClass(dim.score)}`}>
+                      {dim.score.toFixed(1)}/10
+                    </p>
+                  </div>
+                  <div className="mt-3"><ScoreBar score={dim.score} /></div>
+                  <p className="mt-5 text-[13px] font-medium leading-7 text-slate-600">
+                    {dim.summary}
+                  </p>
+                  <EvidenceList
+                    evidence={dim.evidence}
+                    empty="No direct evidence was recorded."
+                  />
+                </div>
+              ),
+            })
+          }
+          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 ${scoreTextClass(dim.score)}`}>{dim.icon}</span>
-              <h3 className="text-sm font-black text-slate-950">{dim.title}</h3>
+              <h3 className="text-[13px] font-black text-slate-950">{dim.title}</h3>
             </div>
             <span className={`text-lg font-black ${scoreTextClass(dim.score)}`}>{dim.score.toFixed(1)}</span>
           </div>
           <div className="mt-3"><ScoreBar score={dim.score} compact /></div>
-          <p className="mt-4 text-xs font-medium leading-6 text-slate-600">{dim.summary}</p>
+          <p className="mt-4 text-[11px] font-medium leading-6 text-slate-600">{dim.summary}</p>
           <EvidenceList evidence={dim.evidence} empty="No direct evidence was recorded." />
-        </article>
+          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-indigo-700">
+            Open full evidence
+            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+          </p>
+        </button>
       ))}
     </div>
 
@@ -564,13 +1059,16 @@ const DimensionsTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ 
 );
 
 /* ── Integrity Tab ──────────────────────────────────────────────────────── */
-const IntegrityTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ evaluation }) => {
+const IntegrityTab: React.FC<{
+  evaluation: InterviewEvaluationResponse;
+  onNavigate: (tab: ReportTab) => void;
+}> = ({ evaluation, onNavigate }) => {
   const summary = evaluation.violation_summary;
   if (!summary) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm animate-fadeIn">
         <SectionTitle icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />} title="Integrity and conduct" subtitle="Interview integrity summary." />
-        <p className="text-xs font-semibold text-slate-500">No violation summary was generated.</p>
+        <p className="text-[11px] font-semibold text-slate-500">No violation summary was generated.</p>
       </div>
     );
   }
@@ -578,11 +1076,20 @@ const IntegrityTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ e
   const hasCritical = summary.severity_counts.critical > 0;
   return (
     <div className={`animate-fadeIn rounded-2xl border p-5 shadow-sm ${summary.has_violation ? 'border-amber-200 bg-amber-50/35' : 'border-emerald-200 bg-emerald-50/30'}`}>
-      <SectionTitle
-        icon={summary.has_violation ? <AlertOctagon className="h-4 w-4 text-amber-600" /> : <ShieldCheck className="h-4 w-4 text-emerald-600" />}
-        title="Integrity and conduct"
-        subtitle="Interview integrity concerns and supporting evidence."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <SectionTitle
+          icon={summary.has_violation ? <AlertOctagon className="h-4 w-4 text-amber-600" /> : <ShieldCheck className="h-4 w-4 text-emerald-600" />}
+          title="Integrity and conduct"
+          subtitle="Interview integrity concerns and supporting evidence."
+        />
+        <button
+          type="button"
+          onClick={() => onNavigate('transcript')}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700"
+        >
+          Review transcript context <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <SeverityTile label="Confirmed" value={summary.validated_violation_count} tone={summary.has_violation ? 'amber' : 'emerald'} />
         <SeverityTile label="Low" value={summary.severity_counts.low} tone="slate" />
@@ -590,12 +1097,12 @@ const IntegrityTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ e
         <SeverityTile label="High" value={summary.severity_counts.high} tone="rose" />
         <SeverityTile label="Critical" value={summary.severity_counts.critical} tone={hasCritical ? 'rose' : 'slate'} />
       </div>
-      <p className="mt-4 text-xs font-medium leading-6 text-slate-600">{summary.summary}</p>
+      <p className="mt-4 text-[11px] font-medium leading-6 text-slate-600">{summary.summary}</p>
       {summary.hard_gate_reasons.length > 0 && (
         <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-rose-600" />
-            <p className="text-xs font-black text-rose-900">Hiring red flags</p>
+            <p className="text-[11px] font-black text-rose-900">Hiring red flags</p>
           </div>
           <ul className="mt-2 space-y-1.5">
             {summary.hard_gate_reasons.map((reason) => (
@@ -611,96 +1118,263 @@ const IntegrityTab: React.FC<{ evaluation: InterviewEvaluationResponse }> = ({ e
 
 /* ── Transcript Tab ─────────────────────────────────────────────────────── */
 const TranscriptTab: React.FC<{
-  transcript: TranscriptTurn[][];
-  currentPage: number;
-  totalTurns: number;
+  transcript: TranscriptTurn[];
   totalElapsed: number;
-  onPage: (page: number) => void;
-}> = ({ transcript, currentPage, totalTurns, totalElapsed, onPage }) => {
+  isLoading: boolean;
+  isError: boolean;
+  onDownload: () => void;
+}> = ({ transcript, totalElapsed, isLoading, isError, onDownload }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [speakerFilter, setSpeakerFilter] = useState<
+    'all' | 'interviewer' | 'candidate'
+  >('all');
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredTranscript = useMemo(
+    () =>
+      transcript.filter((turn) => {
+        const interviewer = isInterviewerTurn(turn);
+        const matchesSpeaker =
+          speakerFilter === 'all' ||
+          (speakerFilter === 'interviewer' && interviewer) ||
+          (speakerFilter === 'candidate' && !interviewer);
+        const matchesQuery =
+          !normalizedQuery ||
+          [
+            turn.text,
+            turn.section,
+            turn.skill,
+            turn.difficulty,
+            turn.question_type,
+            turn.response_type,
+            turn.tone,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(normalizedQuery);
+        return matchesSpeaker && matchesQuery;
+      }),
+    [normalizedQuery, speakerFilter, transcript],
+  );
+  const transcriptSections = useMemo(() => {
+    const firstTurnBySection = new Map<string, number>();
+    transcript.forEach((turn) => {
+      if (turn.section && !firstTurnBySection.has(turn.section)) {
+        firstTurnBySection.set(turn.section, turn.turn_number);
+      }
+    });
+    return Array.from(firstTurnBySection.entries());
+  }, [transcript]);
+
+  if (isLoading) {
+    return (
+      <div className="grid h-full min-h-[360px] place-items-center rounded-2xl border border-slate-200 bg-white">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
+          <p className="mt-3 text-[11px] font-bold text-slate-500">Loading full transcript…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="grid h-full min-h-[360px] place-items-center rounded-2xl border border-rose-200 bg-rose-50/40">
+        <div className="max-w-md text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-rose-400" />
+          <h3 className="mt-3 text-[13px] font-black text-rose-900">Transcript could not be loaded</h3>
+          <p className="mt-1 text-[11px] font-medium text-rose-700/70">
+            Refresh the report to retry the transcript request.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (transcript.length === 0) {
     return (
       <div className="animate-fadeIn rounded-2xl border border-dashed border-slate-200 bg-white/60 p-10 text-center shadow-sm">
         <MessageSquareText className="mx-auto h-10 w-10 text-slate-300" />
-        <h3 className="mt-3 text-sm font-black text-slate-700">No transcript available</h3>
-        <p className="mt-1 text-xs font-medium text-slate-400">
+        <h3 className="mt-3 text-[13px] font-black text-slate-700">No transcript available</h3>
+        <p className="mt-1 text-[11px] font-medium text-slate-400">
           The interview transcript will appear here once the session is completed.
         </p>
       </div>
     );
   }
 
-  const page = transcript[currentPage] ?? [];
-  const totalPages = transcript.length;
   const elapsedMins = Math.round(totalElapsed / 60);
 
   return (
-    <div className="space-y-4 animate-fadeIn">
-      <div className="ibot-panel overflow-hidden">
+    <div className="h-full min-h-0 animate-fadeIn">
+      <div className="ibot-panel flex h-full min-h-0 flex-col overflow-hidden">
         <header className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
           <div>
-            <p className="text-xs font-black text-slate-900">Interview transcript</p>
+            <p className="text-[11px] font-black text-slate-900">Interview transcript</p>
             <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-              {totalTurns} turns · {elapsedMins > 0 ? `${elapsedMins} min` : 'duration unavailable'} · Page {currentPage + 1} of {totalPages}
+              {transcript.length} turns · {elapsedMins > 0 ? `${elapsedMins} min` : 'duration unavailable'} · continuous transcript
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={currentPage === 0}
-              onClick={() => onPage(currentPage - 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
+              onClick={onDownload}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600 transition-colors hover:border-emerald-300 hover:text-emerald-700"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              disabled={currentPage >= totalPages - 1}
-              onClick={() => onPage(currentPage + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <ChevronRight className="h-4 w-4" />
+              <FileDown className="h-3.5 w-3.5" />
+              Download
             </button>
           </div>
         </header>
 
-        <div className="space-y-3 p-5">
-          {page.map((turn) => {
-            const isBot = turn.speaker === 'bot' || turn.speaker === 'interviewer';
+        <div className="shrink-0 space-y-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search the full transcript"
+                aria-label="Search interview transcript"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-[11px] font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Clear transcript search"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+              {(['all', 'interviewer', 'candidate'] as const).map((speaker) => (
+                <button
+                  key={speaker}
+                  type="button"
+                  onClick={() => setSpeakerFilter(speaker)}
+                  className={`rounded-md px-3 py-1.5 text-[10px] font-black transition-colors ${
+                    speakerFilter === speaker
+                      ? 'bg-slate-950 text-white'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {formatLabel(speaker)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {transcriptSections.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+              <span className="shrink-0 text-[8px] font-black uppercase tracking-wider text-slate-400">
+                Jump to
+              </span>
+              {transcriptSections.map(([section, turnNumber]) => (
+                <button
+                  key={section}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSpeakerFilter('all');
+                    window.requestAnimationFrame(() =>
+                      document
+                        .getElementById(`transcript-turn-${turnNumber}`)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                    );
+                  }}
+                  className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[8px] font-black text-slate-500 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                >
+                  {formatLabel(section)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="ibot-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+          <p className="text-[10px] font-bold text-slate-400">
+            Showing {filteredTranscript.length} of {transcript.length} turns
+          </p>
+          {filteredTranscript.map((turn) => {
+            const isBot = isInterviewerTurn(turn);
+            const time = transcriptTurnTime(turn);
             return (
               <div
-                key={turn.turn_number}
-                className={`flex gap-3 ${isBot ? 'flex-row' : 'flex-row-reverse'}`}
+                id={`transcript-turn-${turn.turn_number}`}
+                key={turn.turn_id || turn.turn_number}
+                className={`scroll-mt-4 flex gap-3 rounded-xl border p-4 ${
+                  isBot
+                    ? 'border-slate-200 bg-slate-50/80'
+                    : 'border-emerald-200 bg-emerald-50/45'
+                }`}
               >
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${isBot ? 'bg-slate-950 text-emerald-300' : 'bg-emerald-600 text-white'}`}>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-black ${isBot ? 'bg-slate-950 text-emerald-300' : 'bg-emerald-600 text-white'}`}>
                   {isBot ? <Bot className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
                 </div>
-                <div className={`max-w-[80%] ${isBot ? '' : ''}`}>
-                  <div className={`rounded-2xl px-4 py-3 text-sm font-medium leading-6 ${isBot ? 'bg-slate-100 text-slate-700 rounded-tl-sm' : 'bg-emerald-600 text-white rounded-tr-sm'}`}>
-                    {turn.text}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="text-[10px] font-black text-slate-500">
+                      {isBot ? 'Interviewer' : 'Candidate'}
+                      {time && <span className="ml-2 text-slate-400">{time}</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {turn.skill && (
+                        <span className="rounded bg-indigo-50 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-indigo-700">
+                          {turn.skill}
+                        </span>
+                      )}
+                      {turn.difficulty && (
+                        <span className="rounded bg-white px-2 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                          {formatLabel(turn.difficulty)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className={`mt-1 text-[9px] font-bold text-slate-400 ${isBot ? 'text-left' : 'text-right'}`}>
-                    {isBot ? 'Interviewer' : 'Candidate'} · Turn {turn.turn_number}
-                    {turn.tone && ` · ${turn.tone}`}
+                  <p className="mt-2 whitespace-pre-wrap text-[11px] font-medium leading-6 text-slate-700">
+                    {turn.text || '[No transcribed text]'}
+                  </p>
+                  <p className="mt-2 text-[8px] font-bold text-slate-400">
+                    {[
+                      `Turn ${turn.turn_number}`,
+                      turn.section ? formatLabel(turn.section) : null,
+                      turn.question_type
+                        ? `Question: ${formatLabel(turn.question_type)}`
+                        : null,
+                      turn.response_type
+                        ? `Response: ${formatLabel(turn.response_type)}`
+                        : null,
+                      turn.tone ? `Tone: ${formatLabel(turn.tone)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 </div>
               </div>
             );
           })}
+          {filteredTranscript.length === 0 && (
+            <div className="grid min-h-48 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50">
+              <div className="text-center">
+                <Search className="mx-auto h-7 w-7 text-slate-300" />
+                <p className="mt-2 text-[11px] font-black text-slate-600">
+                  No transcript turns match
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSpeakerFilter('all');
+                  }}
+                  className="mt-2 text-[10px] font-black text-emerald-700"
+                >
+                  Clear filters
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Page indicators */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-1.5 border-t border-slate-100 px-5 py-3">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onPage(i)}
-                className={`h-1.5 rounded-full transition-all ${i === currentPage ? 'w-5 bg-emerald-600' : 'w-1.5 bg-slate-300 hover:bg-slate-400'}`}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -720,7 +1394,7 @@ const ClickableCard: React.FC<{
     className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left hover:border-emerald-300 hover:shadow-md transition-all group"
   >
     <SectionTitle icon={icon} title={title} subtitle={subtitle} />
-    <p className="text-sm font-medium leading-7 text-slate-600 line-clamp-3">{preview}</p>
+    <p className="text-[13px] font-medium leading-7 text-slate-600 line-clamp-3">{preview}</p>
     <p className="mt-3 text-[10px] font-black text-emerald-700 group-hover:text-emerald-800">Click to read full summary →</p>
   </button>
 );
@@ -729,7 +1403,7 @@ const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; subtitle: s
   <div className="mb-4">
     <div className="flex items-center gap-2">
       {icon}
-      <h2 className="text-sm font-black text-slate-950">{title}</h2>
+      <h2 className="text-[13px] font-black text-slate-950">{title}</h2>
     </div>
     <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-400">{subtitle}</p>
   </div>
@@ -738,44 +1412,83 @@ const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; subtitle: s
 const MiniStat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2.5 text-center">
     <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
-    <p className="mt-1 text-sm font-black text-slate-900">{value}</p>
+    <p className="mt-1 text-[13px] font-black text-slate-900">{value}</p>
   </div>
 );
 
-const CalculationStep: React.FC<{ label: string; value: number; helper: string; penalty?: boolean; final?: boolean }> = ({ label, value, helper, penalty = false, final = false }) => (
-  <div className={`rounded-xl border p-4 ${final ? 'border-emerald-200 bg-emerald-50/70' : penalty && value > 0 ? 'border-rose-200 bg-rose-50/70' : 'border-slate-200 bg-slate-50/70'}`}>
-    <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">{label}</p>
+const CalculationStep: React.FC<{
+  label: string;
+  value: number;
+  helper: string;
+  penalty?: boolean;
+  final?: boolean;
+  onClick: () => void;
+}> = ({ label, value, helper, penalty = false, final = false, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`group rounded-xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm ${final ? 'border-emerald-200 bg-emerald-50/70' : penalty && value > 0 ? 'border-rose-200 bg-rose-50/70' : 'border-slate-200 bg-slate-50/70'}`}
+  >
+    <p className="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">{label}</p>
     <p className={`mt-1.5 font-display text-2xl font-black ${penalty && value > 0 ? 'text-rose-700' : final ? 'text-emerald-700' : 'text-slate-900'}`}>{value.toFixed(2)}</p>
     <p className="mt-1 text-[10px] font-semibold leading-4 text-slate-500">{helper}</p>
-  </div>
+    <p className="mt-2 inline-flex items-center gap-1 text-[8px] font-black text-slate-500">
+      Open details <ArrowRight className="h-2.5 w-2.5 transition-transform group-hover:translate-x-0.5" />
+    </p>
+  </button>
 );
 
-const SignalPanel: React.FC<{ title: string; subtitle: string; items: string[]; icon: React.ReactNode; tone: 'emerald' | 'rose' }> = ({ title, subtitle, items, icon, tone }) => {
+const SignalPanel: React.FC<{
+  title: string;
+  subtitle: string;
+  items: string[];
+  icon: React.ReactNode;
+  tone: 'emerald' | 'rose';
+  onSelect?: (item: string) => void;
+}> = ({ title, subtitle, items, icon, tone, onSelect }) => {
   const style = tone === 'emerald' ? 'border-emerald-200 bg-emerald-50/60 text-emerald-800' : 'border-rose-200 bg-rose-50/60 text-rose-800';
   return (
     <div className={`rounded-2xl border p-5 ${style}`}>
-      <div className="flex items-center gap-2">{icon}<p className="text-sm font-black">{title}</p></div>
+      <div className="flex items-center gap-2">{icon}<p className="text-[13px] font-black">{title}</p></div>
       <p className="mt-1 text-[10px] font-semibold opacity-70">{subtitle}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {items.map((item) => (
-          <span key={item} className="rounded-full border border-current/10 bg-white/75 px-3 py-1.5 text-[10px] font-black">{item}</span>
+          onSelect ? (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onSelect(item)}
+              className="rounded-full border border-current/10 bg-white/75 px-3 py-1.5 text-[10px] font-black transition-transform hover:-translate-y-0.5 hover:bg-white"
+              title={`Open ${item} details`}
+            >
+              {item}
+            </button>
+          ) : (
+            <span key={item} className="rounded-full border border-current/10 bg-white/75 px-3 py-1.5 text-[10px] font-black">{item}</span>
+          )
         ))}
-        {items.length === 0 && <p className="text-xs font-semibold opacity-65">None identified.</p>}
+        {items.length === 0 && <p className="text-[11px] font-semibold opacity-65">None identified.</p>}
       </div>
     </div>
   );
 };
 
 const SectionCommunicationCard: React.FC<{ section: string; details: SectionCommunicationBreakdown }> = ({ section, details }) => (
-  <article className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-    <div className="flex items-center justify-between gap-3">
-      <h3 className="text-xs font-black text-slate-900">{formatLabel(section)}</h3>
-      <span className={`text-sm font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</span>
-    </div>
-    <div className="mt-2"><ScoreBar score={details.score} compact /></div>
-    <p className="mt-3 text-[11px] font-medium leading-5 text-slate-600">{details.summary}</p>
+  <details className="group rounded-xl border border-slate-200 bg-slate-50/50 p-4 open:bg-white open:shadow-sm">
+    <summary className="cursor-pointer list-none">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[11px] font-black text-slate-900">{formatLabel(section)}</h3>
+        <span className="flex items-center gap-2">
+          <span className={`text-[13px] font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</span>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 transition-transform group-open:rotate-180" />
+        </span>
+      </div>
+      <div className="mt-2"><ScoreBar score={details.score} compact /></div>
+      <p className="mt-2 text-[8px] font-black text-indigo-600">Click to review evidence</p>
+    </summary>
+    <p className="mt-3 border-t border-slate-200 pt-3 text-[11px] font-medium leading-5 text-slate-600">{details.summary}</p>
     <EvidenceList evidence={details.evidence} empty="No section evidence recorded." compact />
-  </article>
+  </details>
 );
 
 const EvidenceList: React.FC<{ evidence: string[]; empty: string; compact?: boolean }> = ({ evidence, empty, compact = false }) => (
@@ -819,7 +1532,7 @@ const ReportLoadingState = () => (
         <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white">
           <div className="text-center">
             <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
-            <p className="mt-3 text-xs font-bold text-slate-400">Building detailed report…</p>
+            <p className="mt-3 text-[11px] font-bold text-slate-400">Building detailed report…</p>
           </div>
         </div>
       </div>

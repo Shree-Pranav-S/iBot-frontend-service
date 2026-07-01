@@ -35,24 +35,24 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
   };
 
   return (
-    <div className="w-full rounded-card border-t border-emerald-500/30 border-x border-b border-subtle bg-elevated/80 p-6 shadow-glow-emerald backdrop-blur-sm sm:p-7 relative overflow-hidden group">
+    <div className="group relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
       {/* Subtle top edge glow */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
       
       {/* Header */}
       <div className="mb-7 text-center">
-        <h2 className="text-xl font-bold tracking-tight text-white font-display">Welcome back</h2>
-        <p className="mt-1 text-sm text-secondary">Sign in to your account</p>
+        <h2 className="font-display text-xl font-bold tracking-tight text-slate-950">Welcome back</h2>
+        <p className="mt-1 text-sm text-slate-500">Sign in to your account</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div>
-          <label className="block text-[11px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-600">
             Email
           </label>
           <div className="relative group">
-            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
             <input
               id="login-email"
               type="email"
@@ -60,18 +60,18 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className="w-full rounded-input-btn border border-subtle bg-white py-3 pl-11 pr-4 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white"
+              className="w-full rounded-input-btn border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-[11px] font-semibold text-secondary mb-1.5 uppercase tracking-wider">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-600">
             Password
           </label>
           <div className="relative group">
-            <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted group-focus-within:text-emerald-400 transition-colors" />
+            <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
             <input
               id="login-password"
               type={showPassword ? 'text' : 'password'}
@@ -79,12 +79,12 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-input-btn border border-subtle bg-white py-3 pl-11 pr-11 text-sm text-black placeholder-muted outline-none transition-all focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:bg-elevated-2 focus:text-white"
+              className="w-full rounded-input-btn border border-slate-200 bg-white py-3 pl-11 pr-11 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -97,7 +97,7 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
             type="button"
             id="btn-forgot-password"
             onClick={() => navigate('/reset-password')}
-            className="text-[11px] font-medium text-muted hover:text-emerald-400 transition-colors"
+            className="text-[11px] font-medium text-slate-500 transition-colors hover:text-emerald-700"
           >
             Forgot password?
           </button>
@@ -125,15 +125,15 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
 
       {/* Divider */}
       <div className="my-6 flex items-center">
-        <div className="flex-1 h-px bg-subtle" />
-        <span className="px-3 text-[10px] font-medium text-muted">New here?</span>
-        <div className="flex-1 h-px bg-subtle" />
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="px-3 text-[10px] font-medium text-slate-400">New here?</span>
+        <div className="h-px flex-1 bg-slate-200" />
       </div>
 
       <button
         id="btn-goto-register"
         onClick={() => { clearError(); navigate('/register'); }}
-        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-emerald-500/20 bg-transparent py-2.5 text-sm font-semibold text-secondary transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-400"
+        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
       >
         Create Account
       </button>

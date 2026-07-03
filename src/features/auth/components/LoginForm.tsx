@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../hooks/useToast';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import type { LoginFormProps } from '../../../types/auth.types';
 
 export const LoginForm: React.FC<LoginFormProps> = () => {
@@ -14,8 +23,8 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     clearError();
 
     if (!email || !password) {
@@ -26,114 +35,120 @@ export const LoginForm: React.FC<LoginFormProps> = () => {
     setIsSubmitting(true);
     try {
       await login({ email, password });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Invalid credentials.';
-      toastError('Login Failed', message);
+    } catch (error: unknown) {
+      toastError('Login Failed', error instanceof Error ? error.message : 'Invalid credentials.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const inputClass =
+    'h-11 w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition-all placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 hover:bg-white focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10';
+
   return (
-    <div className="group relative w-full overflow-hidden rounded-card border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-7">
-      {/* Subtle top edge glow */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
-      
-      {/* Header */}
-      <div className="mb-7 text-center">
-        <h2 className="font-display text-xl font-bold tracking-tight text-slate-950">Welcome back</h2>
-        <p className="mt-1 text-sm text-slate-500">Sign in to your account</p>
+    <div className="animate-scaleIn relative overflow-hidden rounded-[24px] border border-white/90 bg-white/92 px-6 py-6 shadow-[0_30px_80px_-34px_rgba(15,23,42,0.3),0_18px_46px_-30px_rgba(5,150,105,0.3)] backdrop-blur-xl sm:px-8 sm:py-7">
+      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-500" />
+
+      <div className="text-center">
+        <div className="relative mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-100 bg-emerald-50/80 shadow-inner">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+            <Lock className="h-4 w-4" />
+          </span>
+          <Sparkles className="absolute right-0.5 top-0.5 h-3.5 w-3.5 text-emerald-500" />
+        </div>
+        <h2 className="mt-2 font-display text-xl font-extrabold tracking-[-0.035em] text-slate-950">Welcome Back</h2>
+        <p className="mt-1 text-sm text-slate-500">Sign in to continue to your hiring workspace</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Email */}
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-600">
-            Email
-          </label>
-          <div className="relative group">
-            <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
+      <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-bold text-slate-600">Email</span>
+          <span className="group relative block">
+            <Mail className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-emerald-600 transition-transform group-focus-within:scale-110" />
             <input
               id="login-email"
               type="email"
               required
+              autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => setEmail(event.target.value)}
               placeholder="you@company.com"
-              className="w-full rounded-input-btn border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              className={inputClass}
             />
-          </div>
-        </div>
+          </span>
+        </label>
 
-        {/* Password */}
-        <div>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-600">
-            Password
-          </label>
-          <div className="relative group">
-            <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-bold text-slate-600">Password</span>
+          <span className="group relative block">
+            <Lock className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-emerald-600 transition-transform group-focus-within:scale-110" />
             <input
               id="login-password"
               type={showPassword ? 'text' : 'password'}
               required
+              autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-input-btn border border-slate-200 bg-white py-3 pl-11 pr-11 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Enter your password"
+              className={`${inputClass} pr-12`}
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+              onClick={() => setShowPassword((current) => !current)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-all hover:scale-110 hover:text-slate-700"
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
             </button>
-          </div>
-        </div>
+          </span>
+        </label>
 
-        {/* Forgot password */}
-        <div className="flex justify-end -mt-1">
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+            Secure sign in
+          </span>
           <button
             type="button"
             id="btn-forgot-password"
             onClick={() => navigate('/reset-password')}
-            className="text-[11px] font-medium text-slate-500 transition-colors hover:text-emerald-700"
+            className="text-[11px] font-semibold text-emerald-700 transition-colors hover:text-emerald-900 hover:underline"
           >
             Forgot password?
           </button>
         </div>
 
-        {/* Submit */}
         <button
           id="btn-login-submit"
           type="submit"
           disabled={isSubmitting}
-          className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-input-btn py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-glow-emerald active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-          style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+          className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-sm font-bold text-white shadow-[0_16px_28px_-14px_rgba(13,148,136,0.6)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_34px_-14px_rgba(13,148,136,0.72)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300" style={{ background: 'linear-gradient(135deg, #fff, transparent)' }} />
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
               Sign In
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </>
           )}
         </button>
       </form>
 
-      {/* Divider */}
-      <div className="my-6 flex items-center">
-        <div className="h-px flex-1 bg-slate-200" />
-        <span className="px-3 text-[10px] font-medium text-slate-400">New here?</span>
-        <div className="h-px flex-1 bg-slate-200" />
+      <div className="my-4 flex items-center gap-4">
+        <span className="h-px flex-1 bg-slate-200" />
+        <span className="text-[10px] font-medium text-slate-400">New to iBot?</span>
+        <span className="h-px flex-1 bg-slate-200" />
       </div>
 
       <button
         id="btn-goto-register"
-        onClick={() => { clearError(); navigate('/register'); }}
-        className="flex w-full items-center justify-center gap-2 rounded-input-btn border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-600 transition-all duration-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+        type="button"
+        onClick={() => {
+          clearError();
+          navigate('/register');
+        }}
+        className="flex h-10 w-full items-center justify-center rounded-xl border border-emerald-400 bg-white text-sm font-bold text-emerald-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md active:translate-y-0"
       >
         Create Account
       </button>

@@ -23,6 +23,11 @@ export interface CandidateAssessmentListItem {
   };
   resume_file_path?: string;
   jd_text?: string;
+  /**
+   * Populated by the recruiter UI in the all-assessments view so one candidate
+   * can expose every assessment-specific status, resume, and job description.
+   */
+  enrollments?: CandidateAssessmentListItem[];
 }
 
 interface CSVRowResult {
@@ -195,6 +200,10 @@ export interface RecruiterDecisionResponse {
   candidate_assessment_id: string;
   recruiter_decision: 'APPROVED' | 'REJECTED';
   updated_at: string;
+}
+
+export interface AIRejectionFeedbackResponse {
+  feedback: string;
 }
 
 export interface ExistingCandidateListItem {

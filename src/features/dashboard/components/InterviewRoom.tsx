@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Loader2,
   Mic,
+  MicOff,
   PhoneOff,
   ShieldCheck,
   Sparkles,
@@ -261,6 +262,53 @@ interface InterviewRoomProps {
   onComplete?: () => void;
 }
 
+export const InterviewControlDock: React.FC<{
+  isMuted: boolean;
+  isToggling: boolean;
+  onToggleMicrophone: () => void;
+  onEndSession: () => void;
+}> = ({
+  isMuted,
+  isToggling,
+  onToggleMicrophone,
+  onEndSession,
+}) => (
+  <div className="flex items-center gap-2 rounded-2xl border border-white/80 bg-slate-950/90 p-2 shadow-2xl shadow-slate-950/30 ring-1 ring-slate-900/10 backdrop-blur-xl">
+    <button
+      type="button"
+      onClick={onToggleMicrophone}
+      disabled={isToggling}
+      className={`group inline-flex h-12 min-w-28 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 ${
+        isMuted
+          ? 'bg-rose-500 text-white hover:bg-rose-600'
+          : 'bg-white text-slate-800 hover:bg-emerald-500 hover:text-white'
+      }`}
+      title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+      aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+      aria-pressed={isMuted}
+    >
+      {isToggling ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : isMuted ? (
+        <MicOff className="h-4 w-4" />
+      ) : (
+        <Mic className="h-4 w-4 transition-transform group-hover:scale-110" />
+      )}
+      {isMuted ? 'Unmute' : 'Mute'}
+    </button>
+    <span className="h-8 w-px bg-white/15" aria-hidden="true" />
+    <button
+      type="button"
+      onClick={onEndSession}
+      className="group inline-flex h-12 min-w-28 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-xs font-black text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-rose-500 hover:shadow-lg active:translate-y-0 active:scale-[0.97]"
+      title="End session"
+    >
+      <PhoneOff className="h-4 w-4 transition-transform group-hover:-rotate-6" />
+      End session
+    </button>
+  </div>
+);
+
 export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMins, onExit, onComplete }) => {
   const { data, loading, error, createToken } = useLiveKitInterviewToken(token);
   const [connect, setConnect] = useState(false);
@@ -276,7 +324,7 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
     return (
       <div className="ibot-interview-room-bg relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden p-6 text-slate-900">
         <div className="relative w-full max-w-xl rounded-lg border border-white/80 bg-white/[0.86] p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/20">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-green-500 to-sky-500 text-white shadow-xl shadow-emerald-500/20">
             <Sparkles className="h-9 w-9" />
           </div>
 
@@ -371,6 +419,8 @@ function InterviewStage({
   const { agent, state: agentState } = useVoiceAssistant();
 
   const [micError, setMicError] = useState<string | null>(null);
+  const [micMutedByUser, setMicMutedByUser] = useState(false);
+  const [isMicToggling, setIsMicToggling] = useState(false);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
   const [sessionPhase, setSessionPhase] = useState<'active' | 'complete' | 'ended'>('active');
   const [closingMessageDetected, setClosingMessageDetected] = useState(false);
@@ -379,7 +429,13 @@ function InterviewStage({
   const hasCompletionNotifiedRef = useRef(false);
 
   useEffect(() => {
-    if (connectionState !== ConnectionState.Connected || isMicrophoneEnabled) return;
+    if (
+      connectionState !== ConnectionState.Connected ||
+      micMutedByUser ||
+      isMicrophoneEnabled
+    ) {
+      return;
+    }
 
     let cancelled = false;
     localParticipant
@@ -400,7 +456,27 @@ function InterviewStage({
     return () => {
       cancelled = true;
     };
-  }, [connectionState, isMicrophoneEnabled, localParticipant]);
+  }, [connectionState, isMicrophoneEnabled, localParticipant, micMutedByUser]);
+
+  const toggleMicrophone = async () => {
+    if (connectionState !== ConnectionState.Connected || isMicToggling) return;
+
+    const enableMic = micMutedByUser;
+    setIsMicToggling(true);
+    try {
+      const publication = await localParticipant.setMicrophoneEnabled(enableMic, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      });
+      setMicMutedByUser(!enableMic);
+      setMicError(publication ? null : 'Microphone was not published to the room.');
+    } catch (err) {
+      setMicError(err instanceof Error ? err.message : 'Unable to update microphone.');
+    } finally {
+      setIsMicToggling(false);
+    }
+  };
 
   const endSession = () => {
     setSessionPhase('ended');
@@ -420,7 +496,10 @@ function InterviewStage({
     if (!isLive) return 'Connection closed';
     if (!agent) return 'Starting interviewer';
     if (!agentIsReady) return 'Preparing interviewer';
-    if (!micIsPublished) return 'Connecting microphone';
+    if (!micIsPublished) {
+      if (micMutedByUser) return 'Microphone muted';
+      return 'Connecting microphone';
+    }
     if (agentState === 'speaking') return 'iBot is speaking';
     if (agentState === 'thinking') return 'Processing your response';
     return 'Ready for your response';
@@ -500,7 +579,7 @@ function InterviewStage({
       <header className="z-20 flex min-h-[76px] items-center justify-between gap-4 border-b border-slate-200/70 bg-white/85 px-4 py-3 shadow-sm shadow-slate-200/40 backdrop-blur-xl sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/70">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-green-500 to-sky-500 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/70">
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -526,7 +605,7 @@ function InterviewStage({
               Listening
             </span>
           )}
-          {isLive && !micIsPublished && (
+          {isLive && !micIsPublished && !micMutedByUser && (
             <span
               className="hidden items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black text-amber-700 sm:inline-flex"
               title={displayedMicError || 'Publishing microphone'}
@@ -535,20 +614,16 @@ function InterviewStage({
               Mic connecting
             </span>
           )}
-          {isLive && sessionPhase === 'active' && (
-            <button
-              onClick={endSession}
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-3 text-[11px] font-black text-red-500 shadow-sm transition-all hover:border-red-500 hover:bg-red-500 hover:text-white active:scale-[0.96]"
-              title="End session"
-            >
-              <PhoneOff className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">End</span>
-            </button>
+          {isLive && micMutedByUser && sessionPhase === 'active' && (
+            <span className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-600 sm:inline-flex">
+              <MicOff className="h-3.5 w-3.5" />
+              Muted
+            </span>
           )}
         </div>
       </header>
 
-      <main className="relative z-10 min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
+      <main className="relative z-10 min-h-0 flex-1 p-4 pb-24 sm:p-5 sm:pb-24 lg:p-6 lg:pb-24">
         <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.78fr)]">
           <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/80 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-white/60">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
@@ -635,6 +710,17 @@ function InterviewStage({
           </section>
         </div>
       </main>
+
+      {isLive && sessionPhase === 'active' && (
+        <div className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2">
+          <InterviewControlDock
+            isMuted={micMutedByUser}
+            isToggling={isMicToggling}
+            onToggleMicrophone={toggleMicrophone}
+            onEndSession={endSession}
+          />
+        </div>
+      )}
     </div>
   );
 }

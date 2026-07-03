@@ -6,6 +6,7 @@ import type {
   TokenValidationResponse,
   InterviewEvaluationResponse,
   RecruiterDecisionResponse,
+  AIRejectionFeedbackResponse,
   RecruiterEvaluationListItem,
   SingleCandidateResponse,
   ExistingCandidateListItem,
@@ -156,6 +157,19 @@ export const candidateService = {
     );
     return response.data;
   },
+
+  /**
+   * Generate editable, candidate-facing rejection feedback from evaluation evidence.
+   */
+  async generateRejectionFeedback(
+    caId: string,
+  ): Promise<APIResponse<AIRejectionFeedbackResponse>> {
+    const response = await api.post<APIResponse<AIRejectionFeedbackResponse>>(
+      `/candidates/${caId}/rejection-feedback`,
+    );
+    return response.data;
+  },
+
   /**
    * Fetch evaluation report for a candidate assessment.
    */

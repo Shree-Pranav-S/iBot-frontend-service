@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Loader2,
   ShieldCheck,
+  Sparkles,
   UserCheck,
   UserX,
   X,
@@ -291,8 +292,10 @@ interface DecisionModalProps {
   currentDecision?: string | null;
   decision: RecruiterDecision;
   loading: boolean;
+  generatingFeedback: boolean;
   onClose: () => void;
   onConfirm: (feedback?: string) => Promise<void>;
+  onGenerateFeedback: () => Promise<string | undefined>;
 }
 
 export const DecisionModal: React.FC<DecisionModalProps> = ({
@@ -301,13 +304,19 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   currentDecision,
   decision,
   loading,
+  generatingFeedback,
   onClose,
   onConfirm,
+  onGenerateFeedback,
 }) => {
   const [feedback, setFeedback] = useState('');
   const isApproval = decision === 'APPROVED';
   const isChange =
     currentDecision && currentDecision !== 'PENDING' && currentDecision !== decision;
+  const handleGenerateFeedback = async () => {
+    const draft = await onGenerateFeedback();
+    if (draft) setFeedback(draft.slice(0, 2000));
+  };
 
   return (
     <CenteredDialog
@@ -320,7 +329,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
         <div
           className={`h-1.5 w-full ${
             isApproval
-              ? 'bg-gradient-to-r from-emerald-400 to-cyan-400'
+              ? 'bg-gradient-to-r from-emerald-400 to-emerald-700'
               : 'bg-gradient-to-r from-rose-500 to-amber-400'
           }`}
         />
@@ -377,9 +386,30 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </div>
 
           <label className="mt-5 block">
-            <span className="text-xs font-black text-slate-800">
-              {isApproval ? 'Decision note' : 'Candidate feedback'}
-              <span className="ml-1 font-semibold text-slate-400">(optional)</span>
+            <span className="flex items-center justify-between gap-3">
+              <span className="text-xs font-black text-slate-800">
+                {isApproval ? 'Decision note' : 'Candidate feedback'}
+                <span className="ml-1 font-semibold text-slate-400">(optional)</span>
+              </span>
+              {!isApproval && (
+                <button
+                  type="button"
+                  onClick={handleGenerateFeedback}
+                  disabled={loading || generatingFeedback}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-black text-emerald-700 transition-all hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-600 hover:text-white hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {generatingFeedback ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  {generatingFeedback
+                    ? 'Drafting…'
+                    : feedback.trim()
+                      ? 'Regenerate with AI'
+                      : 'Draft with AI'}
+                </button>
+              )}
             </span>
             <textarea
               value={feedback}
@@ -395,6 +425,11 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <span className="mt-1.5 block text-right text-[10px] font-bold text-slate-400">
               {feedback.length}/2000
             </span>
+            {!isApproval && (
+              <span className="mt-1 block text-[10px] font-semibold text-slate-400">
+                AI drafts use interview evidence and remain fully editable before sending.
+              </span>
+            )}
           </label>
         </div>
 
@@ -440,7 +475,7 @@ export const MetricTile: React.FC<{
 }> = ({ label, value, helper, icon, tone = 'slate' }) => {
   const tones = {
     slate: {
-      icon: 'bg-slate-900 text-emerald-300',
+      icon: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
       card: 'border-slate-200 bg-gradient-to-br from-white to-slate-50',
     },
     emerald: {
@@ -461,14 +496,14 @@ export const MetricTile: React.FC<{
     },
   };
   return (
-    <div className={`rounded-2xl border px-4 py-3.5 shadow-sm shadow-slate-200/50 ${tones[tone].card}`}>
+    <div className={`group rounded-2xl border px-4 py-3.5 shadow-sm shadow-slate-200/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${tones[tone].card}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
           <p className="mt-1 font-display text-2xl font-black tracking-tight text-slate-950">{value}</p>
           {helper && <p className="mt-1 text-[11px] font-semibold text-slate-500">{helper}</p>}
         </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-sm ${tones[tone].icon}`}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-sm transition-transform duration-200 group-hover:scale-105 ${tones[tone].icon}`}>
           {icon}
         </div>
       </div>

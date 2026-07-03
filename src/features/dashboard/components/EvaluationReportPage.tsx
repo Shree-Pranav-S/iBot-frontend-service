@@ -107,7 +107,9 @@ export const EvaluationReportPage: React.FC = () => {
     requestDecision,
     closeDecision,
     saveDecision,
+    generateFeedback,
     isSaving,
+    isGeneratingFeedback,
   } = useEvaluationDecision();
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
   const [detailModal, setDetailModal] = useState<{ title: string; content: React.ReactNode } | null>(null);
@@ -439,8 +441,10 @@ export const EvaluationReportPage: React.FC = () => {
         currentDecision={modal.currentDecision}
         decision={modal.decision}
         loading={isSaving}
+        generatingFeedback={isGeneratingFeedback}
         onClose={closeDecision}
         onConfirm={saveDecision}
+        onGenerateFeedback={generateFeedback}
       />
     </>
   );

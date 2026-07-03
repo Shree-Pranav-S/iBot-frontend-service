@@ -40,13 +40,14 @@ export function groupCandidatesByIdentity(
   return order.map((key) => {
     const group = groups.get(key)!;
     if (group.length === 1) {
-      return group[0];
+      return { ...group[0], enrollments: group };
     }
 
     const primary = pickPrimaryEnrollment(group);
 
     return {
       ...primary,
+      enrollments: group,
       resume_parse_status: group.some(
         (enrollment) => enrollment.resume_parse_status === 'PENDING',
       )

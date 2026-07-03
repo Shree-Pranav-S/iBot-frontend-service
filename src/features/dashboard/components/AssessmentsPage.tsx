@@ -48,7 +48,7 @@ import {
 } from '../utils/gridCapacity';
 
 const CANDIDATES_PAGE_SIZE = 5;
-type StatusFilter = 'all' | 'active' | 'draft' | 'closed';
+type StatusFilter = 'all' | 'active' | 'closed';
 type SortOption = 'newest' | 'start' | 'title';
 
 const ASSESSMENT_PALETTES = [
@@ -282,9 +282,7 @@ export const AssessmentsPage: React.FC = () => {
     if (statusFilter === 'closed') {
       return sortedAssessments.filter((assessment) => assessment.status === 'CLOSED');
     }
-    return sortedAssessments.filter(
-      (assessment) => assessment.status === 'DRAFT' || assessment.status === 'PROCESSING',
-    );
+    return sortedAssessments;
   }, [sortedAssessments, statusFilter]);
 
   const campaignPageCount = Math.max(1, Math.ceil(filteredAssessments.length / campaignPageSize));
@@ -619,7 +617,6 @@ export const AssessmentsPage: React.FC = () => {
     const filters: Array<{ value: StatusFilter; label: string; dot: string }> = [
       { value: 'all', label: 'All', dot: 'bg-slate-400' },
       { value: 'active', label: 'Active', dot: 'bg-emerald-500' },
-      { value: 'draft', label: 'Draft', dot: 'bg-amber-500' },
       { value: 'closed', label: 'Closed', dot: 'bg-slate-500' },
     ];
 

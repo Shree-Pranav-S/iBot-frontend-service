@@ -47,9 +47,20 @@ import {
   ClipboardList,
   UserCheck,
   UserX,
+  Search,
 } from 'lucide-react';
 
 const PAGE_SIZE = 15;
+const AVATAR_GRADIENTS = [
+  'from-violet-500 to-fuchsia-500',
+  'from-indigo-500 to-blue-600',
+  'from-orange-400 to-rose-500',
+  'from-sky-500 to-blue-600',
+  'from-indigo-500 to-violet-600',
+];
+
+const candidateEnrollments = (candidate: CandidateAssessmentListItem) =>
+  candidate.enrollments?.length ? candidate.enrollments : [candidate];
 
 export const CandidatesPage: React.FC = () => {
   const { error: toastError, success: toastSuccess } = useToast();
@@ -58,8 +69,9 @@ export const CandidatesPage: React.FC = () => {
   // Fetch assessments for dropdown selector
   const { data: assessments = [], isLoading: loadingCampaigns } = useAssessments();
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
-  const searchQuery = '';
 
   const instanceNumbers = useMemo(
     () => buildAssessmentInstanceNumbers(assessments),
@@ -67,6 +79,16 @@ export const CandidatesPage: React.FC = () => {
   );
   const assessmentSelectOptions = useMemo(
     () => buildAssessmentSelectOptions(assessments, instanceNumbers),
+    [assessments, instanceNumbers],
+  );
+  const assessmentLabels = useMemo(
+    () =>
+      new Map(
+        assessments.map((assessment) => [
+          assessment.id,
+          formatAssessmentTitle(assessment, instanceNumbers),
+        ]),
+      ),
     [assessments, instanceNumbers],
   );
 
@@ -88,7 +110,9 @@ export const CandidatesPage: React.FC = () => {
     requestDecision,
     closeDecision,
     saveDecision,
+    generateFeedback,
     isSaving: isSavingDecision,
+    isGeneratingFeedback,
   } = useEvaluationDecision();
 
   // Candidate detail and document modal states
@@ -100,6 +124,12 @@ export const CandidatesPage: React.FC = () => {
   const activeCandidate = selectedCandidate
     ? displayCandidates.find((candidate) => candidate.id === selectedCandidate.id) ?? selectedCandidate
     : null;
+  const activeCandidateEnrollments = activeCandidate
+    ? candidateEnrollments(activeCandidate)
+    : [];
+  const selectedCandidateEnrollments = selectedCandidate
+    ? candidateEnrollments(selectedCandidate)
+    : [];
   const {
     data: candidateEvaluation,
     isLoading: loadingCandidateEvaluation,
@@ -259,12 +289,6 @@ export const CandidatesPage: React.FC = () => {
     );
   }, [enrolledAssessmentIds, assessments, instanceNumbers]);
 
-  useEffect(() => {
-    if (enrollAssessmentId && enrolledAssessmentIds.has(enrollAssessmentId)) {
-      setEnrollAssessmentId('');
-    }
-  }, [enrollAssessmentId, enrolledAssessmentIds]);
-
   const resetEnrollModal = () => {
     setEnrollCandidateId('');
     setEnrollAssessmentId('');
@@ -363,17 +387,17 @@ export const CandidatesPage: React.FC = () => {
     let classes = 'bg-slate-100 text-slate-600 border-slate-200';
     let dotClass = 'bg-slate-400';
     if (status === 'EVALUATED') {
-      classes = 'bg-teal-50 text-teal-600 border-teal-200';
-      dotClass = 'bg-teal-500';
-    } else if (status === 'COMPLETED') {
-      classes = 'bg-emerald-50 text-emerald-600 border-emerald-200';
+      classes = 'bg-emerald-50 text-emerald-700 border-emerald-200';
       dotClass = 'bg-emerald-500';
+    } else if (status === 'COMPLETED') {
+      classes = 'bg-sky-50 text-sky-700 border-sky-200';
+      dotClass = 'bg-sky-500';
     } else if (status === 'IN_PROGRESS') {
       classes = 'bg-blue-50 text-blue-600 border-blue-200';
       dotClass = 'bg-blue-500';
     }
     return (
-      <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-all hover:scale-105 cursor-default ${classes}`}>
+      <span className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-bold transition-all hover:scale-105 ${classes}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
         {status}
       </span>
@@ -392,7 +416,7 @@ export const CandidatesPage: React.FC = () => {
       dotClass = 'bg-red-500';
     }
     return (
-      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-bold border transition-all hover:scale-105 cursor-default ${classes}`}>
+      <span className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-bold transition-all hover:scale-105 ${classes}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
         {d === 'APPROVED' ? 'HIRED' : d}
       </span>
@@ -405,19 +429,36 @@ export const CandidatesPage: React.FC = () => {
   const filteredCandidates = useMemo(
     () =>
       displayCandidates.filter((c) => {
-        const q = searchQuery.toLowerCase();
-        return (
+        const q = searchQuery.trim().toLowerCase();
+        const enrollmentSearchText = candidateEnrollments(c)
+          .flatMap((enrollment) => [
+            enrollment.role_name,
+            enrollment.assessment_id
+              ? assessmentLabels.get(enrollment.assessment_id)
+              : '',
+          ])
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        const matchesSearch = (
           c.full_name?.toLowerCase().includes(q) ||
           c.email?.toLowerCase().includes(q) ||
-          (c.role_name || selectedAssessment?.role_name || '').toLowerCase().includes(q)
+          (c.role_name || selectedAssessment?.role_name || '').toLowerCase().includes(q) ||
+          enrollmentSearchText.includes(q)
         );
+        const matchesStatus =
+          selectedStatus === 'all' ||
+          candidateEnrollments(c).some((enrollment) => enrollment.status === selectedStatus);
+        return matchesSearch && matchesStatus;
       }),
-    [displayCandidates, searchQuery, selectedAssessment?.role_name],
+    [
+      assessmentLabels,
+      displayCandidates,
+      searchQuery,
+      selectedAssessment?.role_name,
+      selectedStatus,
+    ],
   );
-
-  useEffect(() => {
-    setPage(0);
-  }, [selectedCampaignId, searchQuery]);
 
   const totalPages = Math.ceil(filteredCandidates.length / PAGE_SIZE);
   const currentPage = Math.min(page, Math.max(totalPages - 1, 0));
@@ -427,19 +468,44 @@ export const CandidatesPage: React.FC = () => {
   );
 
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* ── Header Bar & Toolbar ─────────────────────────────────────────── */}
-      <div className="ibot-section-toolbar relative z-20 mb-4 flex flex-shrink-0 flex-col justify-between gap-3 p-3 md:flex-row md:items-center">
-        <div className="flex flex-wrap items-center gap-3 flex-1">
-          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
-            <Users className="h-4 w-4 text-emerald-500" />
-            Candidates
-          </h2>
+      <div className="relative z-20 mb-4 flex flex-shrink-0 flex-col justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_12px_32px_-24px_rgba(15,23,42,0.35)] md:flex-row md:items-center">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <label className="group relative min-w-[260px] flex-1 xl:max-w-[360px]">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setPage(0);
+              }}
+              placeholder="Search by name, email, or role..."
+              aria-label="Search candidates"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-xs font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setPage(0);
+                }}
+                aria-label="Clear candidate search"
+                className="absolute right-3 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </label>
 
-          {/* Campaign Filter Selector */}
           <CustomSelect
             value={selectedCampaignId}
-            onChange={setSelectedCampaignId}
+            onChange={(value) => {
+              setSelectedCampaignId(value);
+              setPage(0);
+            }}
             options={
               loadingCampaigns
                 ? [{ value: 'all', label: 'Loading…' }]
@@ -451,12 +517,27 @@ export const CandidatesPage: React.FC = () => {
                   ]
             }
             disabled={loadingCampaigns}
-            buttonClassName="min-w-[160px]"
+            buttonClassName="!h-12 min-w-[190px] !px-4"
+          />
+
+          <CustomSelect
+            value={selectedStatus}
+            onChange={(value) => {
+              setSelectedStatus(value);
+              setPage(0);
+            }}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'IN_PROGRESS', label: 'In Progress' },
+              { value: 'COMPLETED', label: 'Completed' },
+              { value: 'EVALUATED', label: 'Evaluated' },
+            ]}
+            buttonClassName="!h-12 min-w-[145px] !px-4"
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 shrink-0">
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={() => {
               if (assessments.length === 0) {
@@ -466,7 +547,7 @@ export const CandidatesPage: React.FC = () => {
               resetManualModal();
               setShowManualModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-[11px] font-bold text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+            className="inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 px-5 text-xs font-bold text-white shadow-[0_12px_24px_-14px_rgba(5,150,105,0.7)] transition-all hover:-translate-y-0.5 hover:from-emerald-700 hover:to-green-700 hover:shadow-lg active:translate-y-0 active:scale-[0.97]"
           >
             <Plus className="h-3.5 w-3.5" />
             Add
@@ -480,7 +561,7 @@ export const CandidatesPage: React.FC = () => {
               resetEnrollModal();
               setShowEnrollModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-[11px] font-bold text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:translate-y-0 active:scale-[0.97]"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Enroll
@@ -493,7 +574,7 @@ export const CandidatesPage: React.FC = () => {
               }
               setShowUploadModal(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 py-2 text-[11px] font-bold text-white hover:bg-emerald-700 transition-all shadow-sm hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+            className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:translate-y-0 active:scale-[0.97]"
             id="upload-csv-btn"
           >
             <Upload className="h-3.5 w-3.5" />
@@ -503,7 +584,7 @@ export const CandidatesPage: React.FC = () => {
       </div>
 
       {/* ── Table Container ──────────────────────────────────────────────── */}
-      <div className="ibot-section-surface ibot-candidates-surface flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_38px_-28px_rgba(15,23,42,0.35)]">
         {loadingCandidates ? (
           <div className="flex-1 flex flex-col items-center justify-center">
             <Loader2 className="h-7 w-7 text-emerald-500 animate-spin mb-2" />
@@ -531,13 +612,13 @@ export const CandidatesPage: React.FC = () => {
         ) : (
           <div className="ibot-scrollbar flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
-                <tr className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  <th className="px-4 py-3 cursor-pointer hover:text-slate-700 transition-colors">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 backdrop-blur">
+                <tr className="h-14 text-[10px] font-extrabold uppercase tracking-[0.09em] text-slate-500">
+                  <th className="cursor-pointer px-5 py-3 transition-colors hover:text-slate-700">
                     Candidate <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
                   </th>
                   <th className="px-4 py-3 cursor-pointer hover:text-slate-700 transition-colors">
-                    Role <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
+                    Assessments <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
                   </th>
                   <th className="px-4 py-3 cursor-pointer hover:text-slate-700 transition-colors">
                     Resume <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
@@ -550,13 +631,13 @@ export const CandidatesPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {visibleCandidates.map((c) => (
+                {visibleCandidates.map((c, candidateIndex) => (
                   <tr
                     key={c.id}
-                    className="group h-16 cursor-pointer transition-colors hover:bg-white/75 focus-within:bg-white/75"
+                    className="group h-[72px] cursor-pointer bg-white transition-colors hover:bg-emerald-50/30 focus-within:bg-emerald-50/30"
                     onClick={() => openCandidateDetails(c)}
                   >
-                    <td className="px-4 py-2">
+                    <td className="px-5 py-2">
                       <button
                         type="button"
                         onClick={(event) => {
@@ -567,12 +648,12 @@ export const CandidatesPage: React.FC = () => {
                         aria-label={`View full details for ${c.full_name}`}
                       >
                         {/* Avatar container with 2px ring highlight on hover */}
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 border border-emerald-200/50 text-emerald-600 font-bold text-[11px] shrink-0 group-hover:ring-2 group-hover:ring-emerald-300 transition-all duration-300">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-sm transition-all duration-300 group-hover:ring-2 group-hover:ring-emerald-300 group-hover:ring-offset-2 ${AVATAR_GRADIENTS[candidateIndex % AVATAR_GRADIENTS.length]}`}>
                           {c.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-800 text-xs truncate group-hover:text-emerald-700 transition-colors">{c.full_name}</p>
-                          <p className="text-[10px] text-slate-400 flex items-center gap-0.5 mt-0.5 font-medium truncate">
+                          <p className="truncate text-xs font-extrabold text-slate-900 transition-colors group-hover:text-emerald-700">{c.full_name}</p>
+                          <p className="mt-1 flex items-center gap-1 truncate text-[10px] font-medium text-slate-500">
                             <Mail className="h-3 w-3 shrink-0" />
                             {c.email}
                           </p>
@@ -580,21 +661,48 @@ export const CandidatesPage: React.FC = () => {
                       </button>
                     </td>
                     <td className="px-4 py-2">
-                      <span className="inline-flex items-center gap-1 rounded-md border border-emerald-100 bg-emerald-50/60 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 transition-all hover:scale-105">
-                        <Briefcase className="h-2.5 w-2.5 shrink-0" />
-                        {(c.role_name || selectedAssessment?.role_name) ?? '—'}
-                      </span>
+                      <div className="space-y-1">
+                        {candidateEnrollments(c).slice(0, 2).map((enrollment) => (
+                          <div
+                            key={enrollment.id}
+                            className="flex max-w-[240px] items-center gap-1.5 truncate text-[10px] font-bold text-slate-700"
+                            title={
+                              (enrollment.assessment_id
+                                ? assessmentLabels.get(enrollment.assessment_id)
+                                : undefined) ||
+                              enrollment.role_name ||
+                              'Assessment'
+                            }
+                          >
+                            <Briefcase className="h-3 w-3 shrink-0 text-indigo-500" />
+                            <span className="truncate">
+                              {(enrollment.assessment_id
+                                ? assessmentLabels.get(enrollment.assessment_id)
+                                : undefined) ||
+                                enrollment.role_name ||
+                                'Assessment'}
+                            </span>
+                          </div>
+                        ))}
+                        {candidateEnrollments(c).length > 2 && (
+                          <p className="pl-4.5 text-[9px] font-black text-indigo-600">
+                            +{candidateEnrollments(c).length - 2} more
+                          </p>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-all hover:scale-105 ${
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold border transition-all hover:scale-105 ${
                           c.resume_parse_status === 'COMPLETED'
                             ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                             : 'bg-amber-50 text-amber-600 border-amber-100'
                         }`}
                       >
                         <FileText className="h-2.5 w-2.5 shrink-0" />
-                        {c.resume_parse_status}
+                        {candidateEnrollments(c).length > 1
+                          ? `${candidateEnrollments(c).length} files`
+                          : c.resume_parse_status}
                       </span>
                     </td>
                     <td className="px-4 py-2">
@@ -611,38 +719,51 @@ export const CandidatesPage: React.FC = () => {
                       >
                         <button
                           onClick={() => openCandidateResume(c)}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.97]"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.97]"
                           aria-label={`View ${c.full_name}'s resume`}
                         >
                           <FileText className="h-3 w-3" />
-                          Resume
+                          {candidateEnrollments(c).length > 1
+                            ? `Resumes (${candidateEnrollments(c).length})`
+                            : 'Resume'}
                         </button>
 
-                        {c.jd_text && (
+                        {candidateEnrollments(c).some((enrollment) => enrollment.jd_text) && (
                           <button
                             onClick={() => openCandidateJd(c)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 active:scale-[0.97]"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 active:scale-[0.97]"
                             aria-label={`View the job description for ${c.full_name}`}
                           >
                             <Briefcase className="h-3 w-3" />
-                            JD
+                            {candidateEnrollments(c).length > 1 ? 'JDs' : 'JD'}
                           </button>
                         )}
 
-                        {c.status === 'EVALUATED' && (
+                        {candidateEnrollments(c).some((enrollment) => enrollment.status === 'EVALUATED') && (
                           <button
-                            onClick={() => navigate(`/candidates/${c.id}/report`)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-[10px] font-bold text-indigo-700 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-100 active:scale-[0.97]"
+                            onClick={() => {
+                              const evaluated = candidateEnrollments(c).filter(
+                                (enrollment) => enrollment.status === 'EVALUATED',
+                              );
+                              if (evaluated.length === 1) {
+                                navigate(`/candidates/${evaluated[0].id}/report`);
+                              } else {
+                                openCandidateDetails(c);
+                              }
+                            }}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:scale-[0.97]"
                             aria-label={`View ${c.full_name}'s evaluation report`}
                           >
                             <ClipboardList className="h-3 w-3" />
-                            Report
+                            {candidateEnrollments(c).filter((enrollment) => enrollment.status === 'EVALUATED').length > 1
+                              ? 'Reports'
+                              : 'Report'}
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteCandidate(c.id)}
                           disabled={deleteMutation.isPending}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-red-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-90 disabled:opacity-30"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-red-500 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-90 disabled:opacity-30"
                           aria-label={`Delete ${c.full_name}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -657,7 +778,7 @@ export const CandidatesPage: React.FC = () => {
         )}
 
         {/* Table Footer with Pagination Controls */}
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200 flex-shrink-0 text-xs font-semibold text-slate-500">
+        <div className="flex flex-shrink-0 items-center justify-between border-t border-slate-200 bg-slate-50/80 px-5 py-3 text-xs font-semibold text-slate-500">
           <div>
             {filteredCandidates.length > 0
               ? `Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, filteredCandidates.length)} of ${filteredCandidates.length} candidates`
@@ -700,11 +821,11 @@ export const CandidatesPage: React.FC = () => {
             className="ibot-modal max-h-[calc(100vh-2rem)] max-w-3xl !overflow-hidden"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-500 via-sky-400 to-indigo-500" />
 
-            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white via-emerald-50/45 to-cyan-50/45 px-6 py-4">
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white via-emerald-50/45 to-indigo-50/35 px-6 py-4">
               <div className="flex min-w-0 items-center gap-3.5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-emerald-300 shadow-lg shadow-slate-900/15">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-800 ring-1 ring-emerald-200">
                   {activeCandidate.full_name
                     .split(/\s+/)
                     .filter(Boolean)
@@ -737,75 +858,77 @@ export const CandidatesPage: React.FC = () => {
               </button>
             </header>
 
-            <div className="min-h-0 overflow-hidden px-6 py-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
-                  {
-                    label: 'Campaign',
-                    value:
-                      (() => {
-                        const assessment = assessments.find(
-                          (item) => item.id === activeCandidate.assessment_id,
-                        );
-                        if (assessment) {
-                          return formatAssessmentTitle(assessment, instanceNumbers);
-                        }
-                        return selectedAssessment?.title || 'All campaigns';
-                      })(),
-                  },
-                  { label: 'Role', value: activeCandidate.role_name || selectedAssessment?.role_name || 'Not assigned' },
-                  { label: 'Interview', value: activeCandidate.status.replace(/_/g, ' ') },
-                  { label: 'Resume', value: activeCandidate.resume_parse_status.replace(/_/g, ' ') },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
-                    <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
-                    <p className="mt-1 truncate text-xs font-bold text-slate-800" title={item.value}>{item.value}</p>
-                  </div>
+            <div className="ibot-scrollbar min-h-0 overflow-y-auto px-6 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-black text-slate-900">Assessment enrollments</h3>
+                  <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                    Documents and reports remain scoped to the assessment they belong to.
+                  </p>
+                </div>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
+                  {activeCandidateEnrollments.length} {activeCandidateEnrollments.length === 1 ? 'assessment' : 'assessments'}
+                </span>
+              </div>
+
+              <div className="mt-3 grid gap-2">
+                {activeCandidateEnrollments.map((enrollment) => (
+                  <article
+                    key={enrollment.id}
+                    className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-xs font-black text-slate-900">
+                          {(enrollment.assessment_id
+                            ? assessmentLabels.get(enrollment.assessment_id)
+                            : undefined) ||
+                            enrollment.role_name ||
+                            'Assessment'}
+                        </p>
+                        {getStatusBadge(enrollment.status)}
+                        {getDecisionBadge(enrollment.recruiter_decision)}
+                      </div>
+                      <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                        {enrollment.role_name || 'Role not assigned'} · Resume {enrollment.resume_parse_status.toLowerCase()}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openCandidateResume(enrollment)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600 hover:border-indigo-200 hover:text-indigo-700"
+                      >
+                        <FileText className="h-3 w-3" />
+                        Resume
+                      </button>
+                      {enrollment.jd_text && (
+                        <button
+                          type="button"
+                          onClick={() => openCandidateJd(enrollment)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600 hover:border-blue-200 hover:text-blue-700"
+                        >
+                          <Briefcase className="h-3 w-3" />
+                          JD
+                        </button>
+                      )}
+                      {enrollment.status === 'EVALUATED' && (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/candidates/${enrollment.id}/report`)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-[10px] font-black text-white hover:bg-indigo-700"
+                        >
+                          <ClipboardList className="h-3 w-3" />
+                          Report
+                        </button>
+                      )}
+                    </div>
+                  </article>
                 ))}
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-3.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-emerald-600" />
-                      <h3 className="text-xs font-black text-slate-900">Resume intelligence</h3>
-                    </div>
-                    {typeof activeCandidate.resume_parsed?.experience_years === 'number' && (
-                      <span className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[9px] font-black text-emerald-700">
-                        {activeCandidate.resume_parsed.experience_years} yrs
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-[10px] font-medium leading-4 text-slate-600">
-                    {activeCandidate.resume_parsed?.summary || 'Resume details are still being prepared.'}
-                  </p>
-                  <div className="mt-2 flex min-h-5 flex-wrap gap-1">
-                    {(activeCandidate.resume_parsed?.skills || []).slice(0, 6).map((skill) => (
-                      <span key={skill} className="rounded-md border border-emerald-100 bg-white px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
-                        {skill}
-                      </span>
-                    ))}
-                    {(activeCandidate.resume_parsed?.skills?.length || 0) > 6 && (
-                      <span className="px-1 py-0.5 text-[9px] font-bold text-slate-400">
-                        +{(activeCandidate.resume_parsed?.skills?.length || 0) - 6} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-white p-3.5">
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-cyan-700" />
-                    <h3 className="text-xs font-black text-slate-900">Job description</h3>
-                  </div>
-                  <p className="mt-2 line-clamp-4 whitespace-pre-line text-[10px] font-medium leading-4 text-slate-600">
-                    {activeCandidate.jd_text || 'No job description is attached to this campaign.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/75 via-white to-cyan-50/60 p-3.5">
+              {activeCandidateEnrollments.length === 1 && (
+              <div className="mt-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/75 via-white to-blue-50/60 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <ClipboardList className="h-4 w-4 text-indigo-600" />
@@ -850,7 +973,9 @@ export const CandidatesPage: React.FC = () => {
                   </div>
                 )}
               </div>
+              )}
 
+              {activeCandidateEnrollments.length === 1 && (
               <div className="mt-3 flex items-center gap-4 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2 text-[9px] font-semibold text-slate-500">
                 <span className="inline-flex items-center gap-1.5">
                   <CalendarClock className="h-3.5 w-3.5 text-slate-400" />
@@ -861,6 +986,7 @@ export const CandidatesPage: React.FC = () => {
                   Completed: {formatDateTime(activeCandidate.interview_ended_at)}
                 </span>
               </div>
+              )}
             </div>
 
             <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/90 px-6 py-3.5">
@@ -871,19 +997,21 @@ export const CandidatesPage: React.FC = () => {
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700"
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  Resume
+                  {activeCandidateEnrollments.length > 1
+                    ? `All resumes (${activeCandidateEnrollments.length})`
+                    : 'Resume'}
                 </button>
-                {activeCandidate.jd_text && (
+                {activeCandidateEnrollments.some((enrollment) => enrollment.jd_text) && (
                   <button
                     type="button"
                     onClick={() => openCandidateJd(activeCandidate)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:text-cyan-700"
                   >
                     <Briefcase className="h-3.5 w-3.5" />
-                    JD
+                    {activeCandidateEnrollments.length > 1 ? 'All JDs' : 'JD'}
                   </button>
                 )}
-                {activeCandidate.status === 'EVALUATED' && (
+                {activeCandidateEnrollments.length === 1 && activeCandidate.status === 'EVALUATED' && (
                   <button
                     type="button"
                     onClick={() => navigate(`/candidates/${activeCandidate.id}/report`)}
@@ -896,7 +1024,7 @@ export const CandidatesPage: React.FC = () => {
                 )}
               </div>
 
-              {activeCandidate.status === 'EVALUATED' && (
+              {activeCandidateEnrollments.length === 1 && activeCandidate.status === 'EVALUATED' && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -1231,10 +1359,12 @@ export const CandidatesPage: React.FC = () => {
             <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
-                  <FileText className="h-4 w-4 text-emerald-500 animate-pulse" />
-                  Candidate Resume: {selectedCandidate.full_name}
+                  <FileText className="h-4 w-4 text-indigo-500" />
+                  Candidate resumes: {selectedCandidate.full_name}
                 </h2>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-bold">Email: {selectedCandidate.email}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-bold">
+                  {selectedCandidate.email} · {selectedCandidateEnrollments.length} assessment-specific {selectedCandidateEnrollments.length === 1 ? 'file' : 'files'}
+                </p>
               </div>
               <button
                 onClick={() => { setShowResumeModal(false); setSelectedCandidate(null); }}
@@ -1244,56 +1374,76 @@ export const CandidatesPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="ibot-scrollbar p-6 overflow-y-auto space-y-4 text-xs">
-              {selectedCandidate.resume_file_path && (
-                <div className="text-[10px] text-slate-400 mb-2 font-bold">
-                  File name: <span className="font-mono">{selectedCandidate.resume_file_path}</span>
-                </div>
-              )}
-
-              {selectedCandidate.resume_parse_status === 'PENDING' ? (
-                <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-center animate-pulse font-bold">
-                  Resume parsing is in progress. Please check back in a few seconds.
-                </div>
-              ) : selectedCandidate.resume_parse_status === 'FAILED' || !selectedCandidate.resume_parsed ? (
-                <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-center font-bold">
-                  Failed to parse resume details.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {selectedCandidate.resume_parsed.summary && (
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                      <h4 className="font-bold text-slate-800 mb-1.5 text-xs">Technical Summary</h4>
-                      <p className="text-slate-600 leading-relaxed font-bold">{selectedCandidate.resume_parsed.summary}</p>
+            <div className="ibot-scrollbar space-y-4 overflow-y-auto p-6 text-xs">
+              {selectedCandidateEnrollments.map((enrollment) => (
+                <section
+                  key={enrollment.id}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                >
+                  <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-black text-slate-900">
+                        {(enrollment.assessment_id
+                          ? assessmentLabels.get(enrollment.assessment_id)
+                          : undefined) ||
+                          enrollment.role_name ||
+                          'Assessment'}
+                      </p>
+                      <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500">
+                        {enrollment.resume_file_path || 'Resume file'} · {enrollment.resume_parse_status.toLowerCase()}
+                      </p>
                     </div>
-                  )}
+                    <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
+                  </header>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedCandidate.resume_parsed.skills && selectedCandidate.resume_parsed.skills.length > 0 && (
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                        <h4 className="font-bold text-slate-800 mb-2 text-xs">Technical Skills</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedCandidate.resume_parsed.skills.map((skill: string, index: number) => (
-                            <span key={index} className="rounded bg-white border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 transition-all hover:scale-105 cursor-default">
-                              {skill}
+                  <div className="p-4">
+                    {enrollment.resume_parse_status === 'PENDING' ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center font-bold text-amber-800">
+                        Resume parsing is in progress. Please check back shortly.
+                      </div>
+                    ) : enrollment.resume_parse_status === 'FAILED' || !enrollment.resume_parsed ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center font-bold text-red-800">
+                        Resume details could not be parsed.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {enrollment.resume_parsed.summary && (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+                            <h4 className="mb-1.5 text-xs font-bold text-slate-800">Technical summary</h4>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                              {enrollment.resume_parsed.summary}
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-[1fr_120px] gap-3">
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5">
+                            <h4 className="mb-2 text-xs font-bold text-slate-800">Technical skills</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {(enrollment.resume_parsed.skills || []).map((skill) => (
+                                <span key={skill} className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-600">
+                                  {skill}
+                                </span>
+                              ))}
+                              {!enrollment.resume_parsed.skills?.length && (
+                                <span className="text-[10px] font-semibold text-slate-400">No skills extracted</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/70 p-3 text-center">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500">Experience</span>
+                            <span className="mt-1 font-display text-2xl font-black text-indigo-700">
+                              {typeof enrollment.resume_parsed.experience_years === 'number'
+                                ? enrollment.resume_parsed.experience_years
+                                : '—'}
                             </span>
-                          ))}
+                            <span className="text-[9px] font-bold text-indigo-500">years estimated</span>
+                          </div>
                         </div>
                       </div>
                     )}
-
-                    {typeof selectedCandidate.resume_parsed.experience_years === 'number' && (
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col justify-center items-center text-center transition-all hover:border-emerald-300">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Experience</span>
-                        <span className="text-2xl font-black text-emerald-600 mt-1">
-                          {selectedCandidate.resume_parsed.experience_years}
-                        </span>
-                        <span className="text-[10px] text-slate-500 mt-0.5 font-bold">Years Est.</span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              )}
+                </section>
+              ))}
             </div>
 
             <div className="border-t border-slate-100 p-4 shrink-0 flex justify-end bg-slate-50/50">
@@ -1315,10 +1465,12 @@ export const CandidatesPage: React.FC = () => {
             <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
-                  <Briefcase className="h-4 w-4 text-emerald-500 animate-pulse" />
-                  Job Description
+                  <Briefcase className="h-4 w-4 text-blue-600" />
+                  Assessment job descriptions
                 </h2>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-bold">Campaign Role: {selectedCandidate.role_name}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-bold">
+                  {selectedCandidate.full_name} · {selectedCandidateEnrollments.length} {selectedCandidateEnrollments.length === 1 ? 'assessment' : 'assessments'}
+                </p>
               </div>
               <button
                 onClick={() => { setShowJdModal(false); setSelectedCandidate(null); }}
@@ -1328,10 +1480,26 @@ export const CandidatesPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="ibot-scrollbar p-6 overflow-y-auto space-y-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
-                {selectedCandidate.jd_text || "No job description text available."}
-              </div>
+            <div className="ibot-scrollbar space-y-4 overflow-y-auto p-6">
+              {selectedCandidateEnrollments.map((enrollment) => (
+                <section key={enrollment.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  <header className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-black text-slate-900">
+                      {(enrollment.assessment_id
+                        ? assessmentLabels.get(enrollment.assessment_id)
+                        : undefined) ||
+                        enrollment.role_name ||
+                        'Assessment'}
+                    </p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                      {enrollment.role_name || 'Role not assigned'}
+                    </p>
+                  </header>
+                  <div className="whitespace-pre-wrap p-4 text-xs font-medium leading-relaxed text-slate-700">
+                    {enrollment.jd_text || 'No job description text is available for this assessment.'}
+                  </div>
+                </section>
+              ))}
             </div>
 
             <div className="border-t border-slate-100 p-4 shrink-0 flex justify-end bg-slate-50/50">
@@ -1385,7 +1553,10 @@ export const CandidatesPage: React.FC = () => {
                   ) : (
                     <CustomSelect
                       value={enrollCandidateId}
-                      onChange={setEnrollCandidateId}
+                      onChange={(value) => {
+                        setEnrollCandidateId(value);
+                        setEnrollAssessmentId('');
+                      }}
                       options={uniqueCandidates.map((candidate) => ({
                         value: candidate.id,
                         label: candidate.full_name,
@@ -1481,8 +1652,10 @@ export const CandidatesPage: React.FC = () => {
         currentDecision={decisionModal.currentDecision}
         decision={decisionModal.decision}
         loading={isSavingDecision}
+        generatingFeedback={isGeneratingFeedback}
         onClose={closeDecision}
         onConfirm={saveDecision}
+        onGenerateFeedback={generateFeedback}
       />
     </div>
   );

@@ -1,5 +1,8 @@
 import { useCallback, useState } from 'react';
-import { useUpdateCandidateDecision } from '../../../hooks/queries';
+import {
+  useGenerateRejectionFeedback,
+  useUpdateCandidateDecision,
+} from '../../../hooks/queries';
 import { useToast } from '../../../hooks/useToast';
 
 export type RecruiterDecision = 'APPROVED' | 'REJECTED';
@@ -101,6 +104,10 @@ export const decisionMeta = (decision: string | null | undefined) => {
 
 export const useEvaluationDecision = () => {
   const { mutateAsync, isPending } = useUpdateCandidateDecision();
+  const {
+    mutateAsync: generateFeedbackMutation,
+    isPending: isGeneratingFeedback,
+  } = useGenerateRejectionFeedback();
   const { success, error: showError } = useToast();
   const [modal, setModal] = useState<{
     open: boolean;
@@ -163,11 +170,26 @@ export const useEvaluationDecision = () => {
     [closeDecision, modal, mutateAsync, showError, success],
   );
 
+  const generateFeedback = useCallback(async () => {
+    try {
+      const result = await generateFeedbackMutation(modal.candidateId);
+      return result.feedback;
+    } catch (error: unknown) {
+      showError(
+        'Unable to draft feedback',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+      return undefined;
+    }
+  }, [generateFeedbackMutation, modal.candidateId, showError]);
+
   return {
     modal,
     requestDecision,
     closeDecision,
     saveDecision,
+    generateFeedback,
     isSaving: isPending,
+    isGeneratingFeedback,
   };
 };

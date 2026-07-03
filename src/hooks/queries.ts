@@ -12,6 +12,7 @@ import type {
   BulkUploadResponse,
   InterviewEvaluationResponse,
   RecruiterDecisionResponse,
+  AIRejectionFeedbackResponse,
   RecruiterEvaluationListItem,
   SingleCandidateResponse,
   ExistingCandidateListItem,
@@ -144,6 +145,17 @@ export const useUpdateCandidateDecision = () => {
     },
   });
 };
+
+export const useGenerateRejectionFeedback = () =>
+  useMutation<AIRejectionFeedbackResponse, Error, string>({
+    mutationFn: async (candidateId) => {
+      const response = await candidateService.generateRejectionFeedback(candidateId);
+      if (!response.success || !response.data) {
+        throw new Error(response.message || "Failed to generate rejection feedback");
+      }
+      return response.data;
+    },
+  });
 
 export const useCreateCandidate = () => {
   const client = useQueryClient();

@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  AlertTriangle,
   ArrowRight,
+  ArrowUpRight,
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
-  ChevronRight,
-  ClipboardCheck,
+  CircleAlert,
+  Clock3,
   FileCheck2,
+  ListChecks,
   Plus,
-  Sparkles,
-  Target,
+  Radio,
   TrendingUp,
   UserCheck,
   Users,
@@ -19,17 +19,47 @@ import {
 import { useAuth } from '../../../hooks/useAuth';
 import { useAssessments, useCandidates, useRecruiterEvaluations } from '../../../hooks/queries';
 import type { RecruiterEvaluationListItem } from '../../../types/candidate.types';
-import { decisionMeta, recommendationMeta, scoreTextClass } from './evaluationUiUtils';
-import { StatusPill } from './EvaluationUI';
+import {
+  clampScore,
+  decisionMeta,
+  recommendationMeta,
+  scoreTextClass,
+} from './evaluationUiUtils';
+
+const DAY_IN_MS = 86_400_000;
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
+const formatRelativeDate = (value: string) => {
+  const days = Math.floor((Date.now() - new Date(value).getTime()) / DAY_IN_MS);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return formatDate(value);
+};
+
 const daysUntil = (value: string) =>
-  Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000);
+  Math.ceil((new Date(value).getTime() - Date.now()) / DAY_IN_MS);
 
 const pluralize = (value: number, singular: string, plural = `${singular}s`) =>
   `${value} ${value === 1 ? singular : plural}`;
+
+// Hard caps keep the page within one viewport — re-check the no-scroll
+// guarantee on a 1024x700 window before raising these.
+const MAX_RECENT_EVALUATIONS = 3;
+const MAX_DEADLINES = 2;
+
+const heroClass = 'dashboard-surface-hero';
+const kpiClass = 'dashboard-surface-kpi';
+const panelClass = 'dashboard-surface-panel';
+
+const kpiIconTones = [
+  { well: 'bg-emerald-100 text-emerald-700', hover: 'group-hover:bg-emerald-200' },
+  { well: 'bg-blue-100 text-blue-700', hover: 'group-hover:bg-blue-200' },
+  { well: 'bg-violet-100 text-violet-700', hover: 'group-hover:bg-violet-200' },
+  { well: 'bg-amber-100 text-amber-700', hover: 'group-hover:bg-amber-200' },
+] as const;
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -41,399 +71,642 @@ export const DashboardPage: React.FC = () => {
   const firstName = user?.full_name?.split(' ')[0] || 'Recruiter';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const todayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date());
 
-  const {
-    activeAssessments,
-    totalCandidates,
-    pendingDecisionCount,
-    closingSoonCount,
-    recentEvaluations,
-    pipelineStages,
-    stats,
-    priorityTitle,
-    priorityCopy,
-  } = useMemo(() => {
-    const active = assessments
+  const dashboard = useMemo(() => {
+    const activeAssessments = assessments
       .filter((assessment) => assessment.status === 'ACTIVE')
       .sort(
         (left, right) =>
           new Date(left.window_end).getTime() - new Date(right.window_end).getTime(),
       );
 
-    const total = candidates.length;
-    const inProgress = candidates.filter(
-      (candidate) => candidate.status === 'IN_PROGRESS',
-    ).length;
-    const invited = candidates.filter((candidate) =>
-      ['INVITED', 'WAITING_ROOM'].includes(candidate.status),
-    ).length;
-    const completed = candidates.filter(
-      (candidate) => candidate.status === 'COMPLETED',
-    ).length;
-    const evaluated = candidates.filter(
-      (candidate) => candidate.status === 'EVALUATED',
-    ).length;
-    const pending = evaluations.filter(
+    const stageCounts = {
+      invited: candidates.filter((candidate) =>
+        ['INVITED', 'WAITING_ROOM'].includes(candidate.status),
+      ).length,
+      interviewing: candidates.filter(
+        (candidate) => candidate.status === 'IN_PROGRESS',
+      ).length,
+      awaitingEvaluation: candidates.filter(
+        (candidate) => candidate.status === 'COMPLETED',
+      ).length,
+      evaluated: candidates.filter(
+        (candidate) => candidate.status === 'EVALUATED',
+      ).length,
+    };
+
+    const pendingDecisions = evaluations.filter(
       (evaluation) => evaluation.recruiter_decision === 'PENDING',
     ).length;
-    const hired = evaluations.filter(
+    const approvedDecisions = evaluations.filter(
       (evaluation) => evaluation.recruiter_decision === 'APPROVED',
     ).length;
-    const closingSoon = active.filter(
+    const rejectedDecisions = evaluations.filter(
+      (evaluation) => evaluation.recruiter_decision === 'REJECTED',
+    ).length;
+    const closingSoon = activeAssessments.filter(
       (assessment) => daysUntil(assessment.window_end) <= 3,
     ).length;
+    const completedInterviews = stageCounts.awaitingEvaluation + stageCounts.evaluated;
+    const completionRate = candidates.length
+      ? Math.round((completedInterviews / candidates.length) * 100)
+      : 0;
+    const averageScore = evaluations.length
+      ? evaluations.reduce((sum, evaluation) => sum + clampScore(evaluation.overall_score), 0) /
+        evaluations.length
+      : 0;
 
-    const recent = [...evaluations]
+    const recentEvaluations = [...evaluations]
       .sort(
         (left, right) =>
           new Date(right.generated_at).getTime() - new Date(left.generated_at).getTime(),
       )
-      .slice(0, 3);
+      .slice(0, MAX_RECENT_EVALUATIONS);
 
-    const stages = [
+    const pipelineStages = [
       {
         label: 'Invited',
-        value: invited,
-        color: 'bg-slate-500',
-        card: 'border-slate-200 bg-slate-50/80',
-        text: 'text-slate-700',
+        description: 'Invitation sent',
+        value: stageCounts.invited,
+        barClass: 'bg-emerald-300',
       },
       {
         label: 'Interviewing',
-        value: inProgress,
-        color: 'bg-cyan-500',
-        card: 'border-cyan-100 bg-cyan-50/75',
-        text: 'text-cyan-700',
+        description: 'Live or in progress',
+        value: stageCounts.interviewing,
+        barClass: 'bg-emerald-500',
+        live: true,
       },
       {
-        label: 'Awaiting evaluation',
-        value: completed,
-        color: 'bg-indigo-500',
-        card: 'border-indigo-100 bg-indigo-50/75',
-        text: 'text-indigo-700',
+        label: 'Awaiting report',
+        description: 'Interview complete',
+        value: stageCounts.awaitingEvaluation,
+        barClass: 'bg-teal-500',
       },
       {
         label: 'Evaluated',
-        value: evaluated,
-        color: 'bg-emerald-500',
-        card: 'border-emerald-100 bg-emerald-50/75',
-        text: 'text-emerald-700',
+        description: 'Report available',
+        value: stageCounts.evaluated,
+        barClass: 'bg-emerald-500',
       },
     ];
 
-    const dashboardStats = [
+    const stats = [
       {
-        label: 'Active campaigns',
-        value: active.length,
-        helper: `${assessments.length} total campaigns`,
+        label: 'Active assessments',
+        value: activeAssessments.length,
+        helper:
+          closingSoon > 0
+            ? `${pluralize(closingSoon, 'window')} closing soon`
+            : `${assessments.length} total created`,
         icon: BriefcaseBusiness,
         to: '/assessments',
-        card: 'border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50',
-        iconClass: 'bg-emerald-600 text-white shadow-emerald-200',
-        valueClass: 'text-emerald-800',
+        attention: closingSoon > 0,
       },
       {
         label: 'Candidates',
-        value: total,
-        helper: `${inProgress} interviewing now`,
+        value: candidates.length,
+        helper:
+          stageCounts.interviewing > 0
+            ? `${stageCounts.interviewing} interviewing now`
+            : `${stageCounts.invited} awaiting interview`,
         icon: Users,
         to: '/candidates',
-        card: 'border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-sky-50',
-        iconClass: 'bg-cyan-600 text-white shadow-cyan-200',
-        valueClass: 'text-cyan-800',
       },
       {
-        label: 'Evaluation reports',
-        value: evaluations.length,
-        helper: `${hired} hired`,
-        icon: FileCheck2,
-        to: '/evaluations',
-        card: 'border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-violet-50',
-        iconClass: 'bg-indigo-600 text-white shadow-indigo-200',
-        valueClass: 'text-indigo-800',
+        label: 'Interview completion',
+        value: `${completionRate}%`,
+        helper: `${completedInterviews} of ${candidates.length} completed`,
+        icon: TrendingUp,
+        to: '/candidates',
       },
       {
         label: 'Pending decisions',
-        value: pending,
-        helper: pending > 0 ? 'Recruiter review required' : 'All caught up',
-        icon: ClipboardCheck,
+        value: pendingDecisions,
+        helper:
+          pendingDecisions > 0
+            ? `${evaluations.length} reports available`
+            : evaluations.length > 0
+              ? 'Review queue is clear'
+              : 'No reports yet',
+        icon: ListChecks,
         to: '/evaluations',
-        card: 'border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50',
-        iconClass: 'bg-amber-500 text-white shadow-amber-200',
-        valueClass: 'text-amber-800',
+        attention: pendingDecisions > 0,
       },
     ];
 
-    const title =
-      pending > 0
-        ? `${pluralize(pending, 'hiring decision')} ready for review`
-        : active.length > 0
-          ? 'Your hiring workspace is on track'
-          : 'Launch your first hiring campaign';
-
-    const copy =
-      pending > 0
-        ? 'Review completed evaluations while interview evidence is fresh and move the strongest candidates forward.'
-        : active.length > 0
-          ? 'Monitor campaign deadlines and candidate movement from one focused workspace.'
-          : 'Create an assessment to begin inviting and evaluating candidates.';
+    const priority =
+      pendingDecisions > 0
+        ? {
+            title: `${pluralize(pendingDecisions, 'decision')} ready for review`,
+            copy: 'The latest interview evidence is in. Review reports and keep strong candidates moving.',
+          }
+        : closingSoon > 0
+          ? {
+              title: `${pluralize(closingSoon, 'assessment')} closing soon`,
+              copy: 'Check candidate coverage before the remaining interview windows close.',
+            }
+          : activeAssessments.length > 0
+            ? {
+                title: 'Your hiring pipeline is on track',
+                copy: 'Candidate activity, evaluations, and campaign deadlines — all in one view.',
+              }
+            : {
+                title: 'Build your first interview assessment',
+                copy: 'Create a role, define the interview plan, and begin inviting candidates.',
+              };
 
     return {
-      activeAssessments: active,
-      totalCandidates: total,
-      inProgressCount: inProgress,
-      invitedCount: invited,
-      completedCount: completed,
-      evaluatedCount: evaluated,
-      pendingDecisionCount: pending,
-      hiredCount: hired,
-      closingSoonCount: closingSoon,
-      recentEvaluations: recent,
-      pipelineStages: stages,
-      stats: dashboardStats,
-      priorityTitle: title,
-      priorityCopy: copy,
+      activeAssessments,
+      averageScore,
+      approvedDecisions,
+      closingSoon,
+      completionRate,
+      pipelineStages,
+      pendingDecisions,
+      priority,
+      recentEvaluations,
+      rejectedDecisions,
+      stageCounts,
+      stats,
     };
   }, [assessments, candidates, evaluations]);
 
+  const maxPipelineValue = Math.max(
+    1,
+    ...dashboard.pipelineStages.map((stage) => stage.value),
+  );
+
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 overflow-hidden">
-      <section className="relative overflow-hidden rounded-2xl border border-emerald-900/20 bg-gradient-to-r from-slate-950 via-emerald-950 to-teal-900 shadow-xl shadow-slate-900/15">
-        <div className="pointer-events-none absolute -right-14 -top-24 h-64 w-64 rounded-full bg-cyan-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-52 w-52 rounded-full bg-emerald-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.45)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.45)_1px,transparent_1px)] [background-size:30px_30px]" />
-
-        <div className="relative flex min-h-[96px] items-center justify-between gap-6 px-5 py-3.5 lg:px-6">
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-              {greeting}, {firstName}
-            </p>
-            <h2 className="mt-1.5 truncate font-display text-xl font-black tracking-tight text-white lg:text-2xl">
-              {priorityTitle}
-            </h2>
-            <p className="mt-1 max-w-2xl truncate text-[11px] font-medium text-slate-300 lg:text-xs">
-              {priorityCopy}
-            </p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <NavLink
-              to="/assessments"
-              className="hidden h-9 items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 text-[10px] font-black text-white transition-colors hover:bg-white/15 sm:inline-flex"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New assessment
-            </NavLink>
-            <NavLink
-              to={pendingDecisionCount > 0 ? '/evaluations' : '/candidates'}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-400 px-3.5 text-[10px] font-black text-slate-950 shadow-lg shadow-emerald-950/30 transition-colors hover:bg-emerald-300"
-            >
-              {pendingDecisionCount > 0 ? <UserCheck className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
-              {pendingDecisionCount > 0 ? 'Review decisions' : 'Open candidates'}
-              <ArrowRight className="h-3 w-3" />
-            </NavLink>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <NavLink
-              key={stat.label}
-              to={stat.to}
-              className={`group flex min-h-[82px] items-center gap-3 rounded-2xl border px-4 py-2.5 shadow-sm transition-colors hover:border-emerald-200 hover:shadow-md ${stat.card}`}
-            >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-lg ${stat.iconClass}`}>
-                <Icon className="h-[18px] w-[18px]" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[9px] font-black uppercase tracking-[0.11em] text-slate-500">
-                  {stat.label}
+    <div className="dashboard-viewport h-full min-h-0 overflow-hidden">
+      <div className="mx-auto grid h-full w-full max-w-[1680px] grid-rows-[auto_auto_minmax(0,1fr)] gap-3">
+        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        <section
+          className={`dashboard-card dashboard-enter relative overflow-hidden ${heroClass}`}
+        >
+          <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_84%_30%,rgba(16,185,129,0.12),transparent_62%)] lg:block" />
+          <div className="relative flex flex-col justify-between gap-3 px-6 py-3 sm:flex-row sm:items-center lg:px-7">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                  <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                  </span>
+                  {greeting}, {firstName}
                 </p>
-                {loading ? (
-                  <div className="mt-1.5 h-6 w-12 rounded ibot-shimmer" />
+                <span className="hidden h-3 w-px bg-slate-200 sm:block" />
+                <p className="text-xs font-medium text-slate-400">{todayLabel}</p>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <h2 className="font-display text-xl font-extrabold tracking-[-0.03em] text-slate-950">
+                  {dashboard.priority.title}
+                </h2>
+                <p className="hidden max-w-xl truncate text-[13px] font-medium text-slate-500 md:block">
+                  {dashboard.priority.copy}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2.5">
+              <NavLink
+                to="/assessments"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                <Plus className="h-4 w-4 text-slate-400" />
+                New assessment
+              </NavLink>
+              <NavLink
+                to={dashboard.pendingDecisions > 0 ? '/evaluations' : '/candidates'}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-emerald-700 px-4 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(6,95,70,0.24)] transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+              >
+                {dashboard.pendingDecisions > 0 ? (
+                  <UserCheck className="h-4 w-4" />
                 ) : (
-                  <p className={`mt-0.5 font-display text-2xl font-black ${stat.valueClass}`}>
-                    {stat.value}
-                  </p>
+                  <Users className="h-4 w-4" />
                 )}
-                <p className="truncate text-[9px] font-semibold text-slate-500">{stat.helper}</p>
-              </div>
-              <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-600" />
-            </NavLink>
-          );
-        })}
-      </section>
-
-      <section className="grid min-h-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
-        <article className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-100 bg-gradient-to-br from-white via-sky-50/35 to-indigo-50/45 shadow-sm">
-          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-cyan-100 bg-gradient-to-r from-cyan-50/90 via-white to-indigo-50/80 px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-md shadow-cyan-200">
-                <TrendingUp className="h-4 w-4" />
-              </span>
-              <div>
-                <h3 className="text-sm font-black text-slate-950">Candidate pipeline</h3>
-                <p className="mt-0.5 text-[10px] font-semibold text-cyan-700">Movement and recently completed intelligence</p>
-              </div>
-            </div>
-            <NavLink
-              to="/candidates"
-              className="inline-flex items-center gap-1 text-[9px] font-black text-cyan-700 transition-colors hover:text-cyan-900"
-            >
-              Open pipeline <ArrowRight className="h-3 w-3" />
-            </NavLink>
-          </header>
-
-          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-2.5 p-3">
-            <div className="grid grid-cols-4 gap-2">
-              {pipelineStages.map((stage) => {
-                const percentage = totalCandidates
-                  ? Math.max((stage.value / totalCandidates) * 100, stage.value > 0 ? 5 : 0)
-                  : 0;
-                return (
-                  <div key={stage.label} className={`min-w-0 rounded-xl border px-3 py-2.5 ${stage.card}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[9px] font-black text-slate-500">{stage.label}</p>
-                      <span className={`text-base font-black ${stage.text}`}>{loading ? '–' : stage.value}</span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white shadow-inner">
-                      <div className={`h-full rounded-full transition-all duration-700 ${stage.color}`} style={{ width: `${percentage}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-indigo-100 bg-white shadow-sm">
-              <div className="flex shrink-0 items-center justify-between border-b border-indigo-100 bg-indigo-50/50 px-3.5 py-2">
-                <div className="flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.1em] text-indigo-800">Recent evaluations</p>
-                </div>
-                <NavLink to="/evaluations" className="text-[9px] font-black text-indigo-600 hover:text-indigo-800">
-                  View all
-                </NavLink>
-              </div>
-
-              {evaluationsLoading ? (
-                <div className="grid min-h-0 flex-1 grid-rows-3 gap-2 p-2.5">
-                  {[0, 1, 2].map((item) => (
-                    <div key={item} className="rounded-lg ibot-shimmer" />
-                  ))}
-                </div>
-              ) : recentEvaluations.length === 0 ? (
-                <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 text-center">
-                  <FileCheck2 className="h-7 w-7 text-slate-300" />
-                  <p className="mt-2 text-[10px] font-black text-slate-700">No evaluation reports yet</p>
-                  <p className="mt-1 text-[9px] text-slate-400">Completed interview reports will appear here.</p>
-                </div>
-              ) : (
-                <div
-                  className="grid min-h-0 flex-1 divide-y divide-slate-100"
-                  style={{
-                    gridTemplateRows: `repeat(${recentEvaluations.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {recentEvaluations.map((evaluation) => (
-                    <EvaluationRow key={evaluation.candidate_assessment_id} evaluation={evaluation} />
-                  ))}
-                </div>
-              )}
+                {dashboard.pendingDecisions > 0 ? 'Review decisions' : 'View candidates'}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </NavLink>
             </div>
           </div>
-        </article>
+        </section>
 
-        <article className="hidden min-h-0 flex-col overflow-hidden rounded-2xl border border-amber-100 bg-gradient-to-br from-white via-amber-50/30 to-rose-50/35 shadow-sm md:flex">
-          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-amber-100 bg-gradient-to-r from-amber-50/90 via-white to-rose-50/70 px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-200">
-                <CalendarClock className="h-4 w-4" />
-              </span>
-              <div>
-                <h3 className="text-sm font-black text-slate-950">Campaign deadlines</h3>
-                <p className="mt-0.5 text-[10px] font-semibold text-amber-700">Windows requiring attention soonest</p>
+        {/* ── KPI strip (single segmented card) ────────────────────────── */}
+        <section
+          className={`dashboard-card grid grid-cols-2 overflow-hidden lg:grid-cols-4 ${kpiClass}`}
+          style={{ animationDelay: '80ms' }}
+          aria-label="Hiring overview"
+        >
+          {dashboard.stats.map((stat, index) => {
+            const Icon = stat.icon;
+            const tone = kpiIconTones[index] ?? kpiIconTones[0];
+            return (
+              <NavLink
+                key={stat.label}
+                to={stat.to}
+                className={`group relative flex flex-col justify-center px-6 py-3 transition-all duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 xl:px-7 border-slate-200/60 ${
+                  index % 2 === 1 ? 'border-l lg:border-l' : ''
+                } ${index >= 2 ? 'border-t lg:border-t-0' : ''} ${
+                  index > 0 ? 'lg:border-l' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    {stat.label}
+                  </span>
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${tone.well} ${tone.hover}`}
+                  >
+                    <Icon
+                      className={`h-3.5 w-3.5 transition-colors ${
+                        stat.attention ? 'text-amber-600' : ''
+                      }`}
+                    />
+                  </span>
+                </div>
+                {loading ? (
+                  <span className="mt-2 block h-8 w-16 rounded-md ibot-shimmer" />
+                ) : (
+                  <span className="mt-1 block font-display text-[26px] font-extrabold leading-8 tracking-tight text-slate-950">
+                    {stat.value}
+                  </span>
+                )}
+                <span
+                  className={`mt-0.5 flex items-center gap-1 text-xs font-medium ${
+                    stat.attention ? 'text-amber-700' : 'text-slate-400'
+                  }`}
+                >
+                  <span className="truncate">{stat.helper}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                </span>
+              </NavLink>
+            );
+          })}
+        </section>
+
+        {/* ── Panels row (fills remaining height) ──────────────────────── */}
+        <section className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,1fr)_minmax(300px,0.82fr)]">
+          {/* Candidate flow */}
+          <article
+            className={`dashboard-card dashboard-panel-candidate flex min-h-0 flex-col overflow-hidden ${panelClass}`}
+            style={{ animationDelay: '170ms' }}
+          >
+            <PanelHeader
+              title="Candidate flow"
+              subtitle="Where candidates are in the interview process"
+              to="/candidates"
+              action="Open pipeline"
+              accentClass="dashboard-panel-accent-emerald"
+            />
+
+            <div className="grid min-h-0 flex-1 gap-5 px-6 py-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+              <div className="flex min-w-0 flex-col gap-3">
+                <div className="flex flex-1 flex-col justify-evenly gap-3">
+                  {dashboard.pipelineStages.map((stage, index) => (
+                    <div
+                      key={stage.label}
+                      className="grid grid-cols-[128px_minmax(0,1fr)_36px] items-center gap-4"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {stage.live && stage.value > 0 && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dashboard-live-dot" />
+                          )}
+                          <p className="truncate text-[13px] font-semibold text-slate-700">
+                            {stage.label}
+                          </p>
+                        </div>
+                        <p className="truncate text-[11px] font-medium text-slate-400">
+                          {stage.description}
+                        </p>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/60">
+                        {!loading && (
+                          <div
+                            className={`dashboard-pipeline-bar h-full rounded-full ${stage.barClass}`}
+                            style={{
+                              width: `${(stage.value / maxPipelineValue) * 100}%`,
+                              animationDelay: `${240 + index * 90}ms`,
+                            }}
+                          />
+                        )}
+                      </div>
+                      <p className="text-right font-display text-[15px] font-extrabold text-slate-900">
+                        {loading ? '—' : stage.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex shrink-0 items-center justify-between rounded-xl bg-white/80 px-4 py-2 ring-1 ring-inset ring-slate-200/80">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                      Interviews completed
+                    </p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-700">
+                      {dashboard.stageCounts.awaitingEvaluation + dashboard.stageCounts.evaluated}{' '}
+                      of {candidates.length} candidates
+                    </p>
+                  </div>
+                  <span className="font-display text-sm font-extrabold text-emerald-700">
+                    {dashboard.completionRate}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="hidden items-center justify-center border-l border-slate-100 pl-6 sm:flex">
+                <CompletionGauge value={dashboard.completionRate} />
               </div>
             </div>
-            {closingSoonCount > 0 && (
-              <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[8px] font-black text-rose-700">
-                {closingSoonCount} urgent
-              </span>
-            )}
-          </header>
+          </article>
 
-          <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-2.5 p-3">
-            {assessmentsLoading ? (
-              <div className="grid min-h-0 grid-rows-3 gap-2">
+          {/* Evaluation intelligence */}
+          <article
+            className={`dashboard-card dashboard-panel-evaluation flex min-h-0 flex-col overflow-hidden ${panelClass}`}
+            style={{ animationDelay: '210ms' }}
+          >
+            <PanelHeader
+              title="Evaluation intelligence"
+              subtitle="Recent reports and hiring outcomes"
+              to="/evaluations"
+              action="View all"
+              accentClass="dashboard-panel-accent-indigo"
+            />
+
+            <div className="dashboard-score-band shrink-0 border-b border-slate-200/70 px-6 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-baseline gap-2">
+                  <p className="font-display text-[26px] font-extrabold leading-8 tracking-tight text-slate-950">
+                    {evaluationsLoading ? '—' : dashboard.averageScore.toFixed(1)}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-400">/ 10 average score</p>
+                </div>
+                <p className="text-xs font-medium text-slate-400">
+                  {pluralize(evaluations.length, 'report')}
+                </p>
+              </div>
+              <DecisionMixBar
+                pending={dashboard.pendingDecisions}
+                approved={dashboard.approvedDecisions}
+                rejected={dashboard.rejectedDecisions}
+              />
+            </div>
+
+            {evaluationsLoading ? (
+              <div className="grid min-h-0 flex-1 grid-rows-3 gap-3 p-5">
                 {[0, 1, 2].map((item) => (
                   <div key={item} className="rounded-xl ibot-shimmer" />
                 ))}
               </div>
-            ) : activeAssessments.length === 0 ? (
-              <div className="flex min-h-0 flex-col items-center justify-center rounded-xl border border-dashed border-amber-200 bg-white/70 p-4 text-center">
-                <BriefcaseBusiness className="h-7 w-7 text-slate-300" />
-                <p className="mt-2 text-[10px] font-black text-slate-700">No active campaigns</p>
-                <p className="mt-1 text-[9px] text-slate-400">Activate an assessment to begin.</p>
+            ) : dashboard.recentEvaluations.length === 0 ? (
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 text-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                  <FileCheck2 className="h-5 w-5" />
+                </span>
+                <p className="mt-3 text-[13px] font-semibold text-slate-700">
+                  No evaluation reports yet
+                </p>
+                <p className="mt-1 max-w-[240px] text-xs leading-5 text-slate-400">
+                  Completed interview reports will appear here automatically.
+                </p>
               </div>
             ) : (
-              <div
-                className="grid min-h-0 gap-1.5"
-                style={{
-                  gridTemplateRows: `repeat(${Math.min(activeAssessments.length, 3)}, minmax(0, 1fr))`,
-                }}
-              >
-                {activeAssessments.slice(0, 3).map((assessment) => (
-                  <DeadlineRow
-                    key={assessment.id}
-                    title={assessment.title}
-                    role={assessment.role_name}
-                    endDate={assessment.window_end}
-                  />
+              <div className="min-h-0 flex-1 divide-y divide-slate-100 overflow-hidden">
+                {dashboard.recentEvaluations.map((evaluation) => (
+                  <EvaluationRow key={evaluation.candidate_assessment_id} evaluation={evaluation} />
                 ))}
               </div>
             )}
+          </article>
 
-            <div className="grid grid-cols-2 gap-2.5 border-t border-amber-100 pt-2.5">
-              {[
-                {
-                  to: '/evaluations',
-                  icon: UserCheck,
-                  label: 'Review decisions',
-                  sub: `${pendingDecisionCount} pending`,
-                  classes: 'border-rose-100 bg-rose-50/80 text-rose-700 hover:border-rose-200',
-                },
-                {
-                  to: '/assessments',
-                  icon: CheckCircle2,
-                  label: 'Manage campaigns',
-                  sub: `${activeAssessments.length} active`,
-                  classes: 'border-emerald-100 bg-emerald-50/80 text-emerald-700 hover:border-emerald-200',
-                },
-              ].map((action) => {
-                const Icon = action.icon;
-                return (
+          {/* Priority queue */}
+          <article
+            className={`dashboard-card dashboard-panel-priority flex min-h-0 flex-col overflow-hidden ${panelClass}`}
+            style={{ animationDelay: '250ms' }}
+          >
+            <PanelHeader
+              title="Priority queue"
+              subtitle="What needs your attention next"
+              accentClass="dashboard-panel-accent-amber"
+            />
+
+            <div className="flex min-h-0 flex-1 flex-col px-5 py-3">
+              <NavLink
+                to="/evaluations"
+                className={`group flex shrink-0 items-center gap-3 rounded-xl border p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  dashboard.pendingDecisions > 0
+                    ? 'border-emerald-200/80 bg-emerald-50/60 hover:bg-emerald-50'
+                    : 'border-slate-200/80 bg-slate-50 hover:bg-slate-100'
+                }`}
+              >
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+                    dashboard.pendingDecisions > 0
+                      ? 'bg-emerald-700 text-white shadow-sm'
+                      : 'bg-white text-emerald-700 ring-1 ring-inset ring-slate-200'
+                  }`}
+                >
+                  {dashboard.pendingDecisions > 0 ? (
+                    <UserCheck className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold text-slate-800">
+                    {dashboard.pendingDecisions > 0
+                      ? 'Review hiring decisions'
+                      : 'Decision queue is clear'}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-500">
+                    {dashboard.pendingDecisions > 0
+                      ? `${pluralize(dashboard.pendingDecisions, 'candidate report')} waiting`
+                      : 'No recruiter action required'}
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+              </NavLink>
+
+              {dashboard.stageCounts.interviewing > 0 && (
+                <NavLink
+                  to="/candidates"
+                  className="mt-2.5 flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                    <Radio className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-xs font-semibold">
+                    {pluralize(dashboard.stageCounts.interviewing, 'interview')} in progress
+                  </span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dashboard-live-dot" />
+                </NavLink>
+              )}
+
+              <div className="mt-4 flex shrink-0 items-center justify-between px-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-400">
+                  Campaign deadlines
+                </p>
+                {dashboard.closingSoon > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-100">
+                    <CircleAlert className="h-3 w-3" />
+                    {dashboard.closingSoon} soon
+                  </span>
+                )}
+              </div>
+
+              {assessmentsLoading ? (
+                <div className="mt-2.5 grid min-h-0 flex-1 grid-rows-2 gap-2.5">
+                  {[0, 1].map((item) => (
+                    <div key={item} className="rounded-xl ibot-shimmer" />
+                  ))}
+                </div>
+              ) : dashboard.activeAssessments.length === 0 ? (
+                <div className="mt-2.5 flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-center">
+                  <CalendarClock className="h-5 w-5 text-slate-300" />
+                  <p className="mt-2 text-xs font-semibold text-slate-600">No active campaigns</p>
                   <NavLink
-                    key={action.label}
-                    to={action.to}
-                    className={`group flex min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:shadow-sm ${action.classes}`}
+                    to="/assessments"
+                    className="mt-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900"
                   >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-[10px] font-black text-slate-800">{action.label}</span>
-                      <span className="mt-0.5 block truncate text-[9px] font-semibold opacity-70">{action.sub}</span>
-                    </span>
+                    Create an assessment
                   </NavLink>
-                );
-              })}
+                </div>
+              ) : (
+                <div className="mt-1.5 flex min-h-0 flex-1 flex-col justify-start gap-1 overflow-hidden">
+                  {dashboard.activeAssessments.slice(0, MAX_DEADLINES).map((assessment) => (
+                    <DeadlineRow
+                      key={assessment.id}
+                      title={assessment.title}
+                      role={assessment.role_name}
+                      endDate={assessment.window_end}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <NavLink
+                to="/assessments"
+                className="mt-auto inline-flex shrink-0 items-center justify-center gap-1.5 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500 transition-colors hover:text-emerald-800"
+              >
+                Manage all assessments
+                <ArrowRight className="h-3.5 w-3.5" />
+              </NavLink>
             </div>
-          </div>
-        </article>
-      </section>
+          </article>
+        </section>
+      </div>
+    </div>
+  );
+};
+
+const PanelHeader: React.FC<{
+  title: string;
+  subtitle: string;
+  to?: string;
+  action?: string;
+  accentClass?: string;
+}> = ({ title, subtitle, to, action, accentClass }) => (
+  <header
+    className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 px-6 py-3 ${accentClass ?? ''}`}
+  >
+    <div className="min-w-0">
+      <h3 className="truncate font-display text-sm font-bold tracking-[-0.01em] text-slate-900">
+        {title}
+      </h3>
+      <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">{subtitle}</p>
+    </div>
+    {to && action && (
+      <NavLink
+        to={to}
+        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-900"
+      >
+        {action}
+        <ArrowRight className="h-3.5 w-3.5" />
+      </NavLink>
+    )}
+  </header>
+);
+
+const CompletionGauge: React.FC<{ value: number }> = ({ value }) => {
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(100, Math.max(0, value));
+
+  return (
+    <div className="text-center">
+      <div
+        className="relative mx-auto h-[92px] w-[92px]"
+        role="img"
+        aria-label={`${progress}% interview completion`}
+      >
+        <svg className="h-full w-full -rotate-90" viewBox="0 0 92 92" aria-hidden="true">
+          <circle cx="46" cy="46" r={radius} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+          <circle
+            className="dashboard-gauge-ring"
+            cx="46"
+            cy="46"
+            r={radius}
+            fill="none"
+            stroke="#059669"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - progress / 100)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="font-display text-lg font-extrabold text-slate-950">{progress}%</span>
+        </div>
+      </div>
+      <p className="mt-1.5 text-xs font-semibold text-slate-700">Completion</p>
+      <p className="mt-0.5 text-[11px] font-medium text-slate-400">All candidates</p>
+    </div>
+  );
+};
+
+const DecisionMixBar: React.FC<{
+  pending: number;
+  approved: number;
+  rejected: number;
+}> = ({ pending, approved, rejected }) => {
+  const total = pending + approved + rejected;
+  const percent = (value: number) => (total ? (value / total) * 100 : 0);
+
+  return (
+    <div className="mt-2">
+      <div
+        className="flex h-1.5 gap-px overflow-hidden rounded-full bg-slate-100"
+        role="img"
+        aria-label={`${approved} hired, ${pending} pending, ${rejected} rejected`}
+      >
+        {total > 0 && (
+          <>
+            <span className="rounded-full bg-emerald-500" style={{ width: `${percent(approved)}%` }} />
+            <span className="rounded-full bg-amber-400" style={{ width: `${percent(pending)}%` }} />
+            <span className="rounded-full bg-rose-400" style={{ width: `${percent(rejected)}%` }} />
+          </>
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-slate-500">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Hired {approved}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+          Pending {pending}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+          Rejected {rejected}
+        </span>
+      </div>
     </div>
   );
 };
@@ -453,36 +726,50 @@ const EvaluationRow: React.FC<{ evaluation: RecruiterEvaluationListItem }> = ({ 
   return (
     <NavLink
       to={`/candidates/${evaluation.candidate_assessment_id}/report`}
-      className="group grid min-h-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-2 transition-colors hover:bg-indigo-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-400"
+      className="group flex items-center gap-3 px-6 py-2.5 transition-all duration-200 hover:bg-slate-50/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
       aria-label={`Open ${evaluation.candidate_name}'s evaluation report`}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-[10px] font-black text-emerald-300">
-          {initials}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[11px] font-black text-slate-900 group-hover:text-indigo-800">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-extrabold text-emerald-800 ring-1 ring-inset ring-emerald-200">
+        {initials}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-[13px] font-semibold text-slate-900 group-hover:text-emerald-800">
             {evaluation.candidate_name}
           </p>
-          <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[9px] font-semibold text-slate-500">{evaluation.role_name}</span>
-            <span className="hidden lg:inline-flex"><StatusPill {...recommendation} /></span>
-          </div>
+          <CompactStatus {...recommendation} />
+          <span className="hidden 2xl:inline-flex">
+            <CompactStatus {...decision} />
+          </span>
         </div>
+        <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">
+          {evaluation.role_name} · {formatRelativeDate(evaluation.generated_at)}
+        </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <span className={`text-sm font-black ${scoreTextClass(evaluation.overall_score)}`}>
-          {evaluation.overall_score.toFixed(1)}
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span
+          className={`font-display text-[15px] font-extrabold ${scoreTextClass(evaluation.overall_score)}`}
+        >
+          {clampScore(evaluation.overall_score).toFixed(1)}
         </span>
-        <span className="hidden xl:inline-flex"><StatusPill {...decision} /></span>
-        <span className="flex h-7 items-center gap-1 rounded-lg px-2 text-[9px] font-black text-indigo-600 transition-colors group-hover:bg-indigo-50">
-          Open
-          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-        </span>
+        <ArrowRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700" />
       </div>
     </NavLink>
   );
 };
+
+const CompactStatus: React.FC<{
+  label: string;
+  className: string;
+  dot: string;
+}> = ({ label, className, dot }) => (
+  <span
+    className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-semibold ${className}`}
+  >
+    <span className={`h-1 w-1 rounded-full ${dot}`} />
+    {label}
+  </span>
+);
 
 const DeadlineRow: React.FC<{
   title: string;
@@ -492,41 +779,49 @@ const DeadlineRow: React.FC<{
   const remaining = daysUntil(endDate);
   const urgent = remaining <= 1;
   const warning = remaining <= 3;
+  const deadlineLabel =
+    remaining < 0
+      ? `${Math.abs(remaining)}d overdue`
+      : remaining === 0
+        ? 'Today'
+        : remaining === 1
+          ? '1 day'
+          : `${remaining} days`;
 
   return (
     <NavLink
       to="/assessments"
-      className={`group grid min-h-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border bg-white px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-sm ${
-        urgent
-          ? 'border-rose-200'
-          : warning
-            ? 'border-amber-200'
-            : 'border-slate-200'
-      }`}
+      className="group flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-white/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
     >
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-        urgent
-          ? 'bg-rose-50 text-rose-600'
-          : warning
-            ? 'bg-amber-50 text-amber-600'
-            : 'bg-emerald-50 text-emerald-700'
-      }`}>
-        {urgent ? <AlertTriangle className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+          urgent
+            ? 'bg-rose-50 text-rose-600'
+            : warning
+              ? 'bg-amber-50 text-amber-700'
+              : 'bg-slate-100 text-slate-500'
+        }`}
+      >
+        {urgent ? <CircleAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
       </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[11px] font-black text-slate-900 group-hover:text-emerald-800">{title}</span>
-        <span className="mt-0.5 block truncate text-[9px] font-semibold text-slate-500">
-          {role} · closes {formatDate(endDate)}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-semibold text-slate-800 group-hover:text-emerald-800">
+          {title}
+        </span>
+        <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400">
+          {role} · {formatDate(endDate)}
         </span>
       </span>
-      <span className={`rounded-lg px-2 py-1 text-[9px] font-black ${
-        urgent
-          ? 'bg-rose-50 text-rose-700'
-          : warning
-            ? 'bg-amber-50 text-amber-700'
-            : 'bg-slate-100 text-slate-600'
-      }`}>
-        {remaining <= 0 ? 'Today' : pluralize(remaining, 'day')}
+      <span
+        className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+          urgent
+            ? 'bg-rose-50 text-rose-700'
+            : warning
+              ? 'bg-amber-50 text-amber-700'
+              : 'bg-slate-100 text-slate-600'
+        }`}
+      >
+        {deadlineLabel}
       </span>
     </NavLink>
   );

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import {
@@ -204,6 +205,7 @@ const PaginationFooter: React.FC<PaginationFooterProps> = ({
 };
 
 export const AssessmentsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { error: toastError, success: toastSuccess } = useToast();
   
   // Queries & Mutations
@@ -787,7 +789,7 @@ export const AssessmentsPage: React.FC = () => {
               </div>
             ) : selectedAssessment ? (
               <div className="ibot-section-surface flex h-full flex-col overflow-hidden animate-scaleIn">
-                <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-brand-soft/60 px-5 pb-4 pt-4">
+                <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-brand-soft/60 px-5 pb-3 pt-3">
                   <div className="flex items-center justify-between gap-3">
                     <button
                       type="button"
@@ -798,42 +800,57 @@ export const AssessmentsPage: React.FC = () => {
                       All campaigns
                     </button>
 
-                    {selectedStatus && (
-                      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
-                        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wide ${selectedStatus.classes}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${selectedStatus.dot}`} />
-                          {selectedStatus.label}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleCampaignStatus(selectedAssessment.id, selectedAssessment.status)
-                          }
-                          disabled={updateStatusMutation.isPending}
-                          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[9px] font-black text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
-                          aria-label={selectedAssessment.status === 'ACTIVE' ? 'Close assessment' : 'Activate assessment'}
-                        >
-                          {updateStatusMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : selectedAssessment.status === 'ACTIVE' ? (
-                            <ToggleRight className="h-5 w-5 text-emerald-600" />
-                          ) : (
-                            <ToggleLeft className="h-5 w-5" />
-                          )}
-                          {selectedAssessment.status === 'ACTIVE' ? 'Close' : 'Activate'}
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(
+                            `/candidates?add=1&assessment=${encodeURIComponent(selectedAssessment.id)}`,
+                          )
+                        }
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-brand-charcoal px-3 text-[10px] font-black text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-md active:translate-y-0 active:scale-[0.98]"
+                      >
+                        <UserRoundPlus className="h-3.5 w-3.5" />
+                        Add candidate
+                      </button>
+
+                      {selectedStatus && (
+                        <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                          <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[8px] font-black uppercase tracking-wide ${selectedStatus.classes}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${selectedStatus.dot}`} />
+                            {selectedStatus.label}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleCampaignStatus(selectedAssessment.id, selectedAssessment.status)
+                            }
+                            disabled={updateStatusMutation.isPending}
+                            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[9px] font-black text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
+                            aria-label={selectedAssessment.status === 'ACTIVE' ? 'Close assessment' : 'Activate assessment'}
+                          >
+                            {updateStatusMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : selectedAssessment.status === 'ACTIVE' ? (
+                              <ToggleRight className="h-5 w-5 text-emerald-600" />
+                            ) : (
+                              <ToggleLeft className="h-5 w-5" />
+                            )}
+                            {selectedAssessment.status === 'ACTIVE' ? 'Close' : 'Activate'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <h2 className="font-display text-xl font-black tracking-tight text-slate-950">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <h2 className="font-display text-lg font-black tracking-tight text-slate-950">
                       {selectedAssessment.title}
                     </h2>
                     {renderInstanceBadge(selectedAssessment.id)}
                   </div>
 
-                  <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
                     {[
                        { label: 'Role name', value: selectedAssessment.role_name, icon: Briefcase, tone: 'text-brand-hover bg-brand-soft' },
                       { label: 'Duration', value: `${selectedAssessment.interview_duration_mins} minutes`, icon: Clock, tone: 'text-indigo-700 bg-indigo-50' },
@@ -842,24 +859,24 @@ export const AssessmentsPage: React.FC = () => {
                     ].map((item) => {
                       const Icon = item.icon;
                       return (
-                        <div key={item.label} className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${item.tone}`}>
-                            <Icon className="h-3.5 w-3.5" />
+                        <div key={item.label} className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-sm">
+                          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${item.tone}`}>
+                            <Icon className="h-3 w-3" />
                           </span>
                           <div className="min-w-0">
-                            <p className="text-[8px] font-black uppercase tracking-[0.13em] text-slate-400">{item.label}</p>
-                            <p className="mt-0.5 truncate text-[11px] font-black text-slate-800" title={item.value}>{item.value}</p>
+                            <p className="text-[7px] font-black uppercase tracking-[0.13em] text-slate-400">{item.label}</p>
+                            <p className="truncate text-[10px] font-black text-slate-800" title={item.value}>{item.value}</p>
                           </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="mt-3 flex w-fit gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+                  <div className="mt-2 flex w-fit gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1">
                     <button
                       type="button"
                       onClick={() => setDetailTab('overview')}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-black transition-all ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[10px] font-black transition-all ${
                         detailTab === 'overview'
                           ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
                           : 'text-slate-500 hover:text-slate-800'
@@ -871,7 +888,7 @@ export const AssessmentsPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setDetailTab('candidates')}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-black transition-all ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[10px] font-black transition-all ${
                         detailTab === 'candidates'
                           ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
                           : 'text-slate-500 hover:text-slate-800'
@@ -988,42 +1005,42 @@ export const AssessmentsPage: React.FC = () => {
                         </div>
                       </section>
 
-                      <section className="overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-sm xl:col-span-12">
-                        <header className="flex items-center justify-between gap-3 border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-orange-50 px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-200">
-                              <Layers3 className="h-4 w-4" />
+                      <section className="order-first overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-[0_16px_36px_-28px_rgba(154,106,48,0.55)] xl:col-span-12">
+                        <header className="flex items-center justify-between gap-3 border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-orange-50 px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-200">
+                              <Layers3 className="h-5 w-5" />
                             </span>
                             <div>
-                              <h3 className="text-xs font-black text-amber-950">Interview Plan</h3>
-                              <p className="mt-0.5 text-[9px] font-bold text-amber-600">Structured sequence and time allocation</p>
+                              <h3 className="text-sm font-black text-amber-950">Interview Plan</h3>
+                              <p className="mt-0.5 text-[10px] font-bold text-amber-700">Structured sequence, focus areas, and time allocation</p>
                             </div>
                           </div>
-                          <span className="rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[9px] font-black text-amber-700">
+                          <span className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[10px] font-black text-amber-700 shadow-sm">
                             {selectedAssessment.interview_plan?.total_mins ?? selectedAssessment.interview_duration_mins} min total
                           </span>
                         </header>
 
                         {selectedAssessment.interview_plan?.sections?.length ? (
-                          <div className="grid grid-cols-1 gap-2.5 p-4 md:grid-cols-2 xl:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
                             {selectedAssessment.interview_plan.sections.map((section, index) => (
-                              <div key={`${section.section_name}-${index}`} className="group rounded-xl border border-slate-200 bg-slate-50/60 p-3 transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/35 hover:shadow-sm">
-                                <div className="flex items-start gap-2.5">
-                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-[9px] font-black text-amber-700">{index + 1}</span>
+                              <div key={`${section.section_name}-${index}`} className="group min-h-[112px] rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/35 hover:shadow-md">
+                                <div className="flex items-start gap-3">
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-[11px] font-black text-amber-700">{index + 1}</span>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="min-w-0">
-                                        <p className="truncate text-[10px] font-black capitalize text-slate-800">
+                                        <p className="truncate text-xs font-black capitalize text-slate-900">
                                           {section.section_name === 'self_intro' ? 'Introduction' : section.section_name.replace(/_/g, ' ')}
                                         </p>
-                                        <p className="mt-0.5 truncate text-[8px] font-bold text-slate-400">{section.skill || 'General assessment'}</p>
+                                        <p className="mt-1 truncate text-[10px] font-bold text-slate-500">{section.skill || 'General assessment'}</p>
                                       </div>
-                                      <span className="shrink-0 rounded-md bg-white px-1.5 py-1 text-[8px] font-black text-amber-700 shadow-sm">{section.allocated_mins} min</span>
+                                      <span className="shrink-0 rounded-lg border border-amber-100 bg-white px-2 py-1 text-[10px] font-black text-amber-700 shadow-sm">{section.allocated_mins} min</span>
                                     </div>
                                     {section.expected_signals && section.expected_signals.length > 0 && (
-                                      <div className="mt-2 flex flex-wrap gap-1">
+                                      <div className="mt-3 flex flex-wrap gap-1.5">
                                         {section.expected_signals.slice(0, 2).map((signal) => (
-                                          <span key={signal} className="rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-[7px] font-bold text-slate-500">{signal}</span>
+                                          <span key={signal} className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[8px] font-bold leading-none text-slate-600">{signal}</span>
                                         ))}
                                       </div>
                                     )}

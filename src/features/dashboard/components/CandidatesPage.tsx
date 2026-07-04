@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import {
@@ -65,10 +65,13 @@ const candidateEnrollments = (candidate: CandidateAssessmentListItem) =>
 export const CandidatesPage: React.FC = () => {
   const { error: toastError, success: toastSuccess } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Fetch assessments for dropdown selector
   const { data: assessments = [], isLoading: loadingCampaigns } = useAssessments();
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all');
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
+    () => searchParams.get('assessment') || 'all',
+  );
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -192,12 +195,24 @@ export const CandidatesPage: React.FC = () => {
   };
 
   // Manual Create modal state
-  const [showManualModal, setShowManualModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(
+    () => searchParams.get('add') === '1',
+  );
   const [manualName, setManualName] = useState('');
   const [manualEmail, setManualEmail] = useState('');
-  const [manualAssessmentId, setManualAssessmentId] = useState('');
+  const [manualAssessmentId, setManualAssessmentId] = useState(
+    () => searchParams.get('assessment') || '',
+  );
   const [manualResume, setManualResume] = useState<File | null>(null);
   const createMutation = useCreateCandidate();
+
+  const clearCandidateActionParams = () => {
+    if (!searchParams.has('add') && !searchParams.has('assessment')) return;
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete('add');
+    nextSearchParams.delete('assessment');
+    setSearchParams(nextSearchParams, { replace: true });
+  };
 
   const resetManualModal = () => {
     setManualName('');
@@ -209,6 +224,7 @@ export const CandidatesPage: React.FC = () => {
   const handleCloseManual = () => {
     setShowManualModal(false);
     resetManualModal();
+    clearCandidateActionParams();
   };
 
   const handleManualCreate = async (e: React.FormEvent) => {

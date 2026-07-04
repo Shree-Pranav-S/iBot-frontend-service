@@ -5,7 +5,7 @@
  * interview plans, and focus area overrides.
  */
 
-// â”€â”€ JD Analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// JD Analysis 
 
 type InferredDifficulty = 'junior level' | 'mid-level' | 'senior level';
 
@@ -21,7 +21,7 @@ interface JDAnalysis {
   behavioural_signals: string[];
 }
 
-// â”€â”€ Interview Plan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Interview Plan 
 
 interface InterviewSection {
   section_name: string;

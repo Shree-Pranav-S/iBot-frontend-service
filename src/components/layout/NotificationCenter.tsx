@@ -63,7 +63,7 @@ export const NotificationCenter: React.FC = () => {
       <button
         type="button"
         onClick={toggleNotifications}
-        className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+        className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-default bg-white text-secondary shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
         aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={isOpen}
       >
@@ -76,7 +76,8 @@ export const NotificationCenter: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-14 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+        <div className="absolute right-0 top-[48px] z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-default bg-white shadow-[0_28px_70px_-28px_rgba(36,33,29,0.34)]">
+          <div className="h-[3px] bg-brand-accent" />
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5">
             <div>
               <p className="text-sm font-black text-slate-950">Notifications</p>
@@ -117,9 +118,9 @@ export const NotificationCenter: React.FC = () => {
                   key={notification.id}
                   type="button"
                   onClick={() => openReport(notification.candidate_assessment_id)}
-                  className="flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition last:border-b-0 hover:bg-emerald-50/60"
+                  className="flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-brand-soft/65"
                 >
-                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand-hover ring-1 ring-inset ring-default">
                     <ClipboardCheck className="h-[18px] w-[18px]" />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -129,7 +130,7 @@ export const NotificationCenter: React.FC = () => {
                     <span className="mt-1 block text-[11px] font-medium leading-relaxed text-slate-600">
                       {notification.message}
                     </span>
-                    <span className="mt-1.5 block text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                    <span className="mt-1.5 block text-[10px] font-bold uppercase tracking-wide text-brand-hover">
                       {formatNotificationTime(notification.sent_at)}
                     </span>
                   </span>

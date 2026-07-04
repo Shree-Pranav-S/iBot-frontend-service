@@ -67,11 +67,11 @@ export const CustomSelect = <T extends SelectValue,>({
           rounded-xl border bg-white px-3.5 py-2.5
           text-xs font-semibold text-slate-700 outline-none
           shadow-sm transition-all duration-150
-          hover:border-emerald-400 hover:shadow-emerald-100/70
-          focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100
+          hover:border-[#B9833F] hover:bg-[#FCFAF6] hover:shadow-[0_8px_20px_-16px_rgba(154,106,48,0.5)]
+          focus:border-[#B9833F] focus:ring-2 focus:ring-[#B9833F]/15
           disabled:cursor-not-allowed disabled:opacity-40
           ${isOpen
-            ? 'border-emerald-500 ring-2 ring-emerald-100 shadow-emerald-100/70'
+            ? 'border-[#B9833F] ring-2 ring-[#B9833F]/15 shadow-[0_8px_20px_-16px_rgba(154,106,48,0.5)]'
             : 'border-slate-200 hover:bg-slate-50/50'
           }
           ${buttonClassName}
@@ -84,7 +84,7 @@ export const CustomSelect = <T extends SelectValue,>({
         </span>
         <ChevronDown
           className={`h-3.5 w-3.5 shrink-0 transition-all duration-200 ${
-            isOpen ? 'rotate-180 text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'
+            isOpen ? 'rotate-180 text-[#9A6A30]' : 'text-slate-400 group-hover:text-[#9A6A30]'
           }`}
         />
       </button>
@@ -100,7 +100,7 @@ export const CustomSelect = <T extends SelectValue,>({
           role="listbox"
         >
           {/* Top accent line */}
-          <div className="h-0.5 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-400" />
+          <div className="h-0.5 bg-[#B9833F]" />
 
           <div className="ibot-scrollbar max-h-60 overflow-y-auto p-1.5">
             {options.length === 0 ? (
@@ -125,8 +125,8 @@ export const CustomSelect = <T extends SelectValue,>({
                       rounded-lg px-3 py-2.5 text-left
                       transition-all duration-100
                       ${isSelected
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950'
+                        ? 'bg-[#24211D] text-white'
+                        : 'text-slate-700 hover:bg-[#F4E8D6] hover:text-slate-950'
                       }
                     `}
                   >
@@ -135,13 +135,13 @@ export const CustomSelect = <T extends SelectValue,>({
                         {option.label}
                       </span>
                       {option.description && (
-                        <span className={`mt-0.5 block truncate text-[10px] font-medium ${isSelected ? 'text-emerald-200' : 'text-slate-400'}`}>
+                        <span className={`mt-0.5 block truncate text-[10px] font-medium ${isSelected ? 'text-[#E8C794]' : 'text-slate-400'}`}>
                           {option.description}
                         </span>
                       )}
                     </div>
                     {isSelected && (
-                      <Check className="ml-2 h-3.5 w-3.5 shrink-0 text-emerald-200" />
+                      <Check className="ml-2 h-3.5 w-3.5 shrink-0 text-[#E8C794]" />
                     )}
                   </button>
                 );

@@ -12,6 +12,12 @@ export default {
         primary: 'var(--text-primary)',
         secondary: 'var(--text-secondary)',
         muted: 'var(--text-muted)',
+        brand: {
+          accent: 'var(--brand-accent)',
+          hover: 'var(--brand-hover)',
+          charcoal: 'var(--brand-charcoal)',
+          soft: 'var(--brand-soft)',
+        },
         emerald: {
           50: 'var(--emerald-50)',
           400: 'var(--emerald-400)',

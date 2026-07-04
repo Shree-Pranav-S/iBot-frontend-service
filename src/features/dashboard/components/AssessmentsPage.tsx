@@ -53,52 +53,52 @@ type SortOption = 'newest' | 'start' | 'title';
 
 const ASSESSMENT_PALETTES = [
   {
-    line: 'from-emerald-500 to-teal-400',
-    icon: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-200',
-    border: 'hover:border-emerald-300',
-    title: 'group-hover:text-emerald-700',
-    wash: 'from-emerald-50/80 to-teal-50/50',
-    meta: 'text-emerald-700',
+    line: 'from-brand-charcoal to-brand-accent',
+    icon: 'bg-gradient-to-br from-brand-charcoal to-brand-hover text-white shadow-[rgba(36,33,29,0.18)]',
+    border: 'hover:border-brand-accent',
+    title: 'group-hover:text-brand-hover',
+    wash: 'from-brand-soft/80 to-white',
+    meta: 'text-brand-hover',
   },
   {
-    line: 'from-sky-500 to-cyan-400',
-    icon: 'bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sky-200',
-    border: 'hover:border-sky-300',
-    title: 'group-hover:text-sky-700',
-    wash: 'from-sky-50/80 to-cyan-50/50',
-    meta: 'text-sky-700',
+    line: 'from-brand-accent to-brand-hover',
+    icon: 'bg-gradient-to-br from-brand-accent to-brand-hover text-white shadow-[rgba(185,131,63,0.18)]',
+    border: 'hover:border-brand-accent',
+    title: 'group-hover:text-brand-hover',
+    wash: 'from-brand-soft/80 to-white',
+    meta: 'text-brand-hover',
   },
   {
-    line: 'from-violet-500 to-fuchsia-400',
-    icon: 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-violet-200',
-    border: 'hover:border-violet-300',
-    title: 'group-hover:text-violet-700',
-    wash: 'from-violet-50/80 to-fuchsia-50/50',
-    meta: 'text-violet-700',
+    line: 'from-[#8A6A45] to-brand-accent',
+    icon: 'bg-gradient-to-br from-[#8A6A45] to-brand-accent text-white shadow-[rgba(138,106,69,0.18)]',
+    border: 'hover:border-brand-accent',
+    title: 'group-hover:text-brand-hover',
+    wash: 'from-brand-soft/80 to-white',
+    meta: 'text-brand-hover',
   },
   {
-    line: 'from-orange-500 to-amber-400',
-    icon: 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-orange-200',
-    border: 'hover:border-orange-300',
-    title: 'group-hover:text-orange-700',
-    wash: 'from-orange-50/80 to-amber-50/50',
-    meta: 'text-orange-700',
+    line: 'from-[#D7AA6A] to-brand-hover',
+    icon: 'bg-gradient-to-br from-[#D7AA6A] to-brand-hover text-white shadow-[rgba(154,106,48,0.18)]',
+    border: 'hover:border-brand-accent',
+    title: 'group-hover:text-brand-hover',
+    wash: 'from-brand-soft/80 to-white',
+    meta: 'text-brand-hover',
   },
   {
-    line: 'from-teal-500 to-emerald-400',
-    icon: 'bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-teal-200',
-    border: 'hover:border-teal-300',
-    title: 'group-hover:text-teal-700',
-    wash: 'from-teal-50/80 to-emerald-50/50',
-    meta: 'text-teal-700',
+    line: 'from-brand-hover to-brand-charcoal',
+    icon: 'bg-gradient-to-br from-brand-hover to-brand-charcoal text-white shadow-[rgba(36,33,29,0.18)]',
+    border: 'hover:border-brand-accent',
+    title: 'group-hover:text-brand-hover',
+    wash: 'from-brand-soft/80 to-white',
+    meta: 'text-brand-hover',
   },
   {
-    line: 'from-rose-500 to-pink-400',
-    icon: 'bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-rose-200',
-    border: 'hover:border-rose-300',
-    title: 'group-hover:text-rose-700',
-    wash: 'from-rose-50/80 to-pink-50/50',
-    meta: 'text-rose-700',
+    line: 'from-[#5A5045] to-[#B9833F]',
+    icon: 'bg-gradient-to-br from-[#5A5045] to-brand-accent text-white shadow-[rgba(36,33,29,0.18)]',
+    border: 'hover:border-brand-accent',
+    title: 'group-hover:text-brand-hover',
+    wash: 'from-brand-soft/80 to-white',
+    meta: 'text-brand-hover',
   },
 ] as const;
 
@@ -125,8 +125,8 @@ function assessmentStatusMeta(status: AssessmentStatus) {
   if (status === 'PROCESSING') {
     return {
       label: 'Processing',
-      classes: 'border-sky-200 bg-sky-50 text-sky-700',
-      dot: 'bg-sky-500',
+      classes: 'border-amber-200 bg-amber-50 text-amber-700',
+      dot: 'bg-amber-500',
     };
   }
   return {
@@ -172,7 +172,7 @@ const PaginationFooter: React.FC<PaginationFooterProps> = ({
           type="button"
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-default bg-surface text-secondary transition-colors hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-default bg-surface text-secondary transition-colors hover:border-brand-accent hover:text-brand-hover disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -183,8 +183,8 @@ const PaginationFooter: React.FC<PaginationFooterProps> = ({
             onClick={() => onPageChange(i)}
             className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition-all ${
               i === page
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'border border-default bg-surface text-secondary hover:border-emerald-300 hover:text-emerald-700'
+                ? 'bg-brand-charcoal text-white shadow-sm'
+                : 'border border-default bg-surface text-secondary hover:border-brand-accent hover:text-brand-hover'
             }`}
           >
             {i + 1}
@@ -194,7 +194,7 @@ const PaginationFooter: React.FC<PaginationFooterProps> = ({
           type="button"
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-default bg-surface text-secondary transition-colors hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-default bg-surface text-secondary transition-colors hover:border-brand-accent hover:text-brand-hover disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -440,7 +440,7 @@ export const AssessmentsPage: React.FC = () => {
   };
 
   const inputStyles =
-    'rounded-lg border border-default bg-surface px-3 py-2.5 text-xs text-primary placeholder-secondary outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 transition-all';
+    'rounded-lg border border-default bg-surface px-3 py-2.5 text-xs text-primary placeholder-secondary outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-soft transition-all';
 
   const totalCandidates = assessmentCandidates.length;
   const completedCandidates = assessmentCandidates.filter(
@@ -458,7 +458,7 @@ export const AssessmentsPage: React.FC = () => {
     const num = instanceNumbers.get(id);
     if (!num) return null;
     return (
-      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
+      <span className="inline-flex items-center rounded-full border border-[#D8C9B5] bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold text-brand-hover">
         #{num}
       </span>
     );
@@ -481,13 +481,13 @@ export const AssessmentsPage: React.FC = () => {
           onClick={() => handleSelectAssessment(assessment.id)}
           className={`group relative flex h-full min-h-[92px] w-full flex-col justify-center overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-colors duration-200 ${
             isSelected
-              ? 'border-emerald-400 bg-emerald-50/75 shadow-md shadow-emerald-900/10'
-              : 'border-default bg-surface hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md'
+              ? 'border-brand-accent bg-brand-soft/75 shadow-md shadow-black/10'
+              : 'border-default bg-surface hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md'
           }`}
         >
           <span
             className={`absolute inset-y-2 left-0 w-1 rounded-r-full bg-gradient-to-b ${
-              isSelected ? 'from-emerald-400 to-emerald-600' : palette.line
+              isSelected ? 'from-brand-accent to-brand-hover' : palette.line
             }`}
           />
           <div className="flex items-start justify-between gap-2 pl-1">
@@ -596,8 +596,8 @@ export const AssessmentsPage: React.FC = () => {
       return (
         <div className="ibot-section-toolbar flex flex-shrink-0 items-center justify-between px-3 py-3">
           <div>
-            <h2 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-800">
-              <Briefcase className="h-4 w-4 text-emerald-600" />
+            <h2 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-brand-hover">
+              <Briefcase className="h-4 w-4 text-brand-hover" />
               Campaigns
             </h2>
             <p className="mt-0.5 text-[9px] font-bold text-slate-400">{assessments.length} total</p>
@@ -605,7 +605,7 @@ export const AssessmentsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-emerald-700"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-charcoal text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover"
             aria-label="Create assessment"
           >
             <Plus className="h-4 w-4" />
@@ -623,8 +623,8 @@ export const AssessmentsPage: React.FC = () => {
     return (
       <div className="ibot-section-toolbar flex flex-shrink-0 flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-emerald-800">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+          <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-brand-hover">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand-hover">
               <Briefcase className="h-4 w-4" />
             </span>
             Campaigns
@@ -635,7 +635,7 @@ export const AssessmentsPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-xl border border-emerald-100 bg-white/75 p-1 shadow-sm">
+          <div className="flex items-center gap-1 rounded-xl border border-default bg-white/75 p-1 shadow-sm">
             {filters.map((filter) => (
               <button
                 key={filter.value}
@@ -646,7 +646,7 @@ export const AssessmentsPage: React.FC = () => {
                 }}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black transition-all ${
                   statusFilter === filter.value
-                    ? 'bg-emerald-600 text-white shadow-sm'
+                    ? 'bg-brand-charcoal text-white shadow-sm'
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                 }`}
               >
@@ -671,7 +671,7 @@ export const AssessmentsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2.5 text-[11px] font-black text-white shadow-md shadow-emerald-900/15 transition-all hover:-translate-y-0.5 hover:bg-emerald-800 active:translate-y-0"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-charcoal px-4 py-2.5 text-[11px] font-black text-white shadow-md shadow-black/15 transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0"
           >
             <Plus className="h-3.5 w-3.5" />
             Create Assessment
@@ -690,7 +690,7 @@ export const AssessmentsPage: React.FC = () => {
 
           {loadingAssessments ? (
             <div className="ibot-panel flex flex-1 flex-col items-center justify-center">
-              <Loader2 className="mb-2 h-6 w-6 animate-spin text-emerald-500" />
+              <Loader2 className="mb-2 h-6 w-6 animate-spin text-brand-accent" />
               <p className="text-[11px] font-semibold text-secondary">Loading campaigns...</p>
             </div>
           ) : assessments.length === 0 ? (
@@ -700,7 +700,7 @@ export const AssessmentsPage: React.FC = () => {
               <p className="mt-1 text-xs text-muted">Create your first assessment to get started.</p>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-all"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-brand-hover"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Create Campaign
@@ -718,7 +718,7 @@ export const AssessmentsPage: React.FC = () => {
                       setStatusFilter('all');
                       setCampaignPage(0);
                     }}
-                    className="mt-2 text-[11px] font-black text-emerald-700 hover:text-emerald-800"
+                    className="mt-2 text-[11px] font-black text-brand-hover hover:text-brand-charcoal"
                   >
                     Show all assessments
                   </button>
@@ -753,7 +753,7 @@ export const AssessmentsPage: React.FC = () => {
 
             {loadingAssessments ? (
               <div className="ibot-panel flex flex-1 items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                <Loader2 className="h-6 w-6 animate-spin text-brand-accent" />
               </div>
             ) : (
               <div className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -782,17 +782,17 @@ export const AssessmentsPage: React.FC = () => {
           <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
             {loadingDetails ? (
               <div className="ibot-panel flex h-full flex-col items-center justify-center">
-                <Loader2 className="mb-3 h-8 w-8 animate-spin text-emerald-500" />
+                <Loader2 className="mb-3 h-8 w-8 animate-spin text-brand-accent" />
                 <p className="text-xs font-semibold text-secondary">Loading details...</p>
               </div>
             ) : selectedAssessment ? (
               <div className="ibot-section-surface flex h-full flex-col overflow-hidden animate-scaleIn">
-                <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-emerald-50/60 px-5 pb-4 pt-4">
+                <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-brand-soft/60 px-5 pb-4 pt-4">
                   <div className="flex items-center justify-between gap-3">
                     <button
                       type="button"
                       onClick={handleBackToBrowse}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-500 shadow-sm transition-all hover:-translate-x-0.5 hover:border-emerald-200 hover:text-emerald-700"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-500 shadow-sm transition-all hover:-translate-x-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       All campaigns
@@ -835,7 +835,7 @@ export const AssessmentsPage: React.FC = () => {
 
                   <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
                     {[
-                      { label: 'Role name', value: selectedAssessment.role_name, icon: Briefcase, tone: 'text-emerald-700 bg-emerald-50' },
+                       { label: 'Role name', value: selectedAssessment.role_name, icon: Briefcase, tone: 'text-brand-hover bg-brand-soft' },
                       { label: 'Duration', value: `${selectedAssessment.interview_duration_mins} minutes`, icon: Clock, tone: 'text-indigo-700 bg-indigo-50' },
                       { label: 'Start date', value: formatAssessmentDate(selectedAssessment.window_start), icon: CalendarDays, tone: 'text-sky-700 bg-sky-50' },
                       { label: 'End date', value: formatAssessmentDate(selectedAssessment.window_end), icon: CalendarDays, tone: 'text-violet-700 bg-violet-50' },
@@ -861,7 +861,7 @@ export const AssessmentsPage: React.FC = () => {
                       onClick={() => setDetailTab('overview')}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-black transition-all ${
                         detailTab === 'overview'
-                          ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-100'
+                          ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -873,13 +873,15 @@ export const AssessmentsPage: React.FC = () => {
                       onClick={() => setDetailTab('candidates')}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-black transition-all ${
                         detailTab === 'candidates'
-                          ? 'bg-white text-cyan-700 shadow-sm ring-1 ring-cyan-100'
+                          ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
                       <Users className="h-3.5 w-3.5" />
                       Candidates
-                      <span className="rounded-full bg-cyan-50 px-1.5 py-0.5 text-[8px] text-cyan-700">
+                      <span className={`rounded-full px-1.5 py-0.5 text-[8px] ${
+                        detailTab === 'candidates' ? 'bg-white/15 text-white' : 'bg-brand-soft text-brand-hover'
+                      }`}>
                         {assessmentCandidates.length}
                       </span>
                     </button>
@@ -1173,14 +1175,14 @@ export const AssessmentsPage: React.FC = () => {
       {showAnalysisModal && selectedAssessment && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-4xl max-h-[88vh] relative flex flex-col bg-white">
-            <div className="h-1.5 shrink-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-amber-400" />
-            <div className="flex justify-between items-center border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-amber-50 px-6 py-4 shrink-0">
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+            <div className="flex shrink-0 items-center justify-between border-b border-default bg-gradient-to-r from-brand-soft via-white to-[#FCFAF6] px-6 py-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-charcoal text-white shadow-md shadow-black/15">
                   <BrainCircuit className="h-4 w-4" />
                 </span>
                 <div>
-                <h2 className="text-base font-black text-slate-950 font-display">
+                <h2 className="font-display text-[16px] font-black text-slate-950">
                   JD Analysis & Interview Plan
                 </h2>
                 <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">{selectedAssessment.title} · AI-generated from the job description</p>
@@ -1372,14 +1374,14 @@ export const AssessmentsPage: React.FC = () => {
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-3xl max-h-[90vh]">
             <div className="flex min-h-0 flex-1 flex-col animate-scaleIn">
-            <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400" />
-            <div className="flex shrink-0 justify-between items-start border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-cyan-50 px-6 py-4">
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+            <div className="flex shrink-0 items-start justify-between border-b border-default bg-gradient-to-r from-brand-soft via-white to-[#FCFAF6] px-6 py-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-200">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-charcoal text-white shadow-md shadow-black/15">
                   <Plus className="h-4 w-4" />
                 </span>
                 <div>
-                <h2 className="text-base font-black text-slate-950 font-display">
+                <h2 className="font-display text-[16px] font-black text-slate-950">
                   Create Assessment
                 </h2>
                 <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">Configure the campaign, interview window, and source JD</p>
@@ -1393,7 +1395,7 @@ export const AssessmentsPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5 bg-gradient-to-br from-white via-slate-50/40 to-emerald-50/20">
+            <div className="ibot-scrollbar flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto bg-gradient-to-br from-white via-slate-50/40 to-brand-soft/20 px-6 py-5">
               {/* Error */}
               {createError && (
                 <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2 animate-slideDown">
@@ -1404,11 +1406,11 @@ export const AssessmentsPage: React.FC = () => {
 
               {/* Form */}
               <form onSubmit={handleCreateAssessment} className="flex flex-col gap-4" id="create-campaign-form">
-                <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <section className="rounded-2xl border border-default bg-white p-4 shadow-sm">
                   <div className="mb-3 flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Briefcase className="h-3.5 w-3.5" /></span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-brand-hover"><Briefcase className="h-3.5 w-3.5" /></span>
                     <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-wider text-emerald-800">Campaign basics</h3>
+                      <h3 className="text-[10px] font-black uppercase tracking-wider text-brand-hover">Campaign basics</h3>
                       <p className="text-[8px] font-semibold text-slate-400">Name the assessment and role being hired.</p>
                     </div>
                   </div>
@@ -1434,11 +1436,11 @@ export const AssessmentsPage: React.FC = () => {
                 </div>
                 </section>
 
-                <section className="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+                <section className="rounded-2xl border border-default bg-white p-4 shadow-sm">
                   <div className="mb-3 flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700"><CalendarDays className="h-3.5 w-3.5" /></span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-brand-hover"><CalendarDays className="h-3.5 w-3.5" /></span>
                     <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-wider text-indigo-800">Interview window</h3>
+                      <h3 className="text-[10px] font-black uppercase tracking-wider text-brand-hover">Interview window</h3>
                       <p className="text-[8px] font-semibold text-slate-400">Set interview length and availability dates.</p>
                     </div>
                   </div>
@@ -1473,11 +1475,11 @@ export const AssessmentsPage: React.FC = () => {
                 </section>
 
                 {/* Focus Area overrides */}
-                <section className="border border-amber-100 rounded-2xl p-4 bg-white flex flex-col gap-2 shadow-sm">
+                <section className="flex flex-col gap-2 rounded-2xl border border-default bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700"><Sliders className="h-3.5 w-3.5" /></span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-brand-hover"><Sliders className="h-3.5 w-3.5" /></span>
                     <div>
-                    <h3 className="text-[10px] font-black text-amber-800 uppercase tracking-wider">Focus areas <span className="text-slate-400 font-semibold normal-case">(optional)</span></h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-wider text-brand-hover">Focus areas <span className="font-semibold normal-case text-slate-400">(optional)</span></h3>
                     <p className="text-[8px] font-semibold text-slate-400">Emphasize skills the generated interview should prioritize.</p>
                     </div>
                   </div>
@@ -1493,7 +1495,7 @@ export const AssessmentsPage: React.FC = () => {
                         type="range" min="1" max="10"
                         value={newWeightOverride}
                         onChange={(e) => setNewWeightOverride(Number(e.target.value))}
-                        className="w-16 accent-emerald-600"
+                        className="w-16 accent-[#B9833F]"
                       />
                       <span className="text-xs text-slate-800 font-bold w-4">{newWeightOverride}</span>
                     </div>
@@ -1507,9 +1509,9 @@ export const AssessmentsPage: React.FC = () => {
                   {createFocusAreas.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {createFocusAreas.map((fa, index) => (
-                        <span key={index} className="inline-flex items-center gap-1 rounded-md bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] text-emerald-700 font-semibold transition-transform hover:scale-105 cursor-default">
+                        <span key={index} className="inline-flex cursor-default items-center gap-1 rounded-md border border-[#D8C9B5] bg-brand-soft px-2 py-0.5 text-[10px] font-semibold text-brand-hover transition-transform hover:scale-105">
                           {fa.skill} ({fa.weight})
-                          <button type="button" onClick={() => removeFocusArea(index)} className="text-emerald-500 hover:text-emerald-700">
+                          <button type="button" onClick={() => removeFocusArea(index)} className="text-brand-accent hover:text-brand-charcoal">
                             <X className="h-3 w-3" />
                           </button>
                         </span>
@@ -1519,11 +1521,11 @@ export const AssessmentsPage: React.FC = () => {
                 </section>
 
                 {/* JD Type */}
-                <section className="rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+                <section className="rounded-2xl border border-default bg-white p-4 shadow-sm">
                   <div className="mb-3 flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-700"><FileCheck2 className="h-3.5 w-3.5" /></span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-soft text-brand-hover"><FileCheck2 className="h-3.5 w-3.5" /></span>
                     <div>
-                      <h3 className="text-[10px] font-black uppercase tracking-wider text-teal-800">Job description</h3>
+                      <h3 className="text-[10px] font-black uppercase tracking-wider text-brand-hover">Job description</h3>
                       <p className="text-[8px] font-semibold text-slate-400">Paste the role brief or upload its PDF.</p>
                     </div>
                   </div>
@@ -1532,7 +1534,7 @@ export const AssessmentsPage: React.FC = () => {
                     <button
                       type="button" onClick={() => setCreateJdType('text')}
                       className={`px-3 py-1.5 text-[11px] font-bold transition-all hover:bg-slate-100/50 ${
-                        createJdType === 'text' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-slate-500 hover:text-slate-700'
+                        createJdType === 'text' ? 'bg-brand-charcoal text-white hover:bg-brand-hover' : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
                       Paste Text
@@ -1540,7 +1542,7 @@ export const AssessmentsPage: React.FC = () => {
                     <button
                       type="button" onClick={() => setCreateJdType('file')}
                       className={`px-3 py-1.5 text-[11px] font-bold transition-all hover:bg-slate-100/50 ${
-                        createJdType === 'file' ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-slate-500 hover:text-slate-700'
+                        createJdType === 'file' ? 'bg-brand-charcoal text-white hover:bg-brand-hover' : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
                       Upload PDF
@@ -1558,7 +1560,7 @@ export const AssessmentsPage: React.FC = () => {
                     className={`${inputStyles} resize-none`}
                   />
                 ) : (
-                  <div className="border border-dashed border-slate-300 bg-slate-50 p-5 rounded-lg flex flex-col items-center justify-center gap-1.5 text-center relative hover:border-emerald-400 hover:bg-emerald-50/20 transition-all duration-300">
+                  <div className="relative flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-center transition-all duration-300 hover:border-brand-accent hover:bg-brand-soft/30">
                     <FileText className="h-6 w-6 text-slate-400 animate-pulse" />
                     {createJdFile ? (
                       <span className="text-xs text-emerald-600 font-bold">{createJdFile.name}</span>
@@ -1591,7 +1593,7 @@ export const AssessmentsPage: React.FC = () => {
                 type="submit"
                 form="create-campaign-form"
                 disabled={createMutation.isPending}
-                className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-black text-white hover:bg-emerald-800 transition-all flex items-center gap-1.5 shadow-sm hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-black text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 disabled:opacity-50"
               >
                 {createMutation.isPending ? (
                   <>
@@ -1617,14 +1619,14 @@ export const AssessmentsPage: React.FC = () => {
       {showJdModal && selectedAssessment && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-3xl max-h-[88vh] animate-scaleIn">
-            <div className="h-1.5 shrink-0 bg-gradient-to-r from-teal-500 via-emerald-400 to-cyan-400" />
-            <div className="flex justify-between items-center border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-emerald-50 px-6 py-4 shrink-0">
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+            <div className="flex shrink-0 items-center justify-between border-b border-default bg-gradient-to-r from-brand-soft via-white to-[#FCFAF6] px-6 py-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-200">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-charcoal text-white shadow-md shadow-black/15">
                   <FileCheck2 className="h-4 w-4" />
                 </span>
                 <div>
-                <h2 className="text-base font-black text-slate-950 font-display">
+                <h2 className="font-display text-[16px] font-black text-slate-950">
                   Job Description
                 </h2>
                 <p className="text-[10px] text-slate-500 mt-0.5 font-bold">{selectedAssessment.title} · {selectedAssessment.role_name}</p>
@@ -1638,7 +1640,7 @@ export const AssessmentsPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-white to-teal-50/30 p-6">
+            <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-white to-brand-soft/30 p-6">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 text-xs font-medium leading-6 text-slate-700 whitespace-pre-wrap shadow-sm">
                 {selectedAssessment.jd_text || 'No job description text is available.'}
               </div>

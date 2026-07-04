@@ -6,12 +6,12 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Download,
   Eye,
   ExternalLink,
   Filter,
   Loader2,
   MessageSquareText,
+  Printer,
   Search,
   ShieldAlert,
   Sparkles,
@@ -33,8 +33,10 @@ import {
 } from './EvaluationUI';
 import {
   candidateInitials,
+  cleanRecruiterNarrative,
   decisionMeta,
   formatDateTime,
+  isDecisionFinalized,
   recommendationMeta,
   scoreLabel,
   scoreTextClass,
@@ -46,11 +48,11 @@ type SortOption = 'score' | 'recent' | 'rank';
 
 const PAGE_SIZE = 4;
 const CANDIDATE_AVATAR_TONES = [
-  'from-emerald-500 to-green-600 shadow-emerald-600/15 ring-emerald-50',
-  'from-indigo-500 to-violet-600 shadow-indigo-600/15 ring-indigo-50',
+  'from-brand-accent to-brand-hover shadow-[rgba(185,131,63,0.18)] ring-brand-soft',
+  'from-[#8A6A45] to-brand-hover shadow-[rgba(138,106,69,0.18)] ring-brand-soft',
   'from-amber-400 to-orange-500 shadow-amber-500/15 ring-amber-50',
-  'from-sky-500 to-blue-600 shadow-sky-600/15 ring-sky-50',
-  'from-violet-500 to-fuchsia-600 shadow-violet-600/15 ring-violet-50',
+  'from-brand-charcoal to-[#4A4035] shadow-[rgba(36,33,29,0.18)] ring-brand-soft',
+  'from-[#C59A5D] to-brand-accent shadow-[rgba(197,154,93,0.18)] ring-brand-soft',
 ];
 
 const candidateAvatarTone = (name: string) => {
@@ -164,6 +166,10 @@ export const EvaluationsPage: React.FC = () => {
     window.open(`/candidates/${caId}/report`, '_blank', 'noopener,noreferrer');
   };
 
+  const handlePrintReport = (caId: string) => {
+    window.open(`/candidates/${caId}/report?print=1`, '_blank', 'noopener,noreferrer');
+  };
+
   if (isLoading) return <EvaluationLoadingState />;
 
   if (isError) {
@@ -175,7 +181,7 @@ export const EvaluationsPage: React.FC = () => {
           <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
             The reporting service may still be starting. Retry to refresh.
           </p>
-          <button type="button" onClick={() => refetch()} className="mt-5 rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-black text-white hover:bg-slate-800">
+          <button type="button" onClick={() => refetch()} className="mt-5 rounded-lg bg-brand-charcoal px-4 py-2.5 text-xs font-black text-white hover:bg-brand-hover">
             Retry
           </button>
         </div>
@@ -187,7 +193,7 @@ export const EvaluationsPage: React.FC = () => {
     return (
       <div className="flex h-full min-h-[440px] items-center justify-center">
         <div className="max-w-lg rounded-2xl border border-dashed border-slate-300 bg-white/80 p-10 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-hover">
             <Sparkles className="h-6 w-6" />
           </div>
           <h2 className="mt-4 text-lg font-black text-slate-950">Evaluation workspace is ready</h2>
@@ -201,11 +207,11 @@ export const EvaluationsPage: React.FC = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden animate-fadeIn">
+      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden animate-fadeIn print:hidden">
         {/* Compact command strip */}
-        <section className="relative z-20 flex shrink-0 items-center justify-between gap-5 overflow-visible rounded-2xl border border-emerald-100 bg-gradient-to-r from-white via-emerald-50/45 to-white px-5 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-shadow hover:shadow-[0_12px_30px_rgba(5,150,105,0.1)]">
+        <section className="ibot-section-toolbar relative z-20 flex shrink-0 items-center justify-between gap-5 overflow-visible px-4 py-3 transition-shadow hover:shadow-[0_12px_30px_rgba(185,131,63,0.12)]">
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 transition-transform duration-200 hover:rotate-3 hover:scale-105">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-charcoal text-white shadow-lg shadow-black/15 transition-transform duration-200 hover:rotate-3 hover:scale-105">
               <BarChart3 className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -227,12 +233,12 @@ export const EvaluationsPage: React.FC = () => {
           <div className="grid shrink-0 grid-cols-4 divide-x divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/80">
             {[
               { label: 'Reports', value: String(stats.total), tone: 'text-slate-900' },
-              { label: 'Average', value: stats.average.toFixed(1), tone: 'text-indigo-700' },
+              { label: 'Average', value: stats.average.toFixed(1), tone: 'text-brand-hover' },
               { label: 'Hired', value: String(stats.approved), tone: 'text-emerald-700' },
               { label: 'Rejected', value: String(stats.rejected), tone: 'text-rose-700' },
             ].map((item) => (
               <div key={item.label} className="min-w-20 px-3.5 py-2 text-center">
-                <p className={`font-display text-base font-black ${item.tone}`}>{item.value}</p>
+                <p className={`font-display text-[16px] font-black ${item.tone}`}>{item.value}</p>
                 <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-400">
                   {item.label}
                 </p>
@@ -242,11 +248,11 @@ export const EvaluationsPage: React.FC = () => {
         </section>
 
         {/* Candidate Grid */}
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-          <header className="shrink-0 border-b border-slate-200 bg-slate-50/55 px-5 py-3">
+        <section className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
+          <header className="shrink-0 border-b border-slate-200 bg-[#FCFAF6]/70 px-5 py-3">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 transition-transform duration-200 hover:rotate-3 hover:scale-105">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-hover ring-1 ring-default transition-transform duration-200 hover:rotate-3 hover:scale-105">
                   <UserRoundSearch className="h-4 w-4" />
                 </div>
                 <div>
@@ -267,7 +273,7 @@ export const EvaluationsPage: React.FC = () => {
                       setPage(0);
                     }}
                     placeholder="Search candidate, role, or assessment"
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs font-semibold text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-emerald-300 hover:shadow-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-xs font-semibold text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-brand-accent hover:shadow-sm focus:border-brand-accent focus:ring-4 focus:ring-brand-soft"
                   />
                 </label>
                 <CustomSelect
@@ -307,8 +313,8 @@ export const EvaluationsPage: React.FC = () => {
                     aria-pressed={active}
                     className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-extrabold transition-all ${
                       active
-                        ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                        : 'border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 hover:shadow-sm'
+                        ? 'border-brand-charcoal bg-brand-charcoal text-white shadow-sm shadow-black/15'
+                        : 'border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover hover:shadow-sm'
                     }`}
                   >
                     {filter.label}
@@ -339,7 +345,7 @@ export const EvaluationsPage: React.FC = () => {
                     setSearchQuery('');
                     setPage(0);
                   }}
-                  className="mt-2 text-[11px] font-black text-indigo-700 hover:text-indigo-800"
+                  className="mt-2 text-[11px] font-black text-brand-hover hover:text-brand-charcoal"
                 >
                   Clear filters
                 </button>
@@ -367,7 +373,7 @@ export const EvaluationsPage: React.FC = () => {
                     return (
                       <tr
                         key={evaluation.candidate_assessment_id}
-                        className="group h-[64px] cursor-pointer transition-all hover:bg-emerald-50/55 focus-visible:bg-emerald-50 focus-visible:outline-none"
+                        className="group h-[64px] cursor-pointer transition-all hover:bg-brand-soft/60 focus-visible:bg-brand-soft focus-visible:outline-none"
                         onClick={() => setSelectedEvaluation(evaluation)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
@@ -384,7 +390,7 @@ export const EvaluationsPage: React.FC = () => {
                               {candidateInitials(evaluation.candidate_name)}
                             </div>
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-extrabold text-slate-900 transition-colors group-hover:text-emerald-700">{evaluation.candidate_name}</p>
+                              <p className="truncate text-sm font-extrabold text-slate-900 transition-colors group-hover:text-brand-hover">{evaluation.candidate_name}</p>
                               <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{evaluation.candidate_email}</p>
                             </div>
                           </div>
@@ -420,7 +426,7 @@ export const EvaluationsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setSelectedEvaluation(evaluation)}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-[11px] font-black text-white shadow-sm shadow-emerald-600/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md"
+                              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-charcoal px-3 text-[11px] font-black text-white shadow-sm shadow-black/15 transition-all hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-md"
                               aria-label={`Review ${evaluation.candidate_name}'s evaluation summary`}
                             >
                               <Eye className="h-3.5 w-3.5" />
@@ -429,7 +435,7 @@ export const EvaluationsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => requestDecision(evaluation.candidate_assessment_id, evaluation.candidate_name, evaluation.recruiter_decision, 'APPROVED')}
-                              disabled={evaluation.recruiter_decision === 'APPROVED'}
+                              disabled={isDecisionFinalized(evaluation.recruiter_decision)}
                               className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 transition-all hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-30"
                               title="Hire"
                               aria-label={`Hire ${evaluation.candidate_name}`}
@@ -439,7 +445,7 @@ export const EvaluationsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => requestDecision(evaluation.candidate_assessment_id, evaluation.candidate_name, evaluation.recruiter_decision, 'REJECTED')}
-                              disabled={evaluation.recruiter_decision === 'REJECTED'}
+                              disabled={isDecisionFinalized(evaluation.recruiter_decision)}
                               className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-30"
                               title="Reject"
                               aria-label={`Reject ${evaluation.candidate_name}`}
@@ -449,7 +455,7 @@ export const EvaluationsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleViewFullReport(evaluation.candidate_assessment_id)}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow-sm"
+                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover hover:shadow-sm"
                               title="Open full report in new tab"
                               aria-label={`Open ${evaluation.candidate_name}'s full report in a new tab`}
                             >
@@ -474,7 +480,7 @@ export const EvaluationsPage: React.FC = () => {
                     type="button"
                     disabled={currentPage === 0}
                     onClick={() => setPage(currentPage - 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:text-emerald-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:text-brand-hover hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-30"
                     aria-label="Previous report page"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -486,7 +492,7 @@ export const EvaluationsPage: React.FC = () => {
                     type="button"
                     disabled={currentPage >= totalPages - 1}
                     onClick={() => setPage(currentPage + 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:text-emerald-700 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:text-brand-hover hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-30"
                     aria-label="Next report page"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -504,6 +510,7 @@ export const EvaluationsPage: React.FC = () => {
           evaluation={selectedEvaluation}
           onClose={() => setSelectedEvaluation(null)}
           onViewReport={() => handleViewFullReport(selectedEvaluation.candidate_assessment_id)}
+          onPrintReport={() => handlePrintReport(selectedEvaluation.candidate_assessment_id)}
           onDecision={(decision) => {
             setSelectedEvaluation(null);
             requestDecision(selectedEvaluation.candidate_assessment_id, selectedEvaluation.candidate_name, selectedEvaluation.recruiter_decision, decision);
@@ -532,29 +539,33 @@ const EvaluationSummaryModal: React.FC<{
   evaluation: RecruiterEvaluationListItem;
   onClose: () => void;
   onViewReport: () => void;
+  onPrintReport: () => void;
   onDecision: (decision: 'APPROVED' | 'REJECTED') => void;
-}> = ({ evaluation, onClose, onViewReport, onDecision }) => {
+}> = ({ evaluation, onClose, onViewReport, onPrintReport, onDecision }) => {
   const recommendation = recommendationMeta(evaluation.hiring_recommendation);
   const decision = decisionMeta(evaluation.recruiter_decision);
   const skills = orderedSkills(evaluation).slice(0, 4);
+  const recommendationReasoning = cleanRecruiterNarrative(
+    evaluation.recommendation_reasoning || evaluation.overall_summary,
+  );
   const dimensions = [
     {
       label: 'Technical',
       score: evaluation.overall_technical_skill_score,
       icon: <BrainCircuit className="h-3.5 w-3.5" />,
-      tone: 'bg-blue-50 text-blue-700',
+      tone: 'bg-brand-charcoal text-white',
     },
     {
       label: 'Behaviour',
       score: evaluation.behavioural_cultural_score,
       icon: <Users className="h-3.5 w-3.5" />,
-      tone: 'bg-violet-50 text-violet-700',
+      tone: 'bg-brand-soft text-brand-hover',
     },
     {
       label: 'Communication',
       score: evaluation.communication_score,
       icon: <MessageSquareText className="h-3.5 w-3.5" />,
-      tone: 'bg-amber-50 text-amber-700',
+      tone: 'bg-[#E8D3B2] text-brand-hover',
     },
   ];
 
@@ -564,11 +575,11 @@ const EvaluationSummaryModal: React.FC<{
       labelledBy="evaluation-summary-title"
       className="max-w-6xl"
     >
-      <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-500 via-sky-400 to-indigo-500" />
+      <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
 
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3.5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 font-display text-sm font-black text-white shadow-lg shadow-emerald-600/20 ring-4 ring-emerald-50">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-accent to-brand-hover font-display text-sm font-black text-white shadow-lg shadow-black/15 ring-4 ring-brand-soft">
             {candidateInitials(evaluation.candidate_name)}
           </div>
           <div className="min-w-0">
@@ -604,11 +615,11 @@ const EvaluationSummaryModal: React.FC<{
       <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="grid content-start gap-3">
-            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50 p-4 shadow-sm">
+            <div className="rounded-2xl border border-default bg-gradient-to-br from-brand-soft/70 via-white to-slate-50 p-4 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <ScoreRing score={evaluation.overall_score} size={112} />
                 <div className="min-w-0 text-right">
-                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-brand-hover">
                     Overall result
                   </p>
                   <p className="mt-1 text-sm font-black text-slate-950">
@@ -657,15 +668,15 @@ const EvaluationSummaryModal: React.FC<{
           </aside>
 
           <section className="grid content-start gap-3">
-            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 p-4 shadow-sm">
+            <div className="rounded-2xl border border-default bg-gradient-to-br from-brand-soft/80 via-white to-slate-50 p-4 shadow-sm">
               <div className="flex items-start gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-charcoal text-white shadow-sm">
                   <Sparkles className="h-4 w-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-black text-indigo-950">Recommendation reasoning</p>
-                  <p className="mt-1.5 line-clamp-4 text-[11px] font-medium leading-5 text-indigo-950/75">
-                    {evaluation.recommendation_reasoning || evaluation.overall_summary}
+                  <p className="text-xs font-black text-brand-charcoal">Recommendation reasoning</p>
+                  <p className="mt-1.5 line-clamp-4 text-[11px] font-medium leading-5 text-secondary">
+                    {recommendationReasoning}
                   </p>
                 </div>
               </div>
@@ -678,7 +689,7 @@ const EvaluationSummaryModal: React.FC<{
                     <p className="text-xs font-black text-slate-950">Priority skill performance</p>
                     <p className="mt-0.5 text-[9px] font-semibold text-slate-400">Highest-priority assessed capabilities</p>
                   </div>
-                  <BrainCircuit className="h-4 w-4 text-indigo-600" />
+                  <BrainCircuit className="h-4 w-4 text-brand-hover" />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {skills.map(([skill, details]) => (
@@ -731,7 +742,7 @@ const EvaluationSummaryModal: React.FC<{
           <button
             type="button"
             onClick={() => onDecision('APPROVED')}
-            disabled={evaluation.recruiter_decision === 'APPROVED'}
+            disabled={isDecisionFinalized(evaluation.recruiter_decision)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
             <UserCheck className="h-3.5 w-3.5" />
@@ -740,7 +751,7 @@ const EvaluationSummaryModal: React.FC<{
           <button
             type="button"
             onClick={() => onDecision('REJECTED')}
-            disabled={evaluation.recruiter_decision === 'REJECTED'}
+            disabled={isDecisionFinalized(evaluation.recruiter_decision)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
             <UserX className="h-3.5 w-3.5" />
@@ -750,16 +761,20 @@ const EvaluationSummaryModal: React.FC<{
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => { onClose(); setTimeout(() => window.print(), 100); }}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-black text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.98]"
+            onClick={() => {
+              onClose();
+              onPrintReport();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-black text-slate-600 transition-all hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:scale-[0.98]"
+            title="Print or save the complete evaluation report as PDF"
           >
-            <Download className="h-3.5 w-3.5" />
-            Print
+            <Printer className="h-3.5 w-3.5" />
+            Print report
           </button>
           <button
             type="button"
             onClick={() => { onClose(); onViewReport(); }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-black text-white shadow-sm shadow-emerald-600/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md active:translate-y-0 active:scale-[0.98]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-3.5 py-2 text-xs font-black text-white shadow-sm shadow-black/15 transition-all hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-md active:translate-y-0 active:scale-[0.98]"
           >
             Open full report
             <ExternalLink className="h-3.5 w-3.5" />
@@ -782,7 +797,7 @@ const EvaluationLoadingState = () => (
     <div className="flex-1 animate-pulse rounded-2xl border border-slate-200 bg-white">
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
+          <Loader2 className="mx-auto h-7 w-7 animate-spin text-brand-accent" />
           <p className="mt-3 text-xs font-bold text-slate-400">Loading candidate intelligence…</p>
         </div>
       </div>

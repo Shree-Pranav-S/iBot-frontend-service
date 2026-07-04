@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -42,18 +42,21 @@ import {
   CenteredDialog,
   CompetencyRadar,
   DecisionModal,
+  RecruiterNarrativeContent,
   ScoreBar,
   ScoreRing,
   StatusPill,
 } from './EvaluationUI';
 import {
   candidateInitials,
+  cleanRecruiterNarrative,
   decisionMeta,
   formatDateTime,
   formatLabel,
   recommendationMeta,
   scoreLabel,
   scoreTextClass,
+  isDecisionFinalized,
   useEvaluationDecision,
 } from './evaluationUiUtils';
 import { EvaluationPrintReport } from './EvaluationPrintReport';
@@ -96,6 +99,8 @@ const skillElementId = (skill: string) =>
 export const EvaluationReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const shouldAutoPrint = searchParams.get('print') === '1';
   const { data: evaluation, isLoading, isError, isFetching, refetch } = useCandidateEvaluation(id || null);
   const {
     data: transcript,
@@ -113,6 +118,7 @@ export const EvaluationReportPage: React.FC = () => {
   } = useEvaluationDecision();
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
   const [detailModal, setDetailModal] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const hasAutoPrinted = useRef(false);
 
   const skills = useMemo(() => {
     if (!evaluation) return [];
@@ -121,6 +127,27 @@ export const EvaluationReportPage: React.FC = () => {
       return pd || b.score - a.score;
     });
   }, [evaluation]);
+
+  useEffect(() => {
+    if (!shouldAutoPrint || !evaluation || isTranscriptLoading || hasAutoPrinted.current) return;
+
+    hasAutoPrinted.current = true;
+    setDetailModal(null);
+    closeDecision();
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('print');
+    setSearchParams(nextParams, { replace: true });
+
+    window.setTimeout(() => window.print(), 150);
+  }, [
+    shouldAutoPrint,
+    evaluation,
+    isTranscriptLoading,
+    closeDecision,
+    searchParams,
+    setSearchParams,
+  ]);
 
   if (isLoading) return <ReportLoadingState />;
 
@@ -137,7 +164,7 @@ export const EvaluationReportPage: React.FC = () => {
             <button type="button" onClick={() => navigate('/evaluations')} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-black text-slate-600 hover:bg-slate-50">
               Back to evaluations
             </button>
-            <button type="button" onClick={() => refetch()} className="rounded-lg bg-slate-950 px-4 py-2.5 text-[11px] font-black text-white hover:bg-slate-800">
+            <button type="button" onClick={() => refetch()} className="rounded-lg bg-brand-charcoal px-4 py-2.5 text-[11px] font-black text-white hover:bg-brand-hover">
               Retry
             </button>
           </div>
@@ -151,7 +178,8 @@ export const EvaluationReportPage: React.FC = () => {
   const candidateName = evaluation.candidate_name || 'Candidate';
   const isTranscriptTab = activeTab === 'transcript';
   const hiringRedFlag = recruiterFacingRedFlag(evaluation.recommendation_override_reason);
-  const recommendationReasoning = evaluation.recommendation_reasoning.replace(/\s*Deterministic override:.*$/i, '').trim();
+  const executiveSummary = cleanRecruiterNarrative(evaluation.overall_summary);
+  const recommendationReasoning = cleanRecruiterNarrative(evaluation.recommendation_reasoning);
 
   const navigateToTab = (tab: ReportTab) => {
     setActiveTab(tab);
@@ -182,12 +210,12 @@ export const EvaluationReportPage: React.FC = () => {
 
           {/* ── Top Nav Bar ─────────────────────────────────────────── */}
           <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-            <button type="button" onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 text-xs font-black text-slate-600 transition-colors hover:text-emerald-700">
+            <button type="button" onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 text-xs font-black text-slate-600 transition-colors hover:text-brand-hover">
               <ArrowLeft className="h-4 w-4" />
               Back to Evaluations
             </button>
             <div className="flex items-center gap-2">
-              {isFetching && <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />}
+              {isFetching && <Loader2 className="h-4 w-4 animate-spin text-brand-accent" />}
               <span className="hidden text-[11px] font-bold text-slate-500 sm:inline">
                 Generated {formatDateTime(evaluation.generated_at)}
               </span>
@@ -195,7 +223,7 @@ export const EvaluationReportPage: React.FC = () => {
                 type="button"
                 onClick={handlePrintReport}
                 disabled={isTranscriptLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3.5 py-2.5 text-xs font-black text-white shadow-sm transition-colors hover:bg-slate-800 disabled:cursor-wait disabled:opacity-55"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-charcoal px-3.5 py-2.5 text-xs font-black text-white shadow-sm transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:opacity-55"
                 title={
                   isTranscriptLoading
                     ? 'Preparing the complete report'
@@ -209,13 +237,13 @@ export const EvaluationReportPage: React.FC = () => {
           </header>
 
           {/* ── Candidate Hero Card ─────────────────────────────────── */}
-          <section className="shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:shadow-none">
-            <div className={`${isTranscriptTab ? 'h-1' : 'h-2'} bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500`} />
+          <section className="ibot-section-surface shrink-0 overflow-hidden print:shadow-none">
+            <div className={`${isTranscriptTab ? 'h-1' : 'h-2'} bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover`} />
             <div className={isTranscriptTab ? 'px-4 py-2.5 sm:px-5' : 'p-4 sm:px-5 sm:py-4'}>
               <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between ${isTranscriptTab ? 'gap-2.5' : 'gap-4'}`}>
                 <div className={`flex min-w-0 ${isTranscriptTab ? 'items-center gap-3' : 'items-start gap-4'}`}>
-                  <div className={`flex shrink-0 items-center justify-center bg-slate-950 font-display font-black text-emerald-300 shadow-lg shadow-slate-900/15 ${
-                    isTranscriptTab ? 'h-10 w-10 rounded-xl text-sm' : 'h-12 w-12 rounded-2xl text-base'
+                  <div className={`flex shrink-0 items-center justify-center bg-gradient-to-br from-brand-accent to-brand-hover font-display font-black text-white shadow-lg shadow-black/15 ${
+                    isTranscriptTab ? 'h-10 w-10 rounded-xl text-sm' : 'h-12 w-12 rounded-2xl text-[16px]'
                   }`}>
                     {candidateInitials(candidateName)}
                   </div>
@@ -224,7 +252,7 @@ export const EvaluationReportPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigateToTab('overview')}
-                        className="rounded-full transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
+                        className="rounded-full transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2"
                         title="Open recommendation overview"
                       >
                         <StatusPill {...recommendation} />
@@ -246,7 +274,7 @@ export const EvaluationReportPage: React.FC = () => {
                       )}
                     </div>
                     <h1 className={`font-display font-black tracking-tight text-slate-950 ${
-                      isTranscriptTab ? 'text-base sm:text-lg' : 'mt-2 text-xl sm:text-2xl'
+                      isTranscriptTab ? 'text-[16px] sm:text-lg' : 'mt-2 text-xl sm:text-2xl'
                     }`}>{candidateName}</h1>
                     <div className={`flex flex-wrap gap-x-4 gap-y-1 font-semibold text-slate-500 ${
                       isTranscriptTab ? 'mt-0.5 text-xs' : 'mt-1.5 text-[11px]'
@@ -266,7 +294,7 @@ export const EvaluationReportPage: React.FC = () => {
                       {evaluation.candidate_email && (
                         <a
                           href={`mailto:${evaluation.candidate_email}`}
-                          className="inline-flex items-center gap-1.5 transition-colors hover:text-emerald-700"
+                          className="inline-flex items-center gap-1.5 transition-colors hover:text-brand-hover"
                         >
                           <Mail className="h-3.5 w-3.5 text-slate-400" />
                           {evaluation.candidate_email}
@@ -274,7 +302,7 @@ export const EvaluationReportPage: React.FC = () => {
                       )}
                     </div>
                     {evaluation.recruiter_feedback && !isTranscriptTab && (
-                      <p className="mt-1.5 line-clamp-1 text-[10px] font-semibold text-indigo-700">
+                      <p className="mt-1.5 line-clamp-1 text-[10px] font-semibold text-brand-hover">
                         Recruiter note: {evaluation.recruiter_feedback}
                       </p>
                     )}
@@ -285,7 +313,7 @@ export const EvaluationReportPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'APPROVED')}
-                    disabled={evaluation.recruiter_decision === 'APPROVED'}
+                    disabled={isDecisionFinalized(evaluation.recruiter_decision)}
                     className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <UserCheck className="h-4 w-4" />
@@ -294,7 +322,7 @@ export const EvaluationReportPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'REJECTED')}
-                    disabled={evaluation.recruiter_decision === 'REJECTED'}
+                    disabled={isDecisionFinalized(evaluation.recruiter_decision)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <UserX className="h-4 w-4" />
@@ -320,8 +348,8 @@ export const EvaluationReportPage: React.FC = () => {
                   onClick={() => navigateToTab(tab.id)}
                   className={`inline-flex min-w-0 items-center justify-center gap-1.5 truncate rounded-lg px-2.5 py-2 text-[11px] font-black transition-all ${
                     activeTab === tab.id
-                      ? 'bg-slate-950 text-emerald-300 shadow-sm'
-                      : 'text-slate-500 hover:bg-white hover:text-emerald-700'
+                      ? 'bg-brand-charcoal text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-white hover:text-brand-hover'
                   }`}
                 >
                   {tab.icon}
@@ -354,6 +382,7 @@ export const EvaluationReportPage: React.FC = () => {
           {activeTab === 'overview' && (
             <OverviewTab
               evaluation={evaluation}
+              executiveSummary={executiveSummary}
               hiringRedFlag={hiringRedFlag}
               recommendationReasoning={recommendationReasoning}
               recommendation={recommendation}
@@ -398,6 +427,7 @@ export const EvaluationReportPage: React.FC = () => {
         <EvaluationPrintReport
           evaluation={evaluation}
           transcript={transcript}
+          executiveSummary={executiveSummary}
           recommendationReasoning={recommendationReasoning}
           hiringRedFlag={hiringRedFlag}
         />
@@ -409,13 +439,13 @@ export const EvaluationReportPage: React.FC = () => {
           labelledBy="evaluation-detail-title"
           className="max-w-3xl"
         >
-          <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-indigo-500" />
-          <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/50 px-5 py-4">
+          <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+          <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-white to-brand-soft/60 px-5 py-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-hover">
                 Evaluation detail
               </p>
-              <h2 id="evaluation-detail-title" className="mt-0.5 text-base font-black text-slate-950">
+              <h2 id="evaluation-detail-title" className="mt-0.5 text-[16px] font-black text-slate-950">
                 {detailModal.title}
               </h2>
             </div>
@@ -453,6 +483,7 @@ export const EvaluationReportPage: React.FC = () => {
 /* ── Overview Tab ──────────────────────────────────────────────────────── */
 const OverviewTab: React.FC<{
   evaluation: InterviewEvaluationResponse;
+  executiveSummary: string;
   hiringRedFlag: string;
   recommendationReasoning: string;
   recommendation: ReturnType<typeof recommendationMeta>;
@@ -460,6 +491,7 @@ const OverviewTab: React.FC<{
   onNavigate: (tab: ReportTab) => void;
 }> = ({
   evaluation,
+  executiveSummary,
   hiringRedFlag,
   recommendationReasoning,
   recommendation,
@@ -472,20 +504,26 @@ const OverviewTab: React.FC<{
         <ClickableCard
           title="Executive summary"
           subtitle="Holistic evidence-based assessment"
-          icon={<Sparkles className="h-4 w-4 text-emerald-600" />}
-          preview={evaluation.overall_summary}
+          icon={<Sparkles className="h-4 w-4 text-brand-hover" />}
+          preview={executiveSummary}
           onClick={() =>
             onDetailModal({
               title: 'Executive Summary',
               content: (
                 <div className="space-y-4">
-                  <p className="text-[13px] font-medium leading-7 text-slate-600">{evaluation.overall_summary}</p>
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <RecruiterNarrativeContent text={executiveSummary} />
+                  <div className="rounded-xl border border-default bg-brand-soft/70 p-4">
                     <div className="flex items-start gap-3">
-                      <Scale className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
-                      <div>
-                        <p className="text-[11px] font-black text-indigo-950">Recommendation reasoning</p>
-                        <p className="mt-1.5 text-[11px] font-medium leading-6 text-indigo-900/80">{recommendationReasoning}</p>
+                      <Scale className="mt-0.5 h-4 w-4 shrink-0 text-brand-hover" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-black text-brand-charcoal">Recommendation reasoning</p>
+                        <div className="mt-2">
+                          <RecruiterNarrativeContent
+                            text={recommendationReasoning}
+                            paragraphClassName="text-[12px] font-medium leading-6 text-secondary"
+                            bulletClassName="text-[12px] font-medium leading-6 text-secondary"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -506,7 +544,7 @@ const OverviewTab: React.FC<{
           </div>
         )}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <SectionTitle icon={<CircleGauge className="h-4 w-4 text-indigo-600" />} title="Score overview" subtitle="Interview performance and integrity findings." />
+          <SectionTitle icon={<CircleGauge className="h-4 w-4 text-brand-hover" />} title="Score overview" subtitle="Interview performance and integrity findings." />
           <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
             <CalculationStep
               label="Performance score"
@@ -538,7 +576,7 @@ const OverviewTab: React.FC<{
         <button
           type="button"
           onClick={() => onNavigate('questions')}
-          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="grid place-items-center">
             <ScoreRing score={evaluation.overall_score} size={164} />
@@ -552,7 +590,7 @@ const OverviewTab: React.FC<{
             <MiniStat label="Percentile" value={evaluation.percentile_in_assessment === null ? '—' : `${evaluation.percentile_in_assessment}%`} />
             <MiniStat label="Cohort" value={evaluation.total_candidates_evaluated ? String(evaluation.total_candidates_evaluated) : '—'} />
           </div>
-          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-emerald-700">
+          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
             Review scoring evidence
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </p>
@@ -561,7 +599,7 @@ const OverviewTab: React.FC<{
         <button
           type="button"
           onClick={() => onNavigate('dimensions')}
-          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="px-1">
             <p className="text-[11px] font-black text-slate-900">Competency radar</p>
@@ -575,7 +613,7 @@ const OverviewTab: React.FC<{
               { label: 'Introduction', score: evaluation.intro_section_score },
             ]}
           />
-          <p className="mt-1 inline-flex items-center gap-1 px-1 text-[10px] font-black text-indigo-700">
+          <p className="mt-1 inline-flex items-center gap-1 px-1 text-[10px] font-black text-brand-hover">
             Explore dimensions
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </p>
@@ -595,7 +633,7 @@ const OverviewTab: React.FC<{
           key={m.label}
           type="button"
           onClick={() => onNavigate(m.tab)}
-          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -608,7 +646,7 @@ const OverviewTab: React.FC<{
             <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 ${scoreTextClass(m.score)}`}>{m.icon}</div>
           </div>
           <div className="mt-3"><ScoreBar score={m.score} compact /></div>
-          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-emerald-700">
+          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
             Open section
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </p>
@@ -628,11 +666,11 @@ const SkillsTab: React.FC<{
   <div className="space-y-4 animate-fadeIn">
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <SectionTitle icon={<BarChart3 className="h-4 w-4 text-emerald-600" />} title="Technical skill portfolio" subtitle="Performance across assessed technical areas." />
+        <SectionTitle icon={<BarChart3 className="h-4 w-4 text-brand-hover" />} title="Technical skill portfolio" subtitle="Performance across assessed technical areas." />
         <button
           type="button"
           onClick={() => onNavigate('questions')}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-black text-indigo-700 transition-colors hover:bg-indigo-100"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-brand-soft px-3 py-2 text-[10px] font-black text-brand-hover transition-colors hover:bg-[#EAD7BE]"
         >
           Review all answers <ArrowRight className="h-3 w-3" />
         </button>
@@ -670,7 +708,7 @@ const SkillsTab: React.FC<{
                       <p className="mb-2 text-[8px] font-black uppercase tracking-wider text-slate-400">Evidence</p>
                       <ul className="space-y-2">
                         {(evaluation.skill_evidence?.[skill] || []).map((item, i) => (
-                          <li key={i} className="border-l-2 border-emerald-300 bg-slate-50 px-3 py-2 text-[10px] font-medium leading-5 text-slate-600">{item}</li>
+                          <li key={i} className="border-l-2 border-brand-accent bg-slate-50 px-3 py-2 text-[10px] font-medium leading-5 text-slate-600">{item}</li>
                         ))}
                         {(evaluation.skill_evidence?.[skill] || []).length === 0 && (
                           <li className="text-[10px] font-semibold text-slate-400">No evidence recorded.</li>
@@ -683,8 +721,8 @@ const SkillsTab: React.FC<{
             }
           >
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-black text-slate-800 group-hover:text-emerald-700 transition-colors" title={skill}>{skill}</p>
-              <p className="mt-0.5 text-[10px] font-bold text-slate-400">Priority {details.priority_score.toFixed(1)} · {details.questions_evaluated}q · {Math.round(details.confidence * 100)}% conf.</p>
+              <p className="truncate text-[11px] font-black text-slate-800 group-hover:text-brand-hover transition-colors" title={skill}>{skill}</p>
+              <p className="mt-0.5 text-[10px] font-bold text-slate-400">Priority {details.priority_score.toFixed(1)}</p>
             </div>
             <div className="relative">
               <div className="absolute inset-0 flex justify-between px-[25%]">
@@ -694,7 +732,6 @@ const SkillsTab: React.FC<{
             </div>
             <div className="text-right">
               <p className={`text-[13px] font-black ${scoreTextClass(details.score)}`}>{details.score.toFixed(1)}</p>
-              <p className="text-[8px] font-bold text-slate-400">{Math.round(details.confidence * 100)}%</p>
             </div>
           </button>
         ))}
@@ -776,7 +813,7 @@ const QuestionsTab: React.FC<{
     <div className="space-y-4 animate-fadeIn">
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle
-          icon={<ListChecks className="h-4 w-4 text-indigo-600" />}
+          icon={<ListChecks className="h-4 w-4 text-brand-hover" />}
           title="Question-by-question review"
           subtitle="Every answer with its score, relevance, confidence, and supporting evidence."
         />
@@ -801,7 +838,7 @@ const QuestionsTab: React.FC<{
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search questions, answers, skills, or evidence"
                 aria-label="Search question evaluations"
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-[11px] font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-[11px] font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-brand-accent focus:ring-4 focus:ring-brand-soft"
               />
               {searchQuery && (
                 <button
@@ -822,8 +859,8 @@ const QuestionsTab: React.FC<{
                   onClick={() => setSectionFilter(section)}
                   className={`rounded-full border px-3 py-1.5 text-[10px] font-black transition-colors ${
                     sectionFilter === section
-                      ? 'border-slate-950 bg-slate-950 text-white'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:text-emerald-700'
+                      ? 'border-brand-charcoal bg-brand-charcoal text-white'
+                      : 'border-slate-200 bg-white text-slate-500 hover:border-brand-accent hover:text-brand-hover'
                   }`}
                 >
                   {section === 'all' ? 'All sections' : section}
@@ -875,7 +912,7 @@ const QuestionsTab: React.FC<{
                     setSearchQuery('');
                     setSectionFilter('all');
                   }}
-                  className="mt-3 text-[10px] font-black text-emerald-700 hover:text-emerald-800"
+                  className="mt-3 text-[10px] font-black text-brand-hover hover:text-brand-charcoal"
                 >
                   Clear filters
                 </button>
@@ -905,7 +942,7 @@ const QuestionEvaluationCard: React.FC<{
 }> = ({ question, index, expanded, onToggle }) => (
   <article
     className={`overflow-hidden rounded-xl border bg-white transition-all ${
-      expanded ? 'border-indigo-200 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+      expanded ? 'border-[#D7C2A8] shadow-sm' : 'border-slate-200 hover:border-brand-accent'
     }`}
   >
     <button
@@ -916,10 +953,10 @@ const QuestionEvaluationCard: React.FC<{
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex h-6 min-w-6 items-center justify-center rounded-md bg-slate-950 px-1.5 text-[10px] font-black text-emerald-300">
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-md bg-brand-charcoal px-1.5 text-[10px] font-black text-white">
             Q{index + 1}
           </span>
-          <span className="rounded-md bg-indigo-50 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-indigo-700">
+          <span className="rounded-md bg-brand-soft px-2 py-1 text-[8px] font-black uppercase tracking-wide text-brand-hover">
             {question.skill || formatLabel(question.section)}
           </span>
           <span className="rounded-md bg-slate-100 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-slate-500">
@@ -991,7 +1028,7 @@ const QuestionEvaluationCard: React.FC<{
         {question.evidence.map((item, evidenceIndex) => (
           <li
             key={`${question.question_id}-${evidenceIndex}`}
-            className="border-l-2 border-indigo-300 pl-2.5 text-[10px] font-medium leading-5 text-slate-600"
+            className="border-l-2 border-brand-accent pl-2.5 text-[10px] font-medium leading-5 text-slate-600"
           >
             {item}
           </li>
@@ -1038,7 +1075,7 @@ const DimensionsTab: React.FC<{
               ),
             })
           }
-          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -1050,7 +1087,7 @@ const DimensionsTab: React.FC<{
           <div className="mt-3"><ScoreBar score={dim.score} compact /></div>
           <p className="mt-4 text-[11px] font-medium leading-6 text-slate-600">{dim.summary}</p>
           <EvidenceList evidence={dim.evidence} empty="No direct evidence was recorded." />
-          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-indigo-700">
+          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
             Open full evidence
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </p>
@@ -1059,7 +1096,7 @@ const DimensionsTab: React.FC<{
     </div>
 
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <SectionTitle icon={<MessageSquareText className="h-4 w-4 text-indigo-600" />} title="Communication by interview section" subtitle="Clarity, structure, tone, and engagement assessed across each phase." />
+      <SectionTitle icon={<MessageSquareText className="h-4 w-4 text-brand-hover" />} title="Communication by interview section" subtitle="Clarity, structure, tone, and engagement assessed across each phase." />
       <div className="grid gap-3 lg:grid-cols-3">
         {Object.entries(evaluation.section_communication_scores ?? {}).map(([section, details]) => (
           <SectionCommunicationCard key={section} section={section} details={details} />
@@ -1096,7 +1133,7 @@ const IntegrityTab: React.FC<{
         <button
           type="button"
           onClick={() => onNavigate('transcript')}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600 shadow-sm transition-colors hover:border-brand-accent hover:text-brand-hover"
         >
           Review transcript context <ArrowRight className="h-3 w-3" />
         </button>
@@ -1181,7 +1218,7 @@ const TranscriptTab: React.FC<{
     return (
       <div className="grid h-full min-h-[360px] place-items-center rounded-2xl border border-slate-200 bg-white">
         <div className="text-center">
-          <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
+          <Loader2 className="mx-auto h-7 w-7 animate-spin text-brand-accent" />
           <p className="mt-3 text-[11px] font-bold text-slate-500">Loading full transcript…</p>
         </div>
       </div>
@@ -1219,13 +1256,13 @@ const TranscriptTab: React.FC<{
   return (
     <div className="h-full min-h-0 animate-fadeIn">
       <div className="ibot-panel flex h-full min-h-0 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-white via-white to-emerald-50/60 px-5 py-3.5">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-white via-white to-brand-soft/70 px-5 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-default bg-brand-soft text-brand-hover">
               <MessageSquareText className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-base font-black text-slate-950">Interview transcript</p>
+              <p className="text-[16px] font-black text-slate-950">Interview transcript</p>
               <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
                 {transcript.length} turns · {elapsedMins > 0 ? `${elapsedMins} min` : 'duration unavailable'} · continuous transcript
               </p>
@@ -1235,7 +1272,7 @@ const TranscriptTab: React.FC<{
             <button
               type="button"
               onClick={onDownload}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-black text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-black text-slate-700 shadow-sm transition-colors hover:border-brand-accent hover:text-brand-hover"
             >
               <FileDown className="h-3.5 w-3.5" />
               Download
@@ -1252,7 +1289,7 @@ const TranscriptTab: React.FC<{
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search the full transcript"
                 aria-label="Search interview transcript"
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-xs font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-9 text-xs font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-brand-accent focus:ring-4 focus:ring-brand-soft"
               />
               {searchQuery && (
                 <button
@@ -1273,7 +1310,7 @@ const TranscriptTab: React.FC<{
                   onClick={() => setSpeakerFilter(speaker)}
                   className={`rounded-md px-3 py-2 text-[11px] font-black transition-colors ${
                     speakerFilter === speaker
-                      ? 'bg-slate-950 text-white'
+                      ? 'bg-brand-charcoal text-white'
                       : 'text-slate-500 hover:bg-slate-100'
                   }`}
                 >
@@ -1300,7 +1337,7 @@ const TranscriptTab: React.FC<{
                         ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
                     );
                   }}
-                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-600 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-600 transition-colors hover:border-brand-accent hover:text-brand-hover"
                 >
                   {formatLabel(section)}
                 </button>
@@ -1324,10 +1361,10 @@ const TranscriptTab: React.FC<{
                 className={`scroll-mt-24 flex gap-4 rounded-2xl border border-l-4 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5 ${
                   isBot
                     ? 'border-slate-200 border-l-slate-500 sm:mr-10'
-                    : 'border-emerald-200 border-l-emerald-500 sm:ml-10'
+                    : 'border-[#D7C2A8] border-l-brand-accent sm:ml-10'
                 }`}
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black shadow-sm ${isBot ? 'bg-slate-950 text-emerald-300' : 'bg-emerald-600 text-white'}`}>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black shadow-sm ${isBot ? 'bg-brand-charcoal text-white' : 'bg-brand-accent text-white'}`}>
                   {isBot ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1338,7 +1375,7 @@ const TranscriptTab: React.FC<{
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {turn.skill && (
-                        <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-indigo-700">
+                        <span className="rounded-md bg-brand-soft px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-brand-hover">
                           {turn.skill}
                         </span>
                       )}
@@ -1384,7 +1421,7 @@ const TranscriptTab: React.FC<{
                     setSearchQuery('');
                     setSpeakerFilter('all');
                   }}
-                  className="mt-2 text-[10px] font-black text-emerald-700"
+                  className="mt-2 text-[10px] font-black text-brand-hover"
                 >
                   Clear filters
                 </button>
@@ -1410,11 +1447,11 @@ const ClickableCard: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left hover:border-emerald-300 hover:shadow-md transition-all group"
+    className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-left hover:border-brand-accent hover:shadow-md transition-all group"
   >
     <SectionTitle icon={icon} title={title} subtitle={subtitle} />
     <p className="text-[13px] font-medium leading-7 text-slate-600 line-clamp-3">{preview}</p>
-    <p className="mt-3 text-[10px] font-black text-emerald-700 group-hover:text-emerald-800">Click to read full summary →</p>
+    <p className="mt-3 text-[10px] font-black text-brand-hover group-hover:text-brand-charcoal">Click to read full summary →</p>
   </button>
 );
 
@@ -1503,7 +1540,7 @@ const SectionCommunicationCard: React.FC<{ section: string; details: SectionComm
         </span>
       </div>
       <div className="mt-2"><ScoreBar score={details.score} compact /></div>
-      <p className="mt-2 text-[8px] font-black text-indigo-600">Click to review evidence</p>
+      <p className="mt-2 text-[8px] font-black text-brand-hover">Click to review evidence</p>
     </summary>
     <p className="mt-3 border-t border-slate-200 pt-3 text-[11px] font-medium leading-5 text-slate-600">{details.summary}</p>
     <EvidenceList evidence={details.evidence} empty="No section evidence recorded." compact />
@@ -1515,7 +1552,7 @@ const EvidenceList: React.FC<{ evidence: string[]; empty: string; compact?: bool
     <p className="mb-2 text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">Evidence</p>
     <ul className="space-y-2">
       {evidence.map((item, i) => (
-        <li key={i} className="border-l-2 border-emerald-300 bg-white px-3 py-2 text-[10px] font-medium leading-5 text-slate-600 shadow-sm">{item}</li>
+        <li key={i} className="border-l-2 border-brand-accent bg-white px-3 py-2 text-[10px] font-medium leading-5 text-slate-600 shadow-sm">{item}</li>
       ))}
       {evidence.length === 0 && <li className="text-[10px] font-semibold text-slate-400">{empty}</li>}
     </ul>
@@ -1550,7 +1587,7 @@ const ReportLoadingState = () => (
         <div className="animate-pulse rounded-2xl border border-slate-200 bg-white" />
         <div className="grid place-items-center rounded-2xl border border-slate-200 bg-white">
           <div className="text-center">
-            <Loader2 className="mx-auto h-7 w-7 animate-spin text-emerald-500" />
+            <Loader2 className="mx-auto h-7 w-7 animate-spin text-brand-accent" />
             <p className="mt-3 text-[11px] font-bold text-slate-400">Building detailed report…</p>
           </div>
         </div>

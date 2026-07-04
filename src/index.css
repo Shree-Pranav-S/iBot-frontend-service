@@ -5,28 +5,32 @@
 @layer base {
   :root {
     /* Color - Light (App: Dashboard / Assessments / Candidates) */
-    --bg-page: #F8FAFC;
+    --bg-page: #F7F3EA;
     --bg-surface: #FFFFFF;
-    --bg-base: #F8FAFC;
-    --bg-elevated: #F6F8F9;
-    --bg-elevated-2: #E2E8F0;
+    --bg-base: #F7F3EA;
+    --bg-elevated: #FCFAF6;
+    --bg-elevated-2: #F4E8D6;
 
-    --sidebar-bg: #022C22;
-    --sidebar-bg-alt: #032F2B;
-    --sidebar-bg-deep: #0B2F2A;
+    --sidebar-bg: #24211D;
+    --sidebar-bg-alt: #2F2A24;
+    --sidebar-bg-deep: #1F1D1A;
 
-    --border-default: #E2E8F0;
-    --border-subtle: #E2E8F0;
-    --border-emphasis: #10B981;
+    --border-default: #E6DED2;
+    --border-subtle: #EDE5D9;
+    --border-emphasis: #B9833F;
+    --brand-accent: #B9833F;
+    --brand-hover: #9A6A30;
+    --brand-charcoal: #24211D;
+    --brand-soft: #F4E8D6;
     --emerald-50: #ECFDF5;
     --emerald-400: #34D399;
     --emerald-500: #059669; /* deeper in light mode for contrast */
     --emerald-600: #047857;
     --emerald-700: #065F46;
 
-    --text-primary: #0F172A;
-    --text-secondary: #64748B;
-    --text-muted: #64748B;
+    --text-primary: #1F1D1A;
+    --text-secondary: #706A61;
+    --text-muted: #8A8175;
 
     /* Radius scale */
     --radius-input-btn: 10px;
@@ -34,10 +38,10 @@
     --radius-modal: 20px;
 
     /* Shadow scale */
-    --shadow-sm: 0 1px 2px rgba(15,23,42,0.06);
-    --shadow-md: 0 16px 40px rgba(15,23,42,0.08);
-    --shadow-glow-emerald: 0 0 40px rgba(16,185,129,0.15);
-    --shadow-lg: 0 20px 60px rgba(2,6,23,0.5);
+    --shadow-sm: 0 1px 2px rgba(36,33,29,0.06);
+    --shadow-md: 0 16px 40px rgba(36,33,29,0.09);
+    --shadow-glow-emerald: 0 0 40px rgba(185,131,63,0.15);
+    --shadow-lg: 0 20px 60px rgba(36,33,29,0.28);
 
     /* Fonts */
     --font-display: 'Geist', sans-serif;
@@ -120,7 +124,8 @@
 
   .ibot-workspace-bg > aside,
   .ibot-workspace-bg > div > header,
-  .ibot-workspace-bg > nav {
+  .ibot-workspace-bg > nav,
+  .ibot-overlay {
     display: none !important;
   }
 
@@ -168,7 +173,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
-    border-bottom: 3px solid #0f766e;
+    border-bottom: 3px solid #B9833F;
     padding-bottom: 16px;
   }
 
@@ -180,7 +185,7 @@
 
   .evaluation-print-kicker,
   .evaluation-print-eyebrow {
-    color: #0f766e;
+    color: #9A6A30;
     font-size: 7.5pt;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -252,7 +257,7 @@
     height: 24px;
     place-items: center;
     border-radius: 6px;
-    background: #0f766e;
+    background: #B9833F;
     color: #ffffff;
     font-size: 8pt;
     font-weight: 800;
@@ -288,7 +293,7 @@
   .evaluation-print-score strong {
     display: block;
     margin: 2px 0;
-    color: #0f766e;
+    color: #9A6A30;
     font-size: 17pt;
     line-height: 1;
   }
@@ -315,6 +320,23 @@
     font-size: 7.5pt;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+  }
+
+  .evaluation-print-narrative-paragraph,
+  .evaluation-print-narrative-bullet {
+    margin: 0;
+    color: #334155;
+    font-size: 9.5pt;
+    line-height: 1.55;
+  }
+
+  .evaluation-print-block ul {
+    margin: 6px 0 0;
+    padding-left: 14px;
+  }
+
+  .evaluation-print-narrative-bullet {
+    margin-top: 2px;
   }
 
   .evaluation-print-alert {
@@ -365,7 +387,7 @@
 
   .evaluation-print-row-heading > strong {
     flex: none;
-    color: #0f766e;
+    color: #9A6A30;
     font-size: 13pt;
   }
 
@@ -397,7 +419,7 @@
   }
 
   .evaluation-print-transcript-turn {
-    border-left: 3px solid #0f766e;
+    border-left: 3px solid #B9833F;
   }
 
   .evaluation-print-transcript-meta span {
@@ -408,6 +430,12 @@
 
   .evaluation-print-transcript-turn > p:last-child {
     margin-top: 4px;
+  }
+
+  .evaluation-print-transcript-text {
+    margin-top: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .evaluation-print-audit {
@@ -577,11 +605,11 @@
   @keyframes dashboard-live-pulse {
     0%, 100% {
       opacity: 1;
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 0 0 rgba(185, 131, 63, 0.35);
     }
     50% {
       opacity: 0.78;
-      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+      box-shadow: 0 0 0 4px rgba(185, 131, 63, 0);
     }
   }
 
@@ -593,15 +621,15 @@
     animation: dashboard-card-in 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
     transition:
       border-color 180ms ease,
-      box-shadow 180ms ease,
-      transform 180ms ease;
+      box-shadow 220ms ease,
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .dashboard-card:hover,
   article.dashboard-card:hover,
   section.dashboard-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    border-color: var(--brand-accent);
+    box-shadow: 0 12px 28px rgba(36, 33, 29, 0.09);
     transform: translateY(-2px);
   }
 
@@ -614,61 +642,62 @@
   }
 
   .dashboard-surface-hero {
-    border-radius: 16px;
-    border: 1px solid rgba(16, 185, 129, 0.22);
+    border-radius: 15px;
+    border: 1px solid rgba(185, 131, 63, 0.28);
     background:
-      radial-gradient(circle at 88% 18%, rgba(45, 212, 191, 0.14), transparent 32%),
-      linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 48%, #ECFEF9 100%);
+      radial-gradient(circle at 88% 18%, rgba(185, 131, 63, 0.14), transparent 32%),
+      linear-gradient(135deg, #FFFFFF 0%, #FCFAF6 48%, #F4E8D6 100%);
     box-shadow:
-      inset 3px 0 0 #059669,
-      0 2px 8px rgba(5, 150, 105, 0.07),
-      0 8px 24px rgba(15, 23, 42, 0.05);
+      inset 3px 0 0 var(--brand-accent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 2px 8px rgba(185, 131, 63, 0.08),
+      0 8px 24px rgba(36, 33, 29, 0.06);
   }
 
   .dashboard-surface-kpi {
-    border-radius: 16px;
-    border: 1px solid #D8E0EA;
+    border-radius: 15px;
+    border: 1px solid var(--border-default);
     background:
-      linear-gradient(180deg, #EEF2F7 0%, #F8FAFC 22%, #FFFFFF 100%);
+      linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 42%, #FFFFFF 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      0 2px 10px rgba(15, 23, 42, 0.06),
-      0 10px 28px rgba(15, 23, 42, 0.04);
+      0 2px 10px rgba(36, 33, 29, 0.06),
+      0 10px 28px rgba(36, 33, 29, 0.04);
   }
 
   .dashboard-surface-panel {
-    border-radius: 16px;
-    border: 1px solid #D8E0EA;
+    border-radius: 15px;
+    border: 1px solid var(--border-default);
     background: #FFFFFF;
     box-shadow:
-      0 1px 3px rgba(15, 23, 42, 0.05),
-      0 8px 24px rgba(15, 23, 42, 0.05);
+      0 1px 3px rgba(36, 33, 29, 0.05),
+      0 10px 28px rgba(36, 33, 29, 0.055);
   }
 
   .dashboard-panel-candidate {
     background:
-      radial-gradient(circle at 96% 4%, rgba(16, 185, 129, 0.08), transparent 28%),
-      linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+      radial-gradient(circle at 96% 4%, rgba(185, 131, 63, 0.09), transparent 28%),
+      linear-gradient(180deg, #FFFFFF 0%, #FCFAF6 100%);
   }
 
   .dashboard-panel-evaluation {
     background:
-      radial-gradient(circle at 4% 0%, rgba(99, 102, 241, 0.07), transparent 30%),
-      linear-gradient(180deg, #FFFFFF 0%, #FAFAFF 100%);
+      radial-gradient(circle at 4% 0%, rgba(185, 131, 63, 0.08), transparent 30%),
+      linear-gradient(180deg, #FFFFFF 0%, #FCFAF6 100%);
   }
 
   .dashboard-panel-priority {
     background:
       radial-gradient(circle at 92% 8%, rgba(245, 158, 11, 0.09), transparent 26%),
-      linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%);
+      linear-gradient(180deg, #FFFFFF 0%, #FCFAF6 100%);
   }
 
   .dashboard-panel-accent-emerald {
-    border-top: 2px solid #10B981;
+    border-top: 2px solid var(--brand-accent);
   }
 
   .dashboard-panel-accent-indigo {
-    border-top: 2px solid #818CF8;
+    border-top: 2px solid var(--brand-accent);
   }
 
   .dashboard-panel-accent-amber {
@@ -677,7 +706,7 @@
 
   .dashboard-score-band {
     background:
-      linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(255, 255, 255, 0.4) 100%);
+      linear-gradient(180deg, rgba(252, 250, 246, 0.92) 0%, rgba(255, 255, 255, 0.48) 100%);
   }
 
   .dashboard-pipeline-bar {
@@ -726,10 +755,11 @@
 
   .ibot-workspace-bg {
     background:
-      linear-gradient(135deg, rgba(15, 23, 42, 0.05) 0 1px, transparent 1px),
-      linear-gradient(90deg, rgba(15, 23, 42, 0.04) 0 1px, transparent 1px),
-      linear-gradient(135deg, #E8EDF3 0%, #EEF2F7 42%, #F1F5F9 100%);
-    background-size: 34px 34px, 34px 34px, auto;
+      radial-gradient(circle at 88% 3%, rgba(185, 131, 63, 0.11), transparent 28%),
+      linear-gradient(rgba(36, 33, 29, 0.026) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(36, 33, 29, 0.026) 1px, transparent 1px),
+      linear-gradient(135deg, #F7F3EA 0%, #FCFAF6 48%, #F7F3EA 100%);
+    background-size: auto, 40px 40px, 40px 40px, auto;
   }
 
   .ibot-recruiter-shell {
@@ -737,6 +767,7 @@
     --font-body: 'Inter', sans-serif;
     font-family: var(--font-body);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
   }
 
   .ibot-recruiter-shell button,
@@ -744,6 +775,343 @@
   .ibot-recruiter-shell select,
   .ibot-recruiter-shell textarea {
     font-family: inherit;
+  }
+
+  .ibot-recruiter-shell ::selection {
+    color: #1F1D1A;
+    background: #E8C794;
+  }
+
+  .ibot-recruiter-shell button,
+  .ibot-recruiter-shell a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ibot-recruiter-shell * {
+    scrollbar-color: #B8AA9A #F7F3EA;
+  }
+
+  .ibot-recruiter-shell .ibot-scrollbar::-webkit-scrollbar-thumb {
+    background: #B8AA9A;
+  }
+
+  .ibot-recruiter-shell .ibot-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9A6A30;
+  }
+
+  .ibot-recruiter-shell .ibot-scrollbar::-webkit-scrollbar-track {
+    background: rgba(247, 243, 234, 0.72);
+  }
+
+  /* Neutralize old decorative cool gradients while preserving semantic
+     emerald, amber, and rose status treatments. */
+  .ibot-recruiter-shell [class~="from-indigo-50"],
+  .ibot-recruiter-shell [class~="from-violet-50"],
+  .ibot-recruiter-shell [class~="from-cyan-50"],
+  .ibot-recruiter-shell [class~="from-sky-50"],
+  .ibot-recruiter-shell [class~="from-teal-50"],
+  .ibot-recruiter-shell [class~="from-blue-50"],
+  .ibot-recruiter-shell [class~="from-orange-50"],
+  .ibot-recruiter-shell [class~="from-pink-50"] {
+    --tw-gradient-from: #F4E8D6 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(244 232 214 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .ibot-recruiter-shell [class~="from-indigo-400"],
+  .ibot-recruiter-shell [class~="from-indigo-500"],
+  .ibot-recruiter-shell [class~="from-indigo-600"],
+  .ibot-recruiter-shell [class~="from-violet-400"],
+  .ibot-recruiter-shell [class~="from-violet-500"],
+  .ibot-recruiter-shell [class~="from-cyan-400"],
+  .ibot-recruiter-shell [class~="from-cyan-500"],
+  .ibot-recruiter-shell [class~="from-teal-400"],
+  .ibot-recruiter-shell [class~="from-teal-500"],
+  .ibot-recruiter-shell [class~="from-blue-400"],
+  .ibot-recruiter-shell [class~="from-blue-500"],
+  .ibot-recruiter-shell [class~="from-orange-400"],
+  .ibot-recruiter-shell [class~="from-orange-500"],
+  .ibot-recruiter-shell [class~="from-pink-400"],
+  .ibot-recruiter-shell [class~="from-pink-500"] {
+    --tw-gradient-from: #B9833F var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(185 131 63 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .ibot-recruiter-shell [class~="via-indigo-500"],
+  .ibot-recruiter-shell [class~="via-violet-500"],
+  .ibot-recruiter-shell [class~="via-cyan-400"],
+  .ibot-recruiter-shell [class~="via-teal-400"],
+  .ibot-recruiter-shell [class~="via-teal-500"],
+  .ibot-recruiter-shell [class~="via-blue-500"],
+  .ibot-recruiter-shell [class~="via-orange-400"],
+  .ibot-recruiter-shell [class~="via-pink-400"] {
+    --tw-gradient-to: rgb(215 170 106 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops:
+      var(--tw-gradient-from),
+      #D7AA6A var(--tw-gradient-via-position),
+      var(--tw-gradient-to);
+  }
+
+  .ibot-recruiter-shell [class~="to-indigo-50"],
+  .ibot-recruiter-shell [class~="to-violet-50"],
+  .ibot-recruiter-shell [class~="to-cyan-50"],
+  .ibot-recruiter-shell [class~="to-sky-50"],
+  .ibot-recruiter-shell [class~="to-teal-50"],
+  .ibot-recruiter-shell [class~="to-blue-50"],
+  .ibot-recruiter-shell [class~="to-orange-50"],
+  .ibot-recruiter-shell [class~="to-pink-50"] {
+    --tw-gradient-to: #FCFAF6 var(--tw-gradient-to-position);
+  }
+
+  .ibot-recruiter-shell [class~="to-indigo-50/35"],
+  .ibot-recruiter-shell [class~="to-indigo-50/30"],
+  .ibot-recruiter-shell [class~="to-indigo-50/25"],
+  .ibot-recruiter-shell [class~="to-teal-50/30"],
+  .ibot-recruiter-shell [class~="to-cyan-50/30"],
+  .ibot-recruiter-shell [class~="to-sky-50/30"] {
+    --tw-gradient-to: rgb(244 232 214 / 0.48) var(--tw-gradient-to-position);
+  }
+
+  .ibot-recruiter-shell [class~="to-indigo-400"],
+  .ibot-recruiter-shell [class~="to-indigo-500"],
+  .ibot-recruiter-shell [class~="to-violet-400"],
+  .ibot-recruiter-shell [class~="to-violet-500"],
+  .ibot-recruiter-shell [class~="to-cyan-400"],
+  .ibot-recruiter-shell [class~="to-cyan-500"],
+  .ibot-recruiter-shell [class~="to-teal-400"],
+  .ibot-recruiter-shell [class~="to-teal-500"],
+  .ibot-recruiter-shell [class~="to-blue-400"],
+  .ibot-recruiter-shell [class~="to-blue-500"],
+  .ibot-recruiter-shell [class~="to-orange-400"],
+  .ibot-recruiter-shell [class~="to-orange-500"],
+  .ibot-recruiter-shell [class~="to-pink-400"],
+  .ibot-recruiter-shell [class~="to-pink-500"] {
+    --tw-gradient-to: #9A6A30 var(--tw-gradient-to-position);
+  }
+
+  /* Warm recruiter workspace defaults. These scope common Tailwind utility
+     colors to the new ivory/charcoal/bronze palette without touching semantic
+     green, rose, or amber status colors. */
+  .ibot-recruiter-shell [class~="bg-white"] {
+    background-color: #FFFFFF;
+  }
+
+  .ibot-recruiter-shell [class~="bg-white/80"],
+  .ibot-recruiter-shell [class~="bg-white/75"],
+  .ibot-recruiter-shell [class~="bg-white/70"],
+  .ibot-recruiter-shell [class~="bg-white/60"] {
+    background-color: rgba(255, 255, 255, 0.82);
+  }
+
+  .ibot-recruiter-shell [class~="bg-slate-50"],
+  .ibot-recruiter-shell [class~="bg-slate-50/90"],
+  .ibot-recruiter-shell [class~="bg-slate-50/80"],
+  .ibot-recruiter-shell [class~="bg-slate-50/75"],
+  .ibot-recruiter-shell [class~="bg-slate-50/70"],
+  .ibot-recruiter-shell [class~="bg-slate-50/60"],
+  .ibot-recruiter-shell [class~="bg-slate-50/55"],
+  .ibot-recruiter-shell [class~="bg-slate-50/50"],
+  .ibot-recruiter-shell [class~="bg-slate-50/45"],
+  .ibot-recruiter-shell [class~="bg-slate-50/35"],
+  .ibot-recruiter-shell [class~="bg-slate-100"],
+  .ibot-recruiter-shell [class~="bg-slate-100/80"] {
+    background-color: #FCFAF6;
+  }
+
+  .ibot-recruiter-shell [class~="bg-slate-200"],
+  .ibot-recruiter-shell [class~="bg-slate-200/80"] {
+    background-color: #F4E8D6;
+  }
+
+  .ibot-recruiter-shell [class~="bg-slate-950"],
+  .ibot-recruiter-shell [class~="bg-slate-900"],
+  .ibot-recruiter-shell [class~="bg-slate-800"] {
+    background-color: var(--brand-charcoal);
+  }
+
+  .ibot-recruiter-shell [class~="border-slate-50"],
+  .ibot-recruiter-shell [class~="border-slate-100"],
+  .ibot-recruiter-shell [class~="border-slate-200"],
+  .ibot-recruiter-shell [class~="border-slate-300"] {
+    border-color: var(--border-default);
+  }
+
+  .ibot-recruiter-shell [class~="divide-slate-200"] > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border-default);
+  }
+
+  .ibot-recruiter-shell [class~="text-slate-950"],
+  .ibot-recruiter-shell [class~="text-slate-900"],
+  .ibot-recruiter-shell [class~="text-slate-800"] {
+    color: var(--text-primary);
+  }
+
+  .ibot-recruiter-shell [class~="text-slate-700"],
+  .ibot-recruiter-shell [class~="text-slate-600"],
+  .ibot-recruiter-shell [class~="text-slate-500"] {
+    color: var(--text-secondary);
+  }
+
+  .ibot-recruiter-shell [class~="text-slate-400"],
+  .ibot-recruiter-shell [class~="text-slate-300"] {
+    color: var(--text-muted);
+  }
+
+  .ibot-recruiter-shell [class~="bg-indigo-50"],
+  .ibot-recruiter-shell [class~="bg-indigo-50/80"],
+  .ibot-recruiter-shell [class~="bg-indigo-50/75"],
+  .ibot-recruiter-shell [class~="bg-indigo-50/70"],
+  .ibot-recruiter-shell [class~="bg-indigo-50/60"],
+  .ibot-recruiter-shell [class~="bg-indigo-50/35"],
+  .ibot-recruiter-shell [class~="bg-indigo-100"],
+  .ibot-recruiter-shell [class~="bg-violet-50"],
+  .ibot-recruiter-shell [class~="bg-violet-50/60"],
+  .ibot-recruiter-shell [class~="bg-violet-100"],
+  .ibot-recruiter-shell [class~="bg-sky-50"],
+  .ibot-recruiter-shell [class~="bg-cyan-50"],
+  .ibot-recruiter-shell [class~="bg-cyan-50/35"],
+  .ibot-recruiter-shell [class~="bg-cyan-50/90"],
+  .ibot-recruiter-shell [class~="bg-teal-50"] {
+    background-color: var(--brand-soft);
+  }
+
+  .ibot-recruiter-shell [class~="bg-blue-50"],
+  .ibot-recruiter-shell [class~="bg-blue-100"],
+  .ibot-recruiter-shell [class~="bg-orange-50"],
+  .ibot-recruiter-shell [class~="bg-orange-100"],
+  .ibot-recruiter-shell [class~="bg-pink-50"],
+  .ibot-recruiter-shell [class~="bg-pink-100"] {
+    background-color: var(--brand-soft);
+  }
+
+  .ibot-recruiter-shell [class~="bg-indigo-600"],
+  .ibot-recruiter-shell [class~="bg-indigo-700"],
+  .ibot-recruiter-shell [class~="bg-cyan-600"],
+  .ibot-recruiter-shell [class~="bg-teal-600"],
+  .ibot-recruiter-shell [class~="bg-sky-600"],
+  .ibot-recruiter-shell [class~="bg-violet-600"] {
+    background-color: var(--brand-charcoal);
+  }
+
+  .ibot-recruiter-shell [class~="bg-blue-500"],
+  .ibot-recruiter-shell [class~="bg-blue-600"],
+  .ibot-recruiter-shell [class~="bg-orange-500"],
+  .ibot-recruiter-shell [class~="bg-orange-600"],
+  .ibot-recruiter-shell [class~="bg-pink-500"],
+  .ibot-recruiter-shell [class~="bg-pink-600"] {
+    background-color: var(--brand-charcoal);
+  }
+
+  .ibot-recruiter-shell [class~="text-indigo-950"],
+  .ibot-recruiter-shell [class~="text-indigo-900"],
+  .ibot-recruiter-shell [class~="text-indigo-800"],
+  .ibot-recruiter-shell [class~="text-indigo-700"],
+  .ibot-recruiter-shell [class~="text-indigo-600"],
+  .ibot-recruiter-shell [class~="text-indigo-500"],
+  .ibot-recruiter-shell [class~="text-violet-800"],
+  .ibot-recruiter-shell [class~="text-violet-700"],
+  .ibot-recruiter-shell [class~="text-violet-500"],
+  .ibot-recruiter-shell [class~="text-sky-700"],
+  .ibot-recruiter-shell [class~="text-sky-600"],
+  .ibot-recruiter-shell [class~="text-sky-500"],
+  .ibot-recruiter-shell [class~="text-cyan-950"],
+  .ibot-recruiter-shell [class~="text-cyan-700"],
+  .ibot-recruiter-shell [class~="text-cyan-600"],
+  .ibot-recruiter-shell [class~="text-teal-950"],
+  .ibot-recruiter-shell [class~="text-teal-700"],
+  .ibot-recruiter-shell [class~="text-teal-600"] {
+    color: var(--brand-hover);
+  }
+
+  .ibot-recruiter-shell [class~="text-blue-800"],
+  .ibot-recruiter-shell [class~="text-blue-700"],
+  .ibot-recruiter-shell [class~="text-blue-600"],
+  .ibot-recruiter-shell [class~="text-blue-500"],
+  .ibot-recruiter-shell [class~="text-orange-800"],
+  .ibot-recruiter-shell [class~="text-orange-700"],
+  .ibot-recruiter-shell [class~="text-orange-600"],
+  .ibot-recruiter-shell [class~="text-orange-500"],
+  .ibot-recruiter-shell [class~="text-pink-800"],
+  .ibot-recruiter-shell [class~="text-pink-700"],
+  .ibot-recruiter-shell [class~="text-pink-600"],
+  .ibot-recruiter-shell [class~="text-pink-500"] {
+    color: var(--brand-hover);
+  }
+
+  .ibot-recruiter-shell [class~="border-indigo-100"],
+  .ibot-recruiter-shell [class~="border-indigo-200"],
+  .ibot-recruiter-shell [class~="border-indigo-300"],
+  .ibot-recruiter-shell [class~="border-violet-100"],
+  .ibot-recruiter-shell [class~="border-violet-300"],
+  .ibot-recruiter-shell [class~="border-sky-100"],
+  .ibot-recruiter-shell [class~="border-sky-200"],
+  .ibot-recruiter-shell [class~="border-sky-300"],
+  .ibot-recruiter-shell [class~="border-cyan-100"],
+  .ibot-recruiter-shell [class~="border-cyan-200"],
+  .ibot-recruiter-shell [class~="border-cyan-300"],
+  .ibot-recruiter-shell [class~="border-teal-100"],
+  .ibot-recruiter-shell [class~="border-teal-200"],
+  .ibot-recruiter-shell [class~="border-teal-300"] {
+    border-color: #D7C2A8;
+  }
+
+  .ibot-recruiter-shell [class~="border-blue-100"],
+  .ibot-recruiter-shell [class~="border-blue-200"],
+  .ibot-recruiter-shell [class~="border-blue-300"],
+  .ibot-recruiter-shell [class~="border-orange-100"],
+  .ibot-recruiter-shell [class~="border-orange-200"],
+  .ibot-recruiter-shell [class~="border-orange-300"],
+  .ibot-recruiter-shell [class~="border-pink-100"],
+  .ibot-recruiter-shell [class~="border-pink-200"],
+  .ibot-recruiter-shell [class~="border-pink-300"] {
+    border-color: #D7C2A8;
+  }
+
+  .ibot-recruiter-shell [class~="hover:bg-indigo-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-violet-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-cyan-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-teal-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-sky-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-blue-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-orange-50"]:hover,
+  .ibot-recruiter-shell [class~="hover:bg-pink-50"]:hover {
+    background-color: var(--brand-soft);
+  }
+
+  .ibot-recruiter-shell [class~="hover:border-indigo-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-indigo-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-violet-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-violet-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-cyan-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-cyan-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-teal-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-teal-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-sky-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-sky-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-blue-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-blue-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-orange-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-orange-300"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-pink-200"]:hover,
+  .ibot-recruiter-shell [class~="hover:border-pink-300"]:hover {
+    border-color: var(--brand-accent);
+  }
+
+  .ibot-recruiter-shell [class~="hover:text-indigo-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-violet-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-cyan-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-teal-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-sky-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-blue-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-orange-700"]:hover,
+  .ibot-recruiter-shell [class~="hover:text-pink-700"]:hover {
+    color: var(--brand-hover);
+  }
+
+  .ibot-recruiter-shell [class~="shadow-slate-200/60"],
+  .ibot-recruiter-shell [class~="shadow-slate-900/15"] {
+    --tw-shadow-color: rgba(36, 33, 29, 0.12);
   }
 
   /* Keep dense recruiter screens readable without globally scaling the layout. */
@@ -765,65 +1133,69 @@
 
   .ibot-hero-panel {
     background:
-      linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.82)),
-      linear-gradient(90deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.05));
+      linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(252, 250, 246, 0.86)),
+      linear-gradient(90deg, rgba(185, 131, 63, 0.11), rgba(244, 232, 214, 0.72));
   }
 
   .ibot-command-panel {
     border-radius: 14px;
-    border: 1px solid #E2E8F0;
+    border: 1px solid var(--border-default);
     background: #FFFFFF;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 1px 3px rgba(36, 33, 29, 0.06);
   }
 
   .ibot-page-header-band {
     border-radius: 0;
-    border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+    border-bottom: 1px solid rgba(185, 131, 63, 0.28);
     background:
-      radial-gradient(circle at 78% 0%, rgba(6, 182, 212, 0.1), transparent 28%),
-      linear-gradient(120deg, #E2E8F0 0%, #EEF2F7 38%, #F8FAFC 72%, #ECFDF5 100%);
+      radial-gradient(circle at 78% 0%, rgba(185, 131, 63, 0.1), transparent 28%),
+      linear-gradient(120deg, #F4E8D6 0%, #F7F3EA 38%, #FCFAF6 72%, #FFFFFF 100%);
     box-shadow:
-      inset 4px 0 0 #059669,
-      0 1px 3px rgba(15, 23, 42, 0.06);
+      inset 4px 0 0 var(--brand-accent),
+      0 1px 3px rgba(36, 33, 29, 0.06);
   }
 
   .ibot-section-toolbar {
-    border-radius: 14px;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 15px;
+    border: 1px solid rgba(185, 131, 63, 0.24);
     background:
-      radial-gradient(circle at 84% 20%, rgba(45, 212, 191, 0.12), transparent 28%),
-      linear-gradient(135deg, #FFFFFF 0%, #F0FDF4 52%, #ECFEF9 100%);
-    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.06);
+      radial-gradient(circle at 84% 20%, rgba(185, 131, 63, 0.12), transparent 28%),
+      linear-gradient(135deg, #FFFFFF 0%, #FCFAF6 52%, #F4E8D6 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 8px 26px -20px rgba(36, 33, 29, 0.28);
   }
 
   .ibot-section-surface {
-    border-radius: 14px;
-    border: 1px solid #E2E8F0;
+    border-radius: 15px;
+    border: 1px solid var(--border-default);
     background:
-      linear-gradient(180deg, #EEF2F7 0%, #F8FAFC 28%, #FFFFFF 100%);
+      linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 42%, #FFFFFF 100%);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      0 2px 8px rgba(15, 23, 42, 0.05);
+      0 12px 32px -26px rgba(36, 33, 29, 0.34);
   }
 
   .ibot-candidates-surface {
     background:
-      radial-gradient(circle at 92% 4%, rgba(99, 102, 241, 0.09), transparent 25%),
-      linear-gradient(145deg, #F8FAFC 0%, #F1F5F9 46%, #F5F3FF 100%);
-    border-color: #DDE4EE;
+      radial-gradient(circle at 92% 4%, rgba(185, 131, 63, 0.09), transparent 25%),
+      linear-gradient(145deg, #FCFAF6 0%, #F7F3EA 46%, #FFFFFF 100%);
+    border-color: var(--border-default);
   }
 
   .ibot-section-inset {
     border-radius: 12px;
-    border: 1px solid #E2E8F0;
+    border: 1px solid var(--border-default);
     background: #FFFFFF;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 8px 22px -20px rgba(36, 33, 29, 0.3);
   }
 
   .ibot-assessments-frame {
     border-radius: 16px;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    background: linear-gradient(160deg, rgba(241, 245, 249, 0.5) 0%, transparent 100%);
+    border: 1px solid rgba(230, 222, 210, 0.95);
+    background: linear-gradient(160deg, rgba(244, 232, 214, 0.55) 0%, transparent 100%);
     padding: 2px;
   }
 
@@ -855,8 +1227,8 @@
   .ibot-assessment-card:hover {
     transform: translateY(-3px);
     box-shadow:
-      0 12px 24px rgba(15, 23, 42, 0.09),
-      0 2px 6px rgba(15, 23, 42, 0.04);
+      0 12px 24px rgba(36, 33, 29, 0.09),
+      0 2px 6px rgba(36, 33, 29, 0.04);
   }
 
   .ibot-assessment-card:hover::before {
@@ -877,10 +1249,12 @@
   }
 
   .ibot-panel {
-    border-radius: 14px;
-    border: 1px solid #E2E8F0;
+    border-radius: 15px;
+    border: 1px solid var(--border-default);
     background: #FFFFFF;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 10px 28px -24px rgba(36, 33, 29, 0.34);
   }
 
   .ibot-transcript-scroll {
@@ -893,18 +1267,18 @@
   }
 
   .ibot-transcript-scroll::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-left: 1px solid #e2e8f0;
+    background: #F7F3EA;
+    border-left: 1px solid #E6DED2;
   }
 
   .ibot-transcript-scroll::-webkit-scrollbar-thumb {
-    background: #94a3b8;
-    border: 2px solid #f1f5f9;
+    background: #B8AA9A;
+    border: 2px solid #F7F3EA;
     border-radius: 999px;
   }
 
   .ibot-transcript-scroll::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #9A6A30;
   }
 
   .ibot-waiting-room-bg {
@@ -1192,8 +1566,75 @@
     animation: ibot-scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  .ibot-landing-shell .landing-reveal {
+    opacity: 0;
+    transform: translateY(34px) scale(0.985);
+    transition:
+      opacity 720ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 720ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 300ms ease,
+      border-color 300ms ease,
+      box-shadow 300ms ease;
+    will-change: opacity, transform;
+  }
+
+  .ibot-landing-shell .landing-reveal[data-reveal-direction="left"] {
+    transform: translateX(-34px) scale(0.985);
+  }
+
+  .ibot-landing-shell .landing-reveal[data-reveal-direction="right"] {
+    transform: translateX(34px) scale(0.985);
+  }
+
+  .ibot-landing-shell .landing-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* Refinish the shared interview avatar for the warm bronze landing theme. */
+  .ibot-landing-shell .ibot-agent-ring {
+    border-color: rgba(185, 131, 63, 0.32);
+  }
+
+  .ibot-landing-shell .ibot-agent-ring.ring-two {
+    border-color: rgba(215, 170, 106, 0.28);
+  }
+
+  .ibot-landing-shell .ibot-agent-led {
+    background: linear-gradient(90deg, #B9833F, #D7AA6A);
+    box-shadow: 0 0 18px rgba(185, 131, 63, 0.26);
+  }
+
+  .ibot-landing-shell .ibot-agent-eye {
+    background: #E8C794;
+    box-shadow: 0 0 18px rgba(185, 131, 63, 0.56);
+  }
+
+  .ibot-landing-shell .ibot-agent-waveform i {
+    background: #F2D7AA;
+    box-shadow: 0 0 9px rgba(185, 131, 63, 0.5);
+  }
+
+  .ibot-landing-shell .ibot-agent-chip {
+    background: linear-gradient(145deg, #B9833F, #9A6A30);
+    box-shadow:
+      inset 0 0 0 3px rgba(255, 255, 255, 0.25),
+      0 14px 28px rgba(154, 106, 48, 0.24);
+  }
+
+  .ibot-landing-shell .ibot-stage-panel {
+    background: #FCFAF6;
+  }
+
   /* Respect prefers-reduced-motion */
   @media (prefers-reduced-motion: reduce) {
+    .ibot-landing-shell .landing-reveal,
+    .ibot-landing-shell .landing-reveal.is-visible {
+      opacity: 1;
+      transform: none;
+      will-change: auto;
+    }
+
     *,
     ::before,
     ::after {

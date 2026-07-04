@@ -17,7 +17,7 @@ import type {
   CandidateAssessmentListItem,
 } from '../../../types/candidate.types';
 import { DecisionModal } from './EvaluationUI';
-import { formatDateTime, useEvaluationDecision } from './evaluationUiUtils';
+import { formatDateTime, cleanRecruiterNarrative, isDecisionFinalized, useEvaluationDecision } from './evaluationUiUtils';
 import {
   buildAssessmentInstanceNumbers,
   buildAssessmentSelectOptions,
@@ -52,11 +52,11 @@ import {
 
 const PAGE_SIZE = 15;
 const AVATAR_GRADIENTS = [
-  'from-violet-500 to-fuchsia-500',
-  'from-indigo-500 to-blue-600',
-  'from-orange-400 to-rose-500',
-  'from-sky-500 to-blue-600',
-  'from-indigo-500 to-violet-600',
+  'from-brand-accent to-brand-hover',
+  'from-brand-charcoal to-[#4A4035]',
+  'from-[#D7AA6A] to-[#9A6A30]',
+  'from-[#C59A5D] to-brand-accent',
+  'from-[#8A6A45] to-brand-hover',
 ];
 
 const candidateEnrollments = (candidate: CandidateAssessmentListItem) =>
@@ -390,11 +390,11 @@ export const CandidatesPage: React.FC = () => {
       classes = 'bg-emerald-50 text-emerald-700 border-emerald-200';
       dotClass = 'bg-emerald-500';
     } else if (status === 'COMPLETED') {
-      classes = 'bg-sky-50 text-sky-700 border-sky-200';
-      dotClass = 'bg-sky-500';
+      classes = 'bg-brand-soft text-brand-hover border-[#D8C9B5]';
+      dotClass = 'bg-brand-accent';
     } else if (status === 'IN_PROGRESS') {
-      classes = 'bg-blue-50 text-blue-600 border-blue-200';
-      dotClass = 'bg-blue-500';
+      classes = 'bg-amber-50 text-amber-700 border-amber-200';
+      dotClass = 'bg-amber-500';
     }
     return (
       <span className={`inline-flex cursor-default items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-bold transition-all hover:scale-105 ${classes}`}>
@@ -423,7 +423,7 @@ export const CandidatesPage: React.FC = () => {
     );
   };
 
-  const inputStyles = "rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all";
+  const inputStyles = "rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-soft transition-all";
 
   // Filter candidates locally using the search query
   const filteredCandidates = useMemo(
@@ -470,10 +470,10 @@ export const CandidatesPage: React.FC = () => {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* ── Header Bar & Toolbar ─────────────────────────────────────────── */}
-      <div className="relative z-20 mb-4 flex flex-shrink-0 flex-col justify-between gap-4 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_12px_32px_-24px_rgba(15,23,42,0.35)] md:flex-row md:items-center">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+      <div className="ibot-section-toolbar relative z-20 mb-3 flex flex-shrink-0 flex-col justify-between gap-3 px-3 py-3 md:flex-row md:items-center">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
           <label className="group relative min-w-[260px] flex-1 xl:max-w-[360px]">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-600" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-brand-hover" />
             <input
               type="search"
               value={searchQuery}
@@ -483,7 +483,7 @@ export const CandidatesPage: React.FC = () => {
               }}
               placeholder="Search by name, email, or role..."
               aria-label="Search candidates"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-xs font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              className="h-10 w-full rounded-xl border border-default bg-white pl-11 pr-10 text-xs font-medium text-slate-800 outline-none transition-all placeholder:text-slate-400 hover:border-brand-accent hover:shadow-sm focus:border-brand-accent focus:ring-4 focus:ring-brand-soft"
             />
             {searchQuery && (
               <button
@@ -517,7 +517,7 @@ export const CandidatesPage: React.FC = () => {
                   ]
             }
             disabled={loadingCampaigns}
-            buttonClassName="!h-12 min-w-[190px] !px-4"
+            buttonClassName="!h-10 min-w-[180px] !px-4"
           />
 
           <CustomSelect
@@ -532,7 +532,7 @@ export const CandidatesPage: React.FC = () => {
               { value: 'COMPLETED', label: 'Completed' },
               { value: 'EVALUATED', label: 'Evaluated' },
             ]}
-            buttonClassName="!h-12 min-w-[145px] !px-4"
+            buttonClassName="!h-10 min-w-[140px] !px-4"
           />
         </div>
 
@@ -547,7 +547,7 @@ export const CandidatesPage: React.FC = () => {
               resetManualModal();
               setShowManualModal(true);
             }}
-            className="inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 px-5 text-xs font-bold text-white shadow-[0_12px_24px_-14px_rgba(5,150,105,0.7)] transition-all hover:-translate-y-0.5 hover:from-emerald-700 hover:to-green-700 hover:shadow-lg active:translate-y-0 active:scale-[0.97]"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-charcoal px-4 text-xs font-bold text-white shadow-[0_10px_22px_-14px_rgba(36,33,29,0.65)] transition-all hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-lg active:translate-y-0 active:scale-[0.97]"
           >
             <Plus className="h-3.5 w-3.5" />
             Add
@@ -561,7 +561,7 @@ export const CandidatesPage: React.FC = () => {
               resetEnrollModal();
               setShowEnrollModal(true);
             }}
-            className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:translate-y-0 active:scale-[0.97]"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-default bg-white px-3.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:translate-y-0 active:scale-[0.97]"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Enroll
@@ -574,7 +574,7 @@ export const CandidatesPage: React.FC = () => {
               }
               setShowUploadModal(true);
             }}
-            className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:translate-y-0 active:scale-[0.97]"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-default bg-white px-3.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:translate-y-0 active:scale-[0.97]"
             id="upload-csv-btn"
           >
             <Upload className="h-3.5 w-3.5" />
@@ -584,10 +584,10 @@ export const CandidatesPage: React.FC = () => {
       </div>
 
       {/* ── Table Container ──────────────────────────────────────────────── */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_38px_-28px_rgba(15,23,42,0.35)]">
+      <div className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
         {loadingCandidates ? (
           <div className="flex-1 flex flex-col items-center justify-center">
-            <Loader2 className="h-7 w-7 text-emerald-500 animate-spin mb-2" />
+            <Loader2 className="mb-2 h-7 w-7 animate-spin text-brand-accent" />
             <p className="text-xs text-slate-400 font-semibold">Loading candidates…</p>
           </div>
         ) : !selectedCampaignId ? (
@@ -603,7 +603,7 @@ export const CandidatesPage: React.FC = () => {
             <p className="text-xs text-slate-400 mt-1">Try resetting filters or upload a CSV to invite candidates</p>
             <button
               onClick={() => setShowUploadModal(true)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-700 transition-all shadow-sm hover:scale-[1.03] active:scale-[0.97]"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-hover transition-all shadow-sm hover:scale-[1.03] active:scale-[0.97]"
             >
               <Upload className="h-3 w-3" />
               Upload CSV
@@ -612,7 +612,7 @@ export const CandidatesPage: React.FC = () => {
         ) : (
           <div className="ibot-scrollbar flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 backdrop-blur">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-[#FCFAF6]/95 backdrop-blur">
                 <tr className="h-14 text-[10px] font-extrabold uppercase tracking-[0.09em] text-slate-500">
                   <th className="cursor-pointer px-5 py-3 transition-colors hover:text-slate-700">
                     Candidate <ChevronDown className="inline h-3 w-3 opacity-0 hover:opacity-100" />
@@ -634,7 +634,7 @@ export const CandidatesPage: React.FC = () => {
                 {visibleCandidates.map((c, candidateIndex) => (
                   <tr
                     key={c.id}
-                    className="group h-[72px] cursor-pointer bg-white transition-colors hover:bg-emerald-50/30 focus-within:bg-emerald-50/30"
+                    className="group h-[72px] cursor-pointer bg-white transition-colors hover:bg-brand-soft/50 focus-within:bg-brand-soft/50"
                     onClick={() => openCandidateDetails(c)}
                   >
                     <td className="px-5 py-2">
@@ -648,11 +648,11 @@ export const CandidatesPage: React.FC = () => {
                         aria-label={`View full details for ${c.full_name}`}
                       >
                         {/* Avatar container with 2px ring highlight on hover */}
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-sm transition-all duration-300 group-hover:ring-2 group-hover:ring-emerald-300 group-hover:ring-offset-2 ${AVATAR_GRADIENTS[candidateIndex % AVATAR_GRADIENTS.length]}`}>
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-sm transition-all duration-300 group-hover:ring-2 group-hover:ring-brand-accent group-hover:ring-offset-2 ${AVATAR_GRADIENTS[candidateIndex % AVATAR_GRADIENTS.length]}`}>
                           {c.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-extrabold text-slate-900 transition-colors group-hover:text-emerald-700">{c.full_name}</p>
+                          <p className="truncate text-xs font-extrabold text-slate-900 transition-colors group-hover:text-brand-hover">{c.full_name}</p>
                           <p className="mt-1 flex items-center gap-1 truncate text-[10px] font-medium text-slate-500">
                             <Mail className="h-3 w-3 shrink-0" />
                             {c.email}
@@ -719,7 +719,7 @@ export const CandidatesPage: React.FC = () => {
                       >
                         <button
                           onClick={() => openCandidateResume(c)}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.97]"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-default bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:scale-[0.97]"
                           aria-label={`View ${c.full_name}'s resume`}
                         >
                           <FileText className="h-3 w-3" />
@@ -731,7 +731,7 @@ export const CandidatesPage: React.FC = () => {
                         {candidateEnrollments(c).some((enrollment) => enrollment.jd_text) && (
                           <button
                             onClick={() => openCandidateJd(c)}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 active:scale-[0.97]"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-default bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:scale-[0.97]"
                             aria-label={`View the job description for ${c.full_name}`}
                           >
                             <Briefcase className="h-3 w-3" />
@@ -751,7 +751,7 @@ export const CandidatesPage: React.FC = () => {
                                 openCandidateDetails(c);
                               }
                             }}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:scale-[0.97]"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-default bg-white px-3 text-[10px] font-bold text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:scale-[0.97]"
                             aria-label={`View ${c.full_name}'s evaluation report`}
                           >
                             <ClipboardList className="h-3 w-3" />
@@ -789,7 +789,7 @@ export const CandidatesPage: React.FC = () => {
               type="button"
               disabled={currentPage === 0}
               onClick={() => setPage(currentPage - 1)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-emerald-200 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-default bg-white px-3 py-1.5 text-slate-600 transition-colors hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
             </button>
@@ -800,7 +800,7 @@ export const CandidatesPage: React.FC = () => {
               type="button"
               disabled={currentPage >= totalPages - 1}
               onClick={() => setPage(currentPage + 1)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-emerald-200 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-default bg-white px-3 py-1.5 text-slate-600 transition-colors hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next
             </button>
@@ -821,11 +821,11 @@ export const CandidatesPage: React.FC = () => {
             className="ibot-modal max-h-[calc(100vh-2rem)] max-w-3xl !overflow-hidden"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="h-1.5 shrink-0 bg-gradient-to-r from-emerald-500 via-sky-400 to-indigo-500" />
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
 
-            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white via-emerald-50/45 to-indigo-50/35 px-6 py-4">
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white via-brand-soft/60 to-white px-6 py-4">
               <div className="flex min-w-0 items-center gap-3.5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-800 ring-1 ring-emerald-200">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-sm font-black text-brand-hover ring-1 ring-default">
                   {activeCandidate.full_name
                     .split(/\s+/)
                     .filter(Boolean)
@@ -866,7 +866,7 @@ export const CandidatesPage: React.FC = () => {
                     Documents and reports remain scoped to the assessment they belong to.
                   </p>
                 </div>
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
+                <span className="rounded-full border border-default bg-brand-soft px-2.5 py-1 text-[10px] font-black text-brand-hover">
                   {activeCandidateEnrollments.length} {activeCandidateEnrollments.length === 1 ? 'assessment' : 'assessments'}
                 </span>
               </div>
@@ -897,7 +897,7 @@ export const CandidatesPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => openCandidateResume(enrollment)}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600 hover:border-indigo-200 hover:text-indigo-700"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-600 hover:border-brand-accent hover:text-brand-hover"
                       >
                         <FileText className="h-3 w-3" />
                         Resume
@@ -916,7 +916,7 @@ export const CandidatesPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => navigate(`/candidates/${enrollment.id}/report`)}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-[10px] font-black text-white hover:bg-indigo-700"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-brand-charcoal px-2.5 text-[10px] font-black text-white hover:bg-brand-hover"
                         >
                           <ClipboardList className="h-3 w-3" />
                           Report
@@ -928,14 +928,14 @@ export const CandidatesPage: React.FC = () => {
               </div>
 
               {activeCandidateEnrollments.length === 1 && (
-              <div className="mt-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/75 via-white to-blue-50/60 p-3.5">
+              <div className="mt-3 rounded-xl border border-default bg-gradient-to-r from-brand-soft/75 via-white to-brand-soft/45 p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <ClipboardList className="h-4 w-4 text-indigo-600" />
+                    <ClipboardList className="h-4 w-4 text-brand-hover" />
                     <h3 className="text-xs font-black text-slate-900">Evaluation snapshot</h3>
                   </div>
                   {activeCandidate.status === 'EVALUATED' && (
-                    <span className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-indigo-700">
+                    <span className="rounded-full border border-default bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-brand-hover">
                       Report ready
                     </span>
                   )}
@@ -947,7 +947,7 @@ export const CandidatesPage: React.FC = () => {
                   </p>
                 ) : loadingCandidateEvaluation ? (
                   <div className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-slate-500">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-accent" />
                     Loading evaluation summary…
                   </div>
                 ) : candidateEvaluationError || !candidateEvaluation ? (
@@ -957,17 +957,20 @@ export const CandidatesPage: React.FC = () => {
                 ) : (
                   <div className="mt-2 grid grid-cols-[auto_1fr] items-center gap-4">
                     <div className="flex items-baseline gap-1">
-                      <span className="font-display text-3xl font-black text-indigo-700">
+                      <span className="font-display text-3xl font-black text-brand-hover">
                         {candidateEvaluation.overall_score.toFixed(1)}
                       </span>
                       <span className="text-[10px] font-bold text-slate-400">/10</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-indigo-700">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-brand-hover">
                         AI recommendation: {candidateEvaluation.hiring_recommendation}
                       </p>
                       <p className="mt-1 line-clamp-2 text-[10px] font-medium leading-4 text-slate-600">
-                        {candidateEvaluation.overall_summary || candidateEvaluation.recommendation_reasoning}
+                        {cleanRecruiterNarrative(
+                          candidateEvaluation.overall_summary ||
+                            candidateEvaluation.recommendation_reasoning,
+                        )}
                       </p>
                     </div>
                   </div>
@@ -994,7 +997,7 @@ export const CandidatesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => openCandidateResume(activeCandidate)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-brand-accent hover:text-brand-hover"
                 >
                   <FileText className="h-3.5 w-3.5" />
                   {activeCandidateEnrollments.length > 1
@@ -1005,7 +1008,7 @@ export const CandidatesPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => openCandidateJd(activeCandidate)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:text-cyan-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-700 shadow-sm transition-colors hover:border-brand-accent hover:text-brand-hover"
                   >
                     <Briefcase className="h-3.5 w-3.5" />
                     {activeCandidateEnrollments.length > 1 ? 'All JDs' : 'JD'}
@@ -1015,7 +1018,7 @@ export const CandidatesPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate(`/candidates/${activeCandidate.id}/report`)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-black text-indigo-700 transition-colors hover:bg-indigo-100"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-brand-soft px-3 py-2 text-[10px] font-black text-brand-hover transition-colors hover:bg-[#EAD7BE]"
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     Report
@@ -1029,7 +1032,7 @@ export const CandidatesPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => requestCandidateDecision('REJECTED')}
-                    disabled={activeCandidate.recruiter_decision === 'REJECTED'}
+                    disabled={isDecisionFinalized(activeCandidate.recruiter_decision)}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[10px] font-black text-rose-700 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <UserX className="h-3.5 w-3.5" />
@@ -1038,7 +1041,7 @@ export const CandidatesPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => requestCandidateDecision('APPROVED')}
-                    disabled={activeCandidate.recruiter_decision === 'APPROVED'}
+                    disabled={isDecisionFinalized(activeCandidate.recruiter_decision)}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-[10px] font-black text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <UserCheck className="h-3.5 w-3.5" />
@@ -1058,8 +1061,8 @@ export const CandidatesPage: React.FC = () => {
 
             <div className="flex justify-between items-start border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
-                  <FileSpreadsheet className="h-4 w-4 text-emerald-500 animate-pulse" />
+                <h2 className="flex items-center gap-2 font-display text-[16px] font-bold text-slate-900">
+                  <FileSpreadsheet className="h-4 w-4 text-brand-accent" />
                   Upload Candidates
                 </h2>
                 <p className="text-[10px] text-slate-400 mt-0.5 font-medium">CSV upload with automatic invitations</p>
@@ -1076,8 +1079,8 @@ export const CandidatesPage: React.FC = () => {
             <div className="ibot-scrollbar flex-1 overflow-y-auto">
               <div className="px-6 py-5 flex flex-col gap-4">
                 {/* CSV Format Info */}
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 flex items-start gap-2 hover:border-emerald-500/20 transition-all">
-                  <Info className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5 animate-bounce" />
+                <div className="flex items-start gap-2 rounded-lg border border-default bg-brand-soft/45 p-3 transition-all hover:border-brand-accent">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-hover" />
                   <div className="text-[10px] text-slate-500 leading-relaxed font-bold">
                     Required columns:{' '}
                     <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">name</code>,{' '}
@@ -1096,7 +1099,7 @@ export const CandidatesPage: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => { navigator.clipboard.writeText(assessment.id); toastSuccess('Copied', 'Assessment ID copied to clipboard.'); }}
-                                className="shrink-0 font-mono text-[8px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded hover:bg-emerald-100 transition-colors"
+                                className="shrink-0 rounded border border-default bg-white px-1.5 py-0.5 font-mono text-[8px] text-brand-hover transition-colors hover:border-brand-accent hover:bg-brand-soft"
                                 title="Click to copy"
                               >
                                 {assessment.id.slice(0, 8)}…
@@ -1145,7 +1148,7 @@ export const CandidatesPage: React.FC = () => {
                               <XCircle className="h-3 w-3 text-red-500 shrink-0 mt-0.5" />
                             )}
                             <div className="flex-1 min-w-0 font-medium">
-                              <p className="text-[10px] font-bold text-slate-700 truncate group-hover:text-emerald-700 transition-colors">
+                              <p className="truncate text-[10px] font-bold text-slate-700 transition-colors group-hover:text-brand-hover">
                                 Row {r.row}: {r.email}
                               </p>
                               {r.reason && (
@@ -1162,10 +1165,10 @@ export const CandidatesPage: React.FC = () => {
                   <div
                     className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-center transition-all cursor-pointer ${
                       dragOver
-                        ? 'border-emerald-400 bg-emerald-50 scale-98 shadow-inner'
+                        ? 'border-brand-accent bg-brand-soft scale-98 shadow-inner'
                         : csvFile
                         ? 'border-emerald-400 bg-emerald-50 shadow-sm'
-                        : 'border-slate-300 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50/30 hover:scale-[1.01] hover:shadow-sm'
+                        : 'border-slate-300 bg-slate-50 hover:border-brand-accent hover:bg-brand-soft/40 hover:scale-[1.01] hover:shadow-sm'
                     }`}
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                     onDragLeave={() => setDragOver(false)}
@@ -1197,8 +1200,8 @@ export const CandidatesPage: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <div className="h-10 w-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center transition-transform hover:rotate-6">
-                          <Upload className="h-5 w-5 text-emerald-600" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-default bg-brand-soft transition-transform hover:rotate-6">
+                          <Upload className="h-5 w-5 text-brand-hover" />
                         </div>
                         <p className="text-xs font-bold text-slate-600">Drop CSV here</p>
                         <p className="text-[10px] text-slate-400 font-semibold">or click to browse</p>
@@ -1213,7 +1216,7 @@ export const CandidatesPage: React.FC = () => {
               {uploadResult ? (
                 <button
                   onClick={handleCloseUpload}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  className="rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 active:scale-[0.97]"
                 >
                   Done
                 </button>
@@ -1228,7 +1231,7 @@ export const CandidatesPage: React.FC = () => {
                   <button
                     onClick={handleBulkUpload}
                     disabled={!csvFile || bulkUploadMutation.isPending}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50"
+                    className="flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
                     id="submit-upload-btn"
                   >
                     {bulkUploadMutation.isPending ? (
@@ -1256,8 +1259,8 @@ export const CandidatesPage: React.FC = () => {
           <div className="ibot-modal max-w-md max-h-[85vh] animate-scaleIn">
             <div className="flex justify-between items-start border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
-                  <Users className="h-4 w-4 text-emerald-500 animate-pulse" />
+                <h2 className="flex items-center gap-2 font-display text-[16px] font-bold text-slate-900">
+                  <Users className="h-4 w-4 text-brand-accent" />
                   Add Candidate
                 </h2>
                 <p className="text-[10px] text-slate-400 mt-0.5">Enter details and upload resume</p>
@@ -1306,7 +1309,7 @@ export const CandidatesPage: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Resume PDF</label>
-                  <div className="border border-dashed border-slate-300 bg-slate-50 p-4 rounded-lg flex flex-col items-center justify-center gap-1 text-center relative hover:border-emerald-400 hover:bg-emerald-50/20 hover:scale-[1.01] transition-all duration-300">
+                  <div className="relative flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-all duration-300 hover:scale-[1.01] hover:border-brand-accent hover:bg-brand-soft/35">
                     <FileText className="h-5 w-5 text-slate-400" />
                     {manualResume ? (
                       <span className="text-[11px] text-emerald-600 font-bold">{manualResume.name}</span>
@@ -1333,7 +1336,7 @@ export const CandidatesPage: React.FC = () => {
               <button
                 type="submit" form="manual-candidate-form"
                 disabled={createMutation.isPending}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
               >
                 {createMutation.isPending ? (
                   <>
@@ -1358,7 +1361,7 @@ export const CandidatesPage: React.FC = () => {
           <div className="ibot-modal max-w-2xl max-h-[85vh] animate-scaleIn">
             <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
+                <h2 className="flex items-center gap-2 font-display text-[16px] font-bold text-slate-900">
                   <FileText className="h-4 w-4 text-indigo-500" />
                   Candidate resumes: {selectedCandidate.full_name}
                 </h2>
@@ -1464,7 +1467,7 @@ export const CandidatesPage: React.FC = () => {
           <div className="ibot-modal max-w-2xl max-h-[85vh] animate-scaleIn">
             <div className="flex justify-between items-center border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
+                <h2 className="flex items-center gap-2 font-display text-[16px] font-bold text-slate-900">
                   <Briefcase className="h-4 w-4 text-blue-600" />
                   Assessment job descriptions
                 </h2>
@@ -1520,8 +1523,8 @@ export const CandidatesPage: React.FC = () => {
           <div className="ibot-modal max-w-md max-h-[85vh] animate-scaleIn">
             <div className="flex justify-between items-start border-b border-slate-100 px-6 py-4 shrink-0">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-display">
-                  <UserPlus className="h-4 w-4 text-emerald-500 animate-pulse" />
+                <h2 className="flex items-center gap-2 font-display text-[16px] font-bold text-slate-900">
+                   <UserPlus className="h-4 w-4 text-brand-accent" />
                   Enroll Candidate
                 </h2>
                 <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Assign an existing candidate to another assessment</p>
@@ -1538,9 +1541,9 @@ export const CandidatesPage: React.FC = () => {
               <form id="enroll-candidate-form" onSubmit={handleEnrollCandidate} className="flex flex-col gap-3.5">
 
                 {/* Info banner */}
-                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100 flex items-start gap-2">
-                  <Info className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-emerald-700 font-semibold leading-relaxed">
+                <div className="flex items-start gap-2 rounded-lg border border-default bg-brand-soft/55 p-3">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-hover" />
+                  <p className="text-[10px] font-semibold leading-relaxed text-secondary">
                     If the candidate has an active enrollment whose interview window overlaps with the new assessment, they must complete that assessment first. A new resume is optional — their previous resume will be reused if none is uploaded.
                   </p>
                 </div>
@@ -1594,7 +1597,7 @@ export const CandidatesPage: React.FC = () => {
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     New Resume PDF <span className="text-slate-300 font-normal normal-case">(optional)</span>
                   </label>
-                  <div className="border border-dashed border-slate-300 bg-slate-50 p-4 rounded-lg flex flex-col items-center justify-center gap-1 text-center relative hover:border-emerald-400 hover:bg-emerald-50/20 hover:scale-[1.01] transition-all duration-300">
+                  <div className="relative flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-all duration-300 hover:scale-[1.01] hover:border-brand-accent hover:bg-brand-soft/35">
                     <FileText className="h-5 w-5 text-slate-400" />
                     {enrollResume ? (
                       <span className="text-[11px] text-emerald-600 font-bold">{enrollResume.name}</span>
@@ -1626,7 +1629,7 @@ export const CandidatesPage: React.FC = () => {
               <button
                 type="submit" form="enroll-candidate-form"
                 disabled={enrollMutation.isPending || uniqueCandidates.length === 0}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.03] active:scale-[0.97] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
               >
                 {enrollMutation.isPending ? (
                   <>

@@ -16,6 +16,16 @@ export const formatElapsedTime = (seconds: number | null | undefined) => {
   return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
 };
 
+export const transcriptTurnMeta = (turn: TranscriptTurn) =>
+  [
+    turn.section ? formatLabel(turn.section) : null,
+    turn.skill,
+    turn.difficulty ? formatLabel(turn.difficulty) : null,
+    turn.question_type ? `Question: ${formatLabel(turn.question_type)}` : null,
+    turn.response_type ? `Response: ${formatLabel(turn.response_type)}` : null,
+    turn.tone ? `Tone: ${formatLabel(turn.tone)}` : null,
+  ].filter(Boolean);
+
 export const transcriptTurnTime = (turn: TranscriptTurn) => {
   const elapsed = formatElapsedTime(turn.elapsed_secs);
   if (elapsed) return elapsed;
@@ -55,14 +65,7 @@ export const buildTranscriptText = (transcript: InterviewTranscriptResponse) => 
   const turns = transcript.turns.flatMap((turn) => {
     const speaker = isInterviewerTurn(turn) ? 'Interviewer' : 'Candidate';
     const time = transcriptTurnTime(turn);
-    const context = [
-      turn.section ? `Section: ${formatLabel(turn.section)}` : null,
-      turn.skill ? `Skill: ${turn.skill}` : null,
-      turn.difficulty ? `Difficulty: ${formatLabel(turn.difficulty)}` : null,
-      turn.question_type ? `Question type: ${formatLabel(turn.question_type)}` : null,
-      turn.response_type ? `Response type: ${formatLabel(turn.response_type)}` : null,
-      turn.tone ? `Tone: ${formatLabel(turn.tone)}` : null,
-    ].filter(Boolean);
+    const context = transcriptTurnMeta(turn);
     return [
       `[Turn ${turn.turn_number}${time ? ` · ${time}` : ''}] ${speaker}`,
       ...(context.length > 0 ? [context.join(' · ')] : []),

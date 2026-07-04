@@ -9,7 +9,6 @@
 export interface UserInfo {
   id: string;
   email: string;
-  role: string;
   full_name?: string;
   company_name?: string;
 }
@@ -51,14 +50,4 @@ export interface RecruiterResponse {
   company_name: string;
   is_active: boolean;
   created_at: string;
-}
-
-// ── Component prop types ─────────────────────────────────────────────────────
-
-export interface LoginFormProps {
-  onToggleView?: () => void;
-}
-
-export interface RegisterFormProps {
-  onToggleView?: () => void;
 }

@@ -4,15 +4,18 @@ import type {
   InterviewTranscriptResponse,
 } from '../../../types/candidate.types';
 import { formatDateTime, formatLabel, scoreLabel } from './evaluationUiUtils';
+import { RecruiterNarrativeContent } from './EvaluationUI';
 import {
   formatElapsedTime,
   isInterviewerTurn,
+  transcriptTurnMeta,
   transcriptTurnTime,
 } from './evaluationReportUtils';
 
 interface EvaluationPrintReportProps {
   evaluation: InterviewEvaluationResponse;
   transcript: InterviewTranscriptResponse | null | undefined;
+  executiveSummary: string;
   recommendationReasoning: string;
   hiringRedFlag: string;
 }
@@ -20,6 +23,7 @@ interface EvaluationPrintReportProps {
 export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
   evaluation,
   transcript,
+  executiveSummary,
   recommendationReasoning,
   hiringRedFlag,
 }) => {
@@ -50,6 +54,15 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
             <dt>Recruiter decision</dt>
             <dd>{formatLabel(evaluation.recruiter_decision || 'pending')}</dd>
           </div>
+          {violation?.has_violation && (
+            <div>
+              <dt>Integrity</dt>
+              <dd>
+                {violation.validated_violation_count} confirmed concern
+                {violation.validated_violation_count === 1 ? '' : 's'}
+              </dd>
+            </div>
+          )}
           <div>
             <dt>Generated</dt>
             <dd>{formatDateTime(evaluation.generated_at)}</dd>
@@ -67,11 +80,19 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
         </div>
         <div className="evaluation-print-block">
           <h3>Executive summary</h3>
-          <p>{evaluation.overall_summary}</p>
+          <RecruiterNarrativeContent
+            text={executiveSummary}
+            paragraphClassName="evaluation-print-narrative-paragraph"
+            bulletClassName="evaluation-print-narrative-bullet"
+          />
         </div>
         <div className="evaluation-print-block">
           <h3>Recommendation reasoning</h3>
-          <p>{recommendationReasoning}</p>
+          <RecruiterNarrativeContent
+            text={recommendationReasoning}
+            paragraphClassName="evaluation-print-narrative-paragraph"
+            bulletClassName="evaluation-print-narrative-bullet"
+          />
         </div>
         {hiringRedFlag && (
           <div className="evaluation-print-alert">
@@ -114,6 +135,14 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
                 : `${evaluation.percentile_in_assessment}%`}
             </dd>
           </div>
+          <div>
+            <dt>Cohort size</dt>
+            <dd>
+              {evaluation.total_candidates_evaluated
+                ? String(evaluation.total_candidates_evaluated)
+                : 'Unavailable'}
+            </dd>
+          </div>
         </dl>
         <div className="evaluation-print-two-column">
           <PrintSignalList title="Demonstrated strengths" items={evaluation.strengths} />
@@ -131,12 +160,7 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
                 <div className="evaluation-print-row-heading">
                   <div>
                     <h3>{skill}</h3>
-                    <p>
-                      Priority {details.priority_score.toFixed(1)} ·{' '}
-                      {details.questions_evaluated} question
-                      {details.questions_evaluated === 1 ? '' : 's'} ·{' '}
-                      {Math.round(details.confidence * 100)}% confidence
-                    </p>
+                    <p>Priority {details.priority_score.toFixed(1)}</p>
                   </div>
                   <strong>{details.score.toFixed(1)}/10</strong>
                 </div>
@@ -261,8 +285,16 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
           <>
             <dl className="evaluation-print-facts">
               <div>
+                <dt>Status</dt>
+                <dd>{violation.has_violation ? 'Concerns identified' : 'No concerns'}</dd>
+              </div>
+              <div>
                 <dt>Confirmed</dt>
                 <dd>{violation.validated_violation_count}</dd>
+              </div>
+              <div>
+                <dt>Penalty applied</dt>
+                <dd>−{violation.penalty_applied.toFixed(2)}</dd>
               </div>
               <div>
                 <dt>Low</dt>
@@ -304,6 +336,11 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
         ) : (
           <>
             <p className="evaluation-print-section-intro">
+              {transcript.candidate_name || evaluation.candidate_name || 'Candidate'}
+              {transcript.assessment_title || evaluation.assessment_title
+                ? ` · ${transcript.assessment_title || evaluation.assessment_title}`
+                : ''}
+              {' · '}
               {transcript.turns.length} turns · Duration{' '}
               {formatElapsedTime(transcript.total_elapsed_secs) ?? 'unavailable'}
             </p>
@@ -311,6 +348,7 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
               {transcript.turns.map((turn) => {
                 const interviewer = isInterviewerTurn(turn);
                 const time = transcriptTurnTime(turn);
+                const meta = transcriptTurnMeta(turn);
                 return (
                   <div
                     key={turn.turn_id || turn.turn_number}
@@ -323,18 +361,12 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
                         {time ? ` · ${time}` : ''}
                       </span>
                     </div>
-                    {(turn.section || turn.skill || turn.difficulty) && (
-                      <p className="evaluation-print-eyebrow">
-                        {[
-                          turn.section ? formatLabel(turn.section) : null,
-                          turn.skill,
-                          turn.difficulty ? formatLabel(turn.difficulty) : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
+                    {meta.length > 0 && (
+                      <p className="evaluation-print-eyebrow">{meta.join(' · ')}</p>
                     )}
-                    <p>{turn.text || '[No transcribed text]'}</p>
+                    <p className="evaluation-print-transcript-text">
+                      {turn.text || '[No transcribed text]'}
+                    </p>
                   </div>
                 );
               })}
@@ -342,6 +374,41 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
           </>
         )}
       </PrintSection>
+
+      <section className="evaluation-print-section">
+        <header className="evaluation-print-section-heading">
+          <span>—</span>
+          <h2>Report audit trail</h2>
+        </header>
+        <dl className="evaluation-print-audit">
+          <div>
+            <dt>Evaluation ID</dt>
+            <dd>{evaluation.id}</dd>
+          </div>
+          <div>
+            <dt>Session ID</dt>
+            <dd>{evaluation.session_id}</dd>
+          </div>
+          <div>
+            <dt>Model</dt>
+            <dd>
+              {evaluation.model_name} ({evaluation.model_provider})
+            </dd>
+          </div>
+          <div>
+            <dt>Prompt version</dt>
+            <dd>{evaluation.prompt_version}</dd>
+          </div>
+          <div>
+            <dt>Schema version</dt>
+            <dd>{evaluation.evaluation_schema_version}</dd>
+          </div>
+          <div>
+            <dt>Transcript hash</dt>
+            <dd className="evaluation-print-hash">{evaluation.transcript_hash}</dd>
+          </div>
+        </dl>
+      </section>
 
       <footer className="evaluation-print-footer">
         Generated by iBot · {formatDateTime(evaluation.generated_at)}

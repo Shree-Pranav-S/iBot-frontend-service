@@ -55,9 +55,9 @@ const kpiClass = 'dashboard-surface-kpi';
 const panelClass = 'dashboard-surface-panel';
 
 const kpiIconTones = [
-  { well: 'bg-emerald-100 text-emerald-700', hover: 'group-hover:bg-emerald-200' },
-  { well: 'bg-blue-100 text-blue-700', hover: 'group-hover:bg-blue-200' },
-  { well: 'bg-violet-100 text-violet-700', hover: 'group-hover:bg-violet-200' },
+  { well: 'bg-brand-soft text-brand-hover', hover: 'group-hover:bg-[#EAD7BE]' },
+  { well: 'bg-brand-soft text-brand-hover', hover: 'group-hover:bg-[#EAD7BE]' },
+  { well: 'bg-brand-soft text-brand-hover', hover: 'group-hover:bg-[#EAD7BE]' },
   { well: 'bg-amber-100 text-amber-700', hover: 'group-hover:bg-amber-200' },
 ] as const;
 
@@ -133,26 +133,26 @@ export const DashboardPage: React.FC = () => {
         label: 'Invited',
         description: 'Invitation sent',
         value: stageCounts.invited,
-        barClass: 'bg-emerald-300',
+        barClass: 'bg-[#D9B47B]',
       },
       {
         label: 'Interviewing',
         description: 'Live or in progress',
         value: stageCounts.interviewing,
-        barClass: 'bg-emerald-500',
+        barClass: 'bg-brand-accent',
         live: true,
       },
       {
         label: 'Awaiting report',
         description: 'Interview complete',
         value: stageCounts.awaitingEvaluation,
-        barClass: 'bg-teal-500',
+        barClass: 'bg-brand-hover',
       },
       {
         label: 'Evaluated',
         description: 'Report available',
         value: stageCounts.evaluated,
-        barClass: 'bg-emerald-500',
+        barClass: 'bg-brand-charcoal',
       },
     ];
 
@@ -244,27 +244,27 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="dashboard-viewport h-full min-h-0 overflow-hidden">
-      <div className="mx-auto grid h-full w-full max-w-[1680px] grid-rows-[auto_auto_minmax(0,1fr)] gap-3">
+      <div className="mx-auto grid h-full w-full max-w-[1680px] grid-rows-[auto_auto_minmax(0,1fr)] gap-2.5">
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <section
           className={`dashboard-card dashboard-enter relative overflow-hidden ${heroClass}`}
         >
-          <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_84%_30%,rgba(16,185,129,0.12),transparent_62%)] lg:block" />
-          <div className="relative flex flex-col justify-between gap-3 px-6 py-3 sm:flex-row sm:items-center lg:px-7">
+          <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_84%_30%,rgba(185,131,63,0.14),transparent_62%)] lg:block" />
+          <div className="relative flex flex-col justify-between gap-2.5 px-5 py-2.5 sm:flex-row sm:items-center lg:px-6">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                <p className="flex items-center gap-2 text-[11px] font-semibold text-brand-hover">
                   <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-accent opacity-40" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand-hover" />
                   </span>
                   {greeting}, {firstName}
                 </p>
                 <span className="hidden h-3 w-px bg-slate-200 sm:block" />
-                <p className="text-xs font-medium text-slate-400">{todayLabel}</p>
+                <p className="text-[11px] font-medium text-slate-400">{todayLabel}</p>
               </div>
-              <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                <h2 className="font-display text-xl font-extrabold tracking-[-0.03em] text-slate-950">
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                <h2 className="font-display text-lg font-extrabold tracking-[-0.035em] text-slate-950">
                   {dashboard.priority.title}
                 </h2>
                 <p className="hidden max-w-xl truncate text-[13px] font-medium text-slate-500 md:block">
@@ -276,14 +276,14 @@ export const DashboardPage: React.FC = () => {
             <div className="flex shrink-0 items-center gap-2.5">
               <NavLink
                 to="/assessments"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-[10px] border border-default bg-white px-3.5 text-xs font-semibold text-secondary shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
               >
                 <Plus className="h-4 w-4 text-slate-400" />
                 New assessment
               </NavLink>
               <NavLink
                 to={dashboard.pendingDecisions > 0 ? '/evaluations' : '/candidates'}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-emerald-700 px-4 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(6,95,70,0.24)] transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-[10px] bg-brand-charcoal px-3.5 text-xs font-semibold text-white shadow-[0_8px_18px_-12px_rgba(36,33,29,0.65)] transition-all hover:-translate-y-0.5 hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2"
               >
                 {dashboard.pendingDecisions > 0 ? (
                   <UserCheck className="h-4 w-4" />
@@ -310,7 +310,7 @@ export const DashboardPage: React.FC = () => {
               <NavLink
                 key={stat.label}
                 to={stat.to}
-                className={`group relative flex flex-col justify-center px-6 py-3 transition-all duration-200 hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 xl:px-7 border-slate-200/60 ${
+                className={`group relative flex flex-col justify-center px-5 py-2.5 transition-all duration-200 hover:bg-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent xl:px-6 border-slate-200/60 ${
                   index % 2 === 1 ? 'border-l lg:border-l' : ''
                 } ${index >= 2 ? 'border-t lg:border-t-0' : ''} ${
                   index > 0 ? 'lg:border-l' : ''
@@ -321,7 +321,7 @@ export const DashboardPage: React.FC = () => {
                     {stat.label}
                   </span>
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors ${tone.well} ${tone.hover}`}
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-all group-hover:scale-105 ${tone.well} ${tone.hover}`}
                   >
                     <Icon
                       className={`h-3.5 w-3.5 transition-colors ${
@@ -333,7 +333,7 @@ export const DashboardPage: React.FC = () => {
                 {loading ? (
                   <span className="mt-2 block h-8 w-16 rounded-md ibot-shimmer" />
                 ) : (
-                  <span className="mt-1 block font-display text-[26px] font-extrabold leading-8 tracking-tight text-slate-950">
+                  <span className="mt-0.5 block font-display text-[23px] font-extrabold leading-7 tracking-[-0.035em] text-slate-950">
                     {stat.value}
                   </span>
                 )}
@@ -343,7 +343,7 @@ export const DashboardPage: React.FC = () => {
                   }`}
                 >
                   <span className="truncate">{stat.helper}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-brand-hover opacity-0 transition-opacity group-hover:opacity-100" />
                 </span>
               </NavLink>
             );
@@ -351,7 +351,7 @@ export const DashboardPage: React.FC = () => {
         </section>
 
         {/* ── Panels row (fills remaining height) ──────────────────────── */}
-        <section className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,1fr)_minmax(300px,0.82fr)]">
+        <section className="grid min-h-0 grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,1fr)_minmax(300px,0.82fr)]">
           {/* Candidate flow */}
           <article
             className={`dashboard-card dashboard-panel-candidate flex min-h-0 flex-col overflow-hidden ${panelClass}`}
@@ -365,7 +365,7 @@ export const DashboardPage: React.FC = () => {
               accentClass="dashboard-panel-accent-emerald"
             />
 
-            <div className="grid min-h-0 flex-1 gap-5 px-6 py-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+            <div className="grid min-h-0 flex-1 gap-5 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_116px]">
               <div className="flex min-w-0 flex-col gap-3">
                 <div className="flex flex-1 flex-col justify-evenly gap-3">
                   {dashboard.pipelineStages.map((stage, index) => (
@@ -376,7 +376,7 @@ export const DashboardPage: React.FC = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           {stage.live && stage.value > 0 && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dashboard-live-dot" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-brand-accent dashboard-live-dot" />
                           )}
                           <p className="truncate text-[13px] font-semibold text-slate-700">
                             {stage.label}
@@ -414,7 +414,7 @@ export const DashboardPage: React.FC = () => {
                       of {candidates.length} candidates
                     </p>
                   </div>
-                  <span className="font-display text-sm font-extrabold text-emerald-700">
+                  <span className="font-display text-sm font-extrabold text-brand-hover">
                     {dashboard.completionRate}%
                   </span>
                 </div>
@@ -439,7 +439,7 @@ export const DashboardPage: React.FC = () => {
               accentClass="dashboard-panel-accent-indigo"
             />
 
-            <div className="dashboard-score-band shrink-0 border-b border-slate-200/70 px-6 py-3">
+            <div className="dashboard-score-band shrink-0 border-b border-slate-200/70 px-5 py-2.5">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-baseline gap-2">
                   <p className="font-display text-[26px] font-extrabold leading-8 tracking-tight text-slate-950">
@@ -496,20 +496,20 @@ export const DashboardPage: React.FC = () => {
               accentClass="dashboard-panel-accent-amber"
             />
 
-            <div className="flex min-h-0 flex-1 flex-col px-5 py-3">
+            <div className="flex min-h-0 flex-1 flex-col px-4 py-3">
               <NavLink
                 to="/evaluations"
-                className={`group flex shrink-0 items-center gap-3 rounded-xl border p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                className={`group flex shrink-0 items-center gap-3 rounded-xl border p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
                   dashboard.pendingDecisions > 0
-                    ? 'border-emerald-200/80 bg-emerald-50/60 hover:bg-emerald-50'
+                    ? 'border-[#D7C2A8] bg-brand-soft/70 hover:bg-brand-soft'
                     : 'border-slate-200/80 bg-slate-50 hover:bg-slate-100'
                 }`}
               >
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
                     dashboard.pendingDecisions > 0
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'bg-white text-emerald-700 ring-1 ring-inset ring-slate-200'
+                      ? 'bg-brand-charcoal text-white shadow-sm'
+                      : 'bg-white text-brand-hover ring-1 ring-inset ring-slate-200'
                   }`}
                 >
                   {dashboard.pendingDecisions > 0 ? (
@@ -536,15 +536,15 @@ export const DashboardPage: React.FC = () => {
               {dashboard.stageCounts.interviewing > 0 && (
                 <NavLink
                   to="/candidates"
-                  className="mt-2.5 flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 text-slate-600 transition-colors hover:bg-slate-50"
+                  className="mt-2.5 flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 text-slate-600 transition-colors hover:bg-brand-soft"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand-hover">
                     <Radio className="h-4 w-4" />
                   </span>
                   <span className="min-w-0 flex-1 text-xs font-semibold">
                     {pluralize(dashboard.stageCounts.interviewing, 'interview')} in progress
                   </span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dashboard-live-dot" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-accent dashboard-live-dot" />
                 </NavLink>
               )}
 
@@ -572,7 +572,7 @@ export const DashboardPage: React.FC = () => {
                   <p className="mt-2 text-xs font-semibold text-slate-600">No active campaigns</p>
                   <NavLink
                     to="/assessments"
-                    className="mt-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900"
+                    className="mt-1 text-[11px] font-bold text-brand-hover hover:text-brand-charcoal"
                   >
                     Create an assessment
                   </NavLink>
@@ -592,7 +592,7 @@ export const DashboardPage: React.FC = () => {
 
               <NavLink
                 to="/assessments"
-                className="mt-auto inline-flex shrink-0 items-center justify-center gap-1.5 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500 transition-colors hover:text-emerald-800"
+                className="mt-auto inline-flex shrink-0 items-center justify-center gap-1.5 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500 transition-colors hover:text-brand-hover"
               >
                 Manage all assessments
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -613,7 +613,7 @@ const PanelHeader: React.FC<{
   accentClass?: string;
 }> = ({ title, subtitle, to, action, accentClass }) => (
   <header
-    className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 px-6 py-3 ${accentClass ?? ''}`}
+    className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-2.5 ${accentClass ?? ''}`}
   >
     <div className="min-w-0">
       <h3 className="truncate font-display text-sm font-bold tracking-[-0.01em] text-slate-900">
@@ -624,7 +624,7 @@ const PanelHeader: React.FC<{
     {to && action && (
       <NavLink
         to={to}
-        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-900"
+        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-brand-hover transition-colors hover:bg-brand-soft hover:text-brand-charcoal"
       >
         {action}
         <ArrowRight className="h-3.5 w-3.5" />
@@ -646,14 +646,14 @@ const CompletionGauge: React.FC<{ value: number }> = ({ value }) => {
         aria-label={`${progress}% interview completion`}
       >
         <svg className="h-full w-full -rotate-90" viewBox="0 0 92 92" aria-hidden="true">
-          <circle cx="46" cy="46" r={radius} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+          <circle cx="46" cy="46" r={radius} fill="none" stroke="#F4E8D6" strokeWidth="8" />
           <circle
             className="dashboard-gauge-ring"
             cx="46"
             cy="46"
             r={radius}
             fill="none"
-            stroke="#059669"
+            stroke="#B9833F"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -726,15 +726,15 @@ const EvaluationRow: React.FC<{ evaluation: RecruiterEvaluationListItem }> = ({ 
   return (
     <NavLink
       to={`/candidates/${evaluation.candidate_assessment_id}/report`}
-      className="group flex items-center gap-3 px-6 py-2.5 transition-all duration-200 hover:bg-slate-50/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+      className="group flex items-center gap-3 px-6 py-2.5 transition-all duration-200 hover:bg-brand-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent"
       aria-label={`Open ${evaluation.candidate_name}'s evaluation report`}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-extrabold text-emerald-800 ring-1 ring-inset ring-emerald-200">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[10px] font-extrabold text-brand-hover ring-1 ring-inset ring-default">
         {initials}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-[13px] font-semibold text-slate-900 group-hover:text-emerald-800">
+          <p className="truncate text-[13px] font-semibold text-slate-900 group-hover:text-brand-hover">
             {evaluation.candidate_name}
           </p>
           <CompactStatus {...recommendation} />
@@ -752,7 +752,7 @@ const EvaluationRow: React.FC<{ evaluation: RecruiterEvaluationListItem }> = ({ 
         >
           {clampScore(evaluation.overall_score).toFixed(1)}
         </span>
-        <ArrowRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700" />
+        <ArrowRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-hover" />
       </div>
     </NavLink>
   );
@@ -791,7 +791,7 @@ const DeadlineRow: React.FC<{
   return (
     <NavLink
       to="/assessments"
-      className="group flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-white/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      className="group flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-white/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
     >
       <span
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
@@ -805,7 +805,7 @@ const DeadlineRow: React.FC<{
         {urgent ? <CircleAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-semibold text-slate-800 group-hover:text-emerald-800">
+        <span className="block truncate text-xs font-semibold text-slate-800 group-hover:text-brand-hover">
           {title}
         </span>
         <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400">

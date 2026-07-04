@@ -7,6 +7,10 @@ import { useToast } from '../../../hooks/useToast';
 
 export type RecruiterDecision = 'APPROVED' | 'REJECTED';
 
+export const isDecisionFinalized = (
+  decision: string | null | undefined,
+): boolean => decision === 'APPROVED' || decision === 'REJECTED';
+
 export const clampScore = (score: number | null | undefined) =>
   Math.min(10, Math.max(0, Number(score) || 0));
 
@@ -35,7 +39,7 @@ export const candidateInitials = (name: string) =>
 export const scoreTextClass = (score: number) => {
   const value = clampScore(score);
   if (value >= 7.5) return 'text-emerald-700';
-  if (value >= 5.5) return 'text-indigo-700';
+  if (value >= 5.5) return 'text-brand-hover';
   if (value >= 4) return 'text-amber-700';
   return 'text-rose-700';
 };
@@ -43,7 +47,7 @@ export const scoreTextClass = (score: number) => {
 export const scoreFillClass = (score: number) => {
   const value = clampScore(score);
   if (value >= 7.5) return 'bg-emerald-500';
-  if (value >= 5.5) return 'bg-indigo-500';
+  if (value >= 5.5) return 'bg-brand-accent';
   if (value >= 4) return 'bg-amber-500';
   return 'bg-rose-500';
 };
@@ -68,8 +72,8 @@ export const recommendationMeta = (recommendation: string) => {
     case 'consider':
       return {
         label: 'Consider',
-        className: 'border-indigo-200 bg-indigo-50 text-indigo-800',
-        dot: 'bg-indigo-500',
+        className: 'border-amber-200 bg-amber-50 text-amber-800',
+        dot: 'bg-amber-500',
       };
     default:
       return {
@@ -102,6 +106,98 @@ export const decisionMeta = (decision: string | null | undefined) => {
   };
 };
 
+const SKILL_LABEL =
+  /^[A-Z][A-Za-z0-9/_-]+(?:\/[A-Za-z][A-Za-z0-9/_-]+)?\b/;
+
+const SKILL_HIGHLIGHT_SENTENCE =
+  /^(?:[A-Z][A-Za-z0-9/_-]+(?:\/[A-Za-z][A-Za-z0-9/_-]+)?)\s*(?:—|-|with\b|reveals\b|is\b|shows\b|scores?\b|demonstrates\b)/i;
+
+const SENTENCE_SPLIT = /(?<=[.!?])\s+/;
+
+export const cleanRecruiterNarrative = (text: string | null | undefined): string => {
+  if (!text) return '';
+
+  let value = text.replace(/\s*Deterministic override:.*$/im, '').trim();
+
+  value = value
+    .replace(/\(priority\s*[\d.]+\)/gi, '')
+    .replace(/\bhighest-priority\s+/gi, '')
+    .replace(/\blow priority\b/gi, '')
+    .replace(/Weighted technical aggregate\s*~?[\d.]+\s*/gi, '')
+    .replace(/\bexceeds its\s+/gi, '');
+
+  value = value.replace(
+    /\b([A-Za-z][A-Za-z0-9/_-]*(?:\/[A-Za-z][A-Za-z0-9/_-]*)?)\s*\([\d.]+\)\s*scores?\s*[\d.]+\s*/gi,
+    '$1 — ',
+  );
+
+  value = value.replace(
+    /\b([A-Za-z][A-Za-z0-9/_-]*(?:\/[A-Za-z][A-Za-z0-9/_-]*)?)\s*\([\d.]+\)\s*at\s*[\d.]+\s*/gi,
+    '$1 — ',
+  );
+
+  value = value
+    .replace(/\s*\([\d.]+\)/g, '')
+    .replace(/\bscores?\s+[\d.]+(?:\/10)?\b/gi, '')
+    .replace(/\bat\s+[\d.]+(?:\/10)?\b/gi, '')
+    .replace(/\bis strong at\s+[\d.]+\b/gi, 'is strong')
+    .replace(/\s+—\s+/g, ' — ')
+    .replace(/\s+([,;:])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+\./g, '.')
+    .trim();
+
+  return value;
+};
+
+export type RecruiterNarrativeBlock =
+  | { type: 'paragraph'; content: string }
+  | { type: 'bullets'; items: string[] };
+
+const isSkillHighlightSentence = (sentence: string): boolean => {
+  if (/^(?:Behavioural|Communication)\b/i.test(sentence)) return true;
+  if (!SKILL_LABEL.test(sentence)) return false;
+  return SKILL_HIGHLIGHT_SENTENCE.test(sentence);
+};
+
+export const buildRecruiterNarrativeBlocks = (
+  text: string | null | undefined,
+): RecruiterNarrativeBlock[] => {
+  const cleaned = cleanRecruiterNarrative(text);
+  if (!cleaned) return [];
+
+  const sentences = cleaned.split(SENTENCE_SPLIT).map((part) => part.trim()).filter(Boolean);
+  const blocks: RecruiterNarrativeBlock[] = [];
+  let paragraphBuffer: string[] = [];
+  let bulletBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    blocks.push({ type: 'paragraph', content: paragraphBuffer.join(' ') });
+    paragraphBuffer = [];
+  };
+
+  const flushBullets = () => {
+    if (bulletBuffer.length === 0) return;
+    blocks.push({ type: 'bullets', items: [...bulletBuffer] });
+    bulletBuffer = [];
+  };
+
+  for (const sentence of sentences) {
+    if (isSkillHighlightSentence(sentence)) {
+      flushParagraph();
+      bulletBuffer.push(sentence);
+      continue;
+    }
+    flushBullets();
+    paragraphBuffer.push(sentence);
+  }
+
+  flushParagraph();
+  flushBullets();
+  return blocks;
+};
+
 export const useEvaluationDecision = () => {
   const { mutateAsync, isPending } = useUpdateCandidateDecision();
   const {
@@ -129,14 +225,16 @@ export const useEvaluationDecision = () => {
       candidateName: string,
       currentDecision: string,
       decision: RecruiterDecision,
-    ) =>
+    ) => {
+      if (isDecisionFinalized(currentDecision)) return;
       setModal({
         open: true,
         candidateId,
         candidateName,
         currentDecision,
         decision,
-      }),
+      });
+    },
     [],
   );
 

@@ -12,8 +12,7 @@
  *
  * Login:
  *   POST /auth/login → gateway sets HttpOnly cookies → returns profile data.
- *   Store profile in React state (and optionally localStorage for UX hints
- *   like the greeting name — never tokens).
+ *   Store profile in React state. Tokens remain HttpOnly cookies.
  *
  * Logout:
  *   POST /auth/logout → gateway reads refresh cookie, revokes DB record,
@@ -40,9 +39,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // (meaning the silent refresh also failed).
   useEffect(() => {
     const handleSessionExpired = () => {
-      // Clear any cached UX hints — no tokens to clear.
-      localStorage.removeItem('recruiter_name');
-      localStorage.removeItem('recruiter_company');
       setUser(null);
       setError('Your session has expired. Please log in again.');
     };
@@ -69,13 +65,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser({
             id: profile.id,
             email: profile.email,
-            role: 'recruiter',
             full_name: profile.full_name,
             company_name: profile.company_name,
           });
-          // Cache non-sensitive display data for greeting UX
-          localStorage.setItem('recruiter_name', profile.full_name);
-          localStorage.setItem('recruiter_company', profile.company_name);
         }
       } catch {
         // 401 = no valid session cookie — silently stay logged out.
@@ -100,13 +92,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser({
           id: profile.id,
           email: profile.email,
-          role: 'recruiter',
           full_name: profile.full_name,
           company_name: profile.company_name,
         });
-        // Cache display hints — not tokens.
-        localStorage.setItem('recruiter_name', profile.full_name ?? '');
-        localStorage.setItem('recruiter_company', profile.company_name ?? '');
       } else {
         throw new Error(response.message || 'Login failed.');
       }
@@ -147,8 +135,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Clear React state immediately for fast UI response.
     setUser(null);
     setError(null);
-    localStorage.removeItem('recruiter_name');
-    localStorage.removeItem('recruiter_company');
 
     // Tell the gateway to revoke the session and clear cookies.
     // Errors are swallowed — the local state is already cleared.

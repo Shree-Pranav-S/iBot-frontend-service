@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Bot,
   Briefcase,
   ChevronRight,
   ClipboardCheck,
@@ -12,6 +11,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useRecruiterRealtime } from '../../hooks/useRecruiterRealtime';
 import { NotificationCenter } from './NotificationCenter';
+import { IbotMark } from '../ui/IbotMark';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, helper: 'Overview' },
@@ -78,22 +78,22 @@ export const MainLayout: React.FC = () => {
     <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-primary">
       {/* ── Sidebar – expands as a width overlay so main content never reflows ── */}
       <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 sm:block">
-        <div className="absolute inset-y-0 left-0 z-30 flex w-[88px] flex-col overflow-hidden border-r border-emerald-900/30 bg-sidebar text-white shadow-[18px_0_48px_rgba(2,44,34,0.2)] transition-[width] duration-300 ease-out will-change-[width] group-hover/sidebar:w-[304px]">
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-emerald-500/20 via-sidebar-alt/50 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 left-0 z-30 flex w-[88px] flex-col overflow-hidden border-r border-white/10 bg-sidebar text-white shadow-[18px_0_52px_rgba(36,33,29,0.2)] transition-[width] duration-300 ease-out will-change-[width] group-hover/sidebar:w-[304px]">
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand-accent/25 via-sidebar-alt/50 to-transparent pointer-events-none" />
 
         {/* Logo */}
-        <div className="relative flex h-[76px] w-[304px] items-center gap-3 border-b border-white/10 px-5 transition-[padding] duration-300 ease-out group-hover/sidebar:px-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 text-slate-950 shadow-lg shadow-emerald-500/20">
-            <Bot className="h-6 w-6" />
-          </div>
+        <div className="relative flex h-[68px] w-[304px] items-center gap-3 border-b border-white/10 px-6 transition-[padding] duration-300 ease-out group-hover/sidebar:px-4">
+          <span className="shrink-0 transition-transform duration-300 group-hover/sidebar:-rotate-3 group-hover/sidebar:scale-105">
+            <IbotMark />
+          </span>
           <div className="min-w-[180px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
             <div className="flex items-center gap-2">
-              <p className="font-display text-lg font-bold tracking-tight">iBot</p>
-              <span className="rounded-full border border-emerald-300/[0.35] bg-emerald-300/[0.12] px-2 py-0.5 text-[10px] font-black uppercase text-emerald-200">
+              <p className="font-display text-lg font-extrabold tracking-[-0.035em]">iBot</p>
+              <span className="rounded-full border border-brand-accent/40 bg-brand-accent/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-[#F4E8D6]">
                 Pro
               </span>
             </div>
-            <p className="mt-0.5 truncate text-xs font-semibold text-slate-400">
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-[#B8AA9A]">
               Interview intelligence suite
             </p>
           </div>
@@ -110,10 +110,10 @@ export const MainLayout: React.FC = () => {
                 title={item.label}
                 tabIndex={-1}
                 className={({ isActive }) =>
-                  `group/item flex h-[58px] w-16 items-center gap-3 rounded-xl px-3 text-sm font-bold transition-[width,background-color,color] duration-300 group-hover/sidebar:w-[280px] ${
+                  `group/item flex h-[56px] w-16 items-center gap-3 rounded-xl px-3 text-sm font-bold transition-[width,background-color,color,transform] duration-300 group-hover/sidebar:w-[280px] ${
                     isActive
-                      ? 'bg-white text-slate-950 shadow-lg shadow-black/20'
-                      : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                      ? 'bg-[#FCFAF6] text-brand-charcoal shadow-[0_10px_24px_-14px_rgba(0,0,0,0.7)] ring-1 ring-white/70'
+                      : 'text-[#B8AA9A] hover:translate-x-0.5 hover:bg-white/[0.08] hover:text-white'
                   }`
                 }
               >
@@ -122,21 +122,23 @@ export const MainLayout: React.FC = () => {
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ${
                         isActive
-                          ? 'bg-sidebar-deep text-emerald-300'
-                          : 'bg-white/[0.08] text-slate-300 group-hover/item:bg-emerald-500/15 group-hover/item:text-emerald-200'
+                          ? 'bg-sidebar-deep text-brand-accent'
+                          : 'bg-white/[0.08] text-[#D8CCBD] group-hover/item:bg-brand-accent/15 group-hover/item:text-[#F4E8D6]'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
                     </span>
                     <span className="min-w-[150px] flex-1 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
                       <span className="block truncate">{item.label}</span>
-                      <span className="mt-0.5 block truncate text-[10px] font-semibold text-slate-500">
+                      <span className={`mt-0.5 block truncate text-[10px] font-semibold ${
+                        isActive ? 'text-[#706A61]' : 'text-[#8A8175]'
+                      }`}>
                         {item.helper}
                       </span>
                     </span>
                     <ChevronRight
                       className={`h-4 w-4 shrink-0 opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 ${
-                        isActive ? 'text-emerald-500' : 'text-slate-500 group-hover/item:text-emerald-200'
+                        isActive ? 'text-brand-accent' : 'text-[#8A8175] group-hover/item:text-[#F4E8D6]'
                       }`}
                     />
                   </>
@@ -148,13 +150,13 @@ export const MainLayout: React.FC = () => {
 
         {/* Bottom: user profile + logout */}
         <div className="relative w-[304px] border-t border-white/10 p-3">
-          <div className="mb-2 flex h-[58px] w-16 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3 transition-[width] duration-300 group-hover/sidebar:w-[280px]">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-400 text-xs font-black text-slate-950">
+          <div className="mb-2 flex h-[56px] w-16 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] px-3 transition-[width,background-color] duration-300 group-hover/sidebar:w-[280px] group-hover/sidebar:bg-white/[0.08]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-accent to-brand-hover text-xs font-black text-white">
               {initials}
             </div>
             <div className="min-w-[170px] opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100">
               <p className="truncate text-xs font-semibold text-white">{user?.full_name || 'Recruiter'}</p>
-              <p className="truncate text-[10px] font-semibold text-slate-500">{user?.email}</p>
+              <p className="truncate text-[10px] font-semibold text-[#B8AA9A]">{user?.email}</p>
             </div>
           </div>
 
@@ -163,7 +165,7 @@ export const MainLayout: React.FC = () => {
             tabIndex={-1}
             id="btn-logout"
             title="Sign Out"
-            className="flex h-[54px] w-16 items-center gap-3 rounded-xl px-3 text-sm font-bold text-slate-400 transition-[width,background-color,color] duration-300 hover:bg-red-500/10 hover:text-red-200 group-hover/sidebar:w-[280px]"
+            className="flex h-[52px] w-16 items-center gap-3 rounded-xl px-3 text-sm font-bold text-[#B8AA9A] transition-[width,background-color,color] duration-300 hover:bg-rose-500/10 hover:text-rose-200 group-hover/sidebar:w-[280px]"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
               <LogOut className="h-4 w-4" />
@@ -180,12 +182,12 @@ export const MainLayout: React.FC = () => {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header
           className={`ibot-page-header-band z-10 flex shrink-0 items-center justify-between px-4 sm:px-6 lg:px-7 ${
-            isReportPage ? 'h-[64px]' : 'h-[72px]'
+            isReportPage ? 'h-[60px]' : 'h-[68px]'
           }`}
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-hover">
                 {user?.company_name || currentCopy.eyebrow}
               </p>
               <span className="hidden h-3.5 w-px bg-default sm:block" />
@@ -193,14 +195,14 @@ export const MainLayout: React.FC = () => {
                 {currentCopy.subtitle}
               </p>
             </div>
-            <h1 className="mt-0.5 truncate font-display text-lg font-bold tracking-[-0.025em] text-primary lg:text-xl">
+            <h1 className="mt-0.5 truncate font-display text-lg font-extrabold tracking-[-0.035em] text-primary lg:text-xl">
               {currentCopy.title}
             </h1>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationCenter />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-default bg-emerald-50 text-[11px] font-black text-emerald-700 shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8C9B5] bg-brand-soft text-[11px] font-black text-brand-hover shadow-[0_8px_18px_-14px_rgba(36,33,29,0.55)]">
               {initials}
             </div>
           </div>
@@ -216,7 +218,7 @@ export const MainLayout: React.FC = () => {
       </div>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-default bg-surface p-1.5 shadow-lg sm:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-default bg-white/95 p-1.5 shadow-[0_18px_44px_-18px_rgba(36,33,29,0.38)] backdrop-blur-xl sm:hidden">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -226,7 +228,7 @@ export const MainLayout: React.FC = () => {
               className={({ isActive }) =>
                 `flex h-12 items-center justify-center rounded-xl transition-all ${
                   isActive
-                    ? 'bg-sidebar text-emerald-300'
+                    ? 'bg-sidebar text-brand-accent'
                     : 'text-secondary hover:bg-elevated hover:text-primary'
                 }`
               }

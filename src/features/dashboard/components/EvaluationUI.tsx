@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  AlertTriangle,
   Check,
   CheckCircle2,
   Loader2,
@@ -12,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  buildRecruiterNarrativeBlocks,
   clampScore,
   scoreFillClass,
   scoreTextClass,
@@ -56,7 +56,7 @@ export const CenteredDialog: React.FC<CenteredDialogProps> = ({
 
   return createPortal(
     <div
-      className="ibot-overlay !z-[100] !items-center !justify-center !overflow-hidden !p-4"
+      className="ibot-overlay print:hidden !z-[100] !items-center !justify-center !overflow-hidden !p-4"
       role="presentation"
       onMouseDown={closeDisabled ? undefined : onClose}
     >
@@ -71,6 +71,41 @@ export const CenteredDialog: React.FC<CenteredDialogProps> = ({
       </section>
     </div>,
     document.body,
+  );
+};
+
+export const RecruiterNarrativeContent: React.FC<{
+  text: string;
+  paragraphClassName?: string;
+  bulletClassName?: string;
+}> = ({
+  text,
+  paragraphClassName = 'text-[13px] font-medium leading-7 text-slate-600',
+  bulletClassName = 'text-[12px] font-medium leading-6 text-slate-600',
+}) => {
+  const blocks = buildRecruiterNarrativeBlocks(text);
+  if (blocks.length === 0) {
+    return <p className={paragraphClassName}>No summary available.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, index) =>
+        block.type === 'paragraph' ? (
+          <p key={`paragraph-${index}`} className={paragraphClassName}>
+            {block.content}
+          </p>
+        ) : (
+          <ul key={`bullets-${index}`} className="space-y-2 border-l-2 border-[#D7C2A8] pl-3.5">
+            {block.items.map((item, itemIndex) => (
+              <li key={`bullet-${index}-${itemIndex}`} className={bulletClassName}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        ),
+      )}
+    </div>
   );
 };
 
@@ -100,7 +135,7 @@ export const ScoreRing: React.FC<{
     value >= 7.5
       ? '#10b981'
       : value >= 5.5
-        ? '#6366f1'
+        ? '#B9833F'
         : value >= 4
           ? '#f59e0b'
           : '#f43f5e';
@@ -116,7 +151,7 @@ export const ScoreRing: React.FC<{
         role="img"
         aria-label={`${label}: ${value.toFixed(1)} out of 10`}
       >
-        <circle cx="56" cy="56" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="8" />
+        <circle cx="56" cy="56" r={radius} fill="none" stroke="#E6DED2" strokeWidth="8" />
         <circle
           cx="56"
           cy="56"
@@ -219,8 +254,8 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
         <polygon
           key={scale}
           points={polygon(coordinates(scale))}
-          fill={scale === 1 ? '#f8fafc' : 'none'}
-          stroke="#dbe4ef"
+          fill={scale === 1 ? '#FCFAF6' : 'none'}
+          stroke="#E6DED2"
           strokeWidth="1"
         />
       ))}
@@ -231,14 +266,14 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
           y1={center.y}
           x2={pt.x}
           y2={pt.y}
-          stroke="#dbe4ef"
+          stroke="#E6DED2"
           strokeWidth="1"
         />
       ))}
       <polygon
         points={polygon(dataCoordinates)}
-        fill="rgba(16, 185, 129, 0.18)"
-        stroke="#059669"
+        fill="rgba(185, 131, 63, 0.18)"
+        stroke="#B9833F"
         strokeWidth="2.5"
       />
       {dataCoordinates.map((pt, index) => (
@@ -248,7 +283,7 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
           cy={pt.y}
           r="4"
           fill="#ffffff"
-          stroke="#059669"
+          stroke="#B9833F"
           strokeWidth="2.5"
         />
       ))}
@@ -265,7 +300,7 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
               textAnchor={anchor}
               fontSize="9"
               fontWeight="600"
-              fill="#64748b"
+              fill="#706A61"
             >
               {item.label}
             </text>
@@ -275,7 +310,7 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
               textAnchor={anchor}
               fontSize="10"
               fontWeight="700"
-              fill="#0f172a"
+              fill="#1F1D1A"
             >
               {item.score.toFixed(1)}
             </text>
@@ -301,7 +336,6 @@ interface DecisionModalProps {
 export const DecisionModal: React.FC<DecisionModalProps> = ({
   open,
   candidateName,
-  currentDecision,
   decision,
   loading,
   generatingFeedback,
@@ -311,8 +345,6 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
 }) => {
   const [feedback, setFeedback] = useState('');
   const isApproval = decision === 'APPROVED';
-  const isChange =
-    currentDecision && currentDecision !== 'PENDING' && currentDecision !== decision;
   const handleGenerateFeedback = async () => {
     const draft = await onGenerateFeedback();
     if (draft) setFeedback(draft.slice(0, 2000));
@@ -366,22 +398,10 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             </button>
           </div>
 
-          <div
-            className={`mt-5 flex gap-3 rounded-xl border p-3.5 ${
-              isChange
-                ? 'border-amber-200 bg-amber-50 text-amber-900'
-                : 'border-slate-200 bg-slate-50 text-slate-700'
-            }`}
-          >
-            {isChange ? (
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            ) : (
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-            )}
+          <div className="mt-5 flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-slate-700">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
             <p className="text-xs font-semibold leading-relaxed">
-              {isChange
-                ? `This will replace the existing ${String(currentDecision).toLowerCase()} decision.`
-                : 'This decision is saved to the candidate record and queues the corresponding candidate notification.'}
+              This decision is saved to the candidate record and queues the corresponding candidate notification.
             </p>
           </div>
 
@@ -396,7 +416,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                   type="button"
                   onClick={handleGenerateFeedback}
                   disabled={loading || generatingFeedback}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-black text-emerald-700 transition-all hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-600 hover:text-white hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-brand-soft px-2.5 py-1.5 text-[10px] font-black text-brand-hover transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-charcoal hover:text-white hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {generatingFeedback ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -420,7 +440,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                   ? 'Add an internal note about why this candidate is moving forward…'
                   : 'Add constructive feedback that may be included in the rejection email…'
               }
-              className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium leading-relaxed text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium leading-relaxed text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-brand-accent focus:ring-4 focus:ring-brand-soft"
             />
             <span className="mt-1.5 block text-right text-[10px] font-bold text-slate-400">
               {feedback.length}/2000
@@ -475,16 +495,16 @@ export const MetricTile: React.FC<{
 }> = ({ label, value, helper, icon, tone = 'slate' }) => {
   const tones = {
     slate: {
-      icon: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
-      card: 'border-slate-200 bg-gradient-to-br from-white to-slate-50',
+      icon: 'bg-brand-soft text-brand-hover ring-1 ring-default',
+      card: 'border-slate-200 bg-gradient-to-br from-white to-brand-soft/50',
     },
     emerald: {
       icon: 'bg-emerald-600 text-white',
       card: 'border-emerald-100 bg-gradient-to-br from-white to-emerald-50/80',
     },
     indigo: {
-      icon: 'bg-indigo-600 text-white',
-      card: 'border-indigo-100 bg-gradient-to-br from-white to-indigo-50/80',
+      icon: 'bg-brand-charcoal text-white',
+      card: 'border-[#D7C2A8] bg-gradient-to-br from-white to-brand-soft/70',
     },
     amber: {
       icon: 'bg-amber-500 text-white',

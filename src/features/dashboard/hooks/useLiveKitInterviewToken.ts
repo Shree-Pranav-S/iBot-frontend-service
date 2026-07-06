@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { livekitService } from '../services/livekit';
-import type { LiveKitTokenResponse } from '../services/livekit';
+import type { LiveKitTokenResponse } from '../../../types/livekit.types';
 
 const tokenErrorMessage = (err: unknown) => {
   const error = err as {

@@ -134,11 +134,11 @@ const CaptionCard = React.memo(({
       className={`animate-slideUp rounded-2xl border shadow-sm transition-all duration-300 ${
         isActive
           ? isAssistant
-            ? 'border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white shadow-xl shadow-slate-900/20'
-            : 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50/70 text-slate-950 shadow-lg shadow-emerald-900/5'
+            ? 'border-brand-charcoal bg-gradient-to-br from-brand-charcoal via-[#302B25] to-[#4A3520] text-white shadow-xl shadow-black/15'
+            : 'border-[#D9C4A7] bg-gradient-to-br from-white to-brand-soft/70 text-[#1F1D1A] shadow-lg shadow-brand-accent/5'
           : isAssistant
-          ? 'border-slate-200/80 bg-white/90 text-slate-800'
-          : 'border-emerald-100 bg-emerald-50/35 text-slate-800'
+          ? 'border-[#E6DED2] bg-white/90 text-[#1F1D1A]'
+          : 'border-[#E6DED2] bg-brand-soft/35 text-[#1F1D1A]'
       } ${isActive ? 'p-4' : 'p-3.5'} ${isAssistant ? 'mr-4' : 'ml-4'}`}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -149,11 +149,11 @@ const CaptionCard = React.memo(({
             } ${
               isAssistant
                 ? isActive
-                  ? 'bg-white/10 text-emerald-300'
-                  : 'bg-slate-950 text-emerald-300'
+                  ? 'bg-white/10 text-[#E8C794]'
+                  : 'bg-brand-charcoal text-[#E8C794]'
                 : isActive
-                ? 'bg-emerald-600 text-white'
-                : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                ? 'bg-brand-accent text-white'
+                : 'bg-brand-soft text-brand-hover ring-1 ring-[#D9C4A7]'
             }`}
           >
             {isAssistant ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
@@ -167,7 +167,7 @@ const CaptionCard = React.memo(({
             </p>
           </div>
           {isActive && showLiveState && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black text-emerald-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[9px] font-black text-brand-hover">
               <Volume2 className="h-2.5 w-2.5" />
               Live
             </span>
@@ -193,7 +193,7 @@ const CaptionCard = React.memo(({
             {[0, 1, 2].map((dot) => (
               <span
                 key={dot}
-                className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400"
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#D7AA6A]"
                 style={{ animationDelay: `${dot * 0.12}s` }}
               />
             ))}
@@ -231,12 +231,12 @@ export const TranscriptPanel = React.memo(({
 
   if (visibleMessages.length === 0) {
     return (
-      <div className="flex h-full min-h-[190px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-gradient-to-br from-white to-emerald-50/40 p-8 text-center shadow-inner shadow-slate-100">
+      <div className="flex h-full min-h-[190px] items-center justify-center rounded-2xl border border-dashed border-[#D9C4A7] bg-gradient-to-br from-white to-brand-soft/40 p-8 text-center shadow-inner shadow-[#E6DED2]/60">
         <div>
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft text-brand-hover ring-1 ring-[#D9C4A7]">
             <MessageCircle className="h-5 w-5" />
           </div>
-          <p className="text-sm font-black text-slate-800">Captions will appear here</p>
+          <p className="text-sm font-black text-[#1F1D1A]">Captions will appear here</p>
         </div>
       </div>
     );
@@ -328,8 +328,8 @@ export const CompletionNotice: React.FC<{ type: 'complete' | 'terminated' | 'end
 };
 
 export const TimerPill = React.memo(({ value }: { value: string }) => (
-  <span className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-lg shadow-slate-900/15">
-    <Clock className="h-3.5 w-3.5 text-emerald-400" />
+  <span className="inline-flex items-center gap-2 rounded-full border border-brand-charcoal bg-brand-charcoal px-3 py-1.5 text-[11px] font-black text-white shadow-lg shadow-black/10">
+    <Clock className="h-3.5 w-3.5 text-[#E8C794]" />
     <span className="font-mono tabular-nums tracking-wide">{value}</span>
   </span>
 ));

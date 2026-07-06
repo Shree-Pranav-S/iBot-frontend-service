@@ -9,3 +9,8 @@ const trueValues = new Set(['1', 'true', 'yes', 'on']);
 export const LIVEKIT_FORCE_RELAY = trueValues.has(
   String(import.meta.env.VITE_LIVEKIT_FORCE_RELAY ?? '').trim().toLowerCase(),
 );
+
+/** LiveKit data-channel topic for interview lifecycle events from the agent. */
+export const INTERVIEW_DATA_TOPIC = 'ibot.interview';
+
+export const INTERVIEW_CLOSING_EVENT = 'interview_closing';

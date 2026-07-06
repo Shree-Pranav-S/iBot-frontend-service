@@ -27,6 +27,7 @@ import {
   StatusPill,
 } from './InterviewExperience';
 import { LiveTranscriptPanel } from './InterviewRoom';
+import { IbotMark } from '../../../components/ui/IbotMark';
 
 interface DemoInterviewRoomProps {
   token: string;
@@ -47,21 +48,21 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
 
   if (!data) {
     return (
-      <div className="ibot-interview-room-bg fixed inset-0 z-50 flex h-screen w-screen items-center justify-center overflow-hidden p-6 text-slate-900">
-        <div className="relative w-full max-w-xl rounded-2xl border border-white/80 bg-white/[0.92] p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
+      <div className="ibot-candidate-shell ibot-interview-room-bg fixed inset-0 z-50 flex h-screen w-screen items-center justify-center overflow-hidden p-6 text-[#1F1D1A]">
+        <div className="relative w-full max-w-xl rounded-3xl border border-[#E6DED2] bg-white/[0.94] p-8 text-center shadow-[0_28px_80px_-42px_rgba(36,33,29,0.35)] backdrop-blur-2xl">
           <button
             type="button"
             onClick={onExit}
-            className="absolute left-5 top-5 inline-flex h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-600 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+            className="absolute left-5 top-5 inline-flex h-10 items-center gap-1.5 rounded-full border border-[#E6DED2] bg-white px-3 text-[11px] font-black text-[#706A61] shadow-sm transition hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             Back
           </button>
 
-          <div className="mx-auto mt-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/20">
+          <div className="mx-auto mt-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-charcoal text-[#E8C794] shadow-xl shadow-black/15">
             <Sparkles className="h-8 w-8" />
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#D9C4A7] bg-brand-soft px-3 py-1 text-[10px] font-black uppercase tracking-wide text-brand-hover">
             <Radio className="h-3.5 w-3.5" />
             Practice environment
           </div>
@@ -74,9 +75,9 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
             question generation.
           </p>
 
-          <div className="mx-auto mt-5 flex max-w-md items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/80 p-4 text-left">
-            <Mic className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-            <p className="text-xs font-semibold leading-relaxed text-emerald-900">
+          <div className="mx-auto mt-5 flex max-w-md items-start gap-3 rounded-xl border border-[#D9C4A7] bg-brand-soft/80 p-4 text-left">
+            <Mic className="mt-0.5 h-4 w-4 shrink-0 text-brand-hover" />
+            <p className="text-xs font-semibold leading-relaxed text-[#4A4035]">
               Your microphone switches on when you enter and stays on throughout
               this practice session, just like the real interview.
             </p>
@@ -92,7 +93,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
             type="button"
             onClick={startDemo}
             disabled={loading}
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-8 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-brand-charcoal px-8 py-4 text-sm font-black text-white shadow-xl shadow-black/15 transition hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -226,17 +227,15 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
   })();
 
   return (
-    <div className="ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
-      <header className="z-20 flex min-h-[72px] items-center justify-between gap-4 border-b border-white/80 bg-white/[0.96] px-4 py-3 shadow-sm shadow-slate-200/50 sm:px-6">
+    <div className="ibot-candidate-shell ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-[#1F1D1A]">
+      <header className="z-20 flex min-h-[70px] items-center justify-between gap-4 border-b border-[#E6DED2] bg-white/[0.94] px-6 py-3 shadow-sm shadow-[#1F1D1A]/5">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
-            <Sparkles className="h-5 w-5" />
-          </div>
+          <IbotMark />
           <div className="min-w-0">
             <p className="truncate text-sm font-black text-slate-950">
               Demo Interview
             </p>
-            <p className="truncate text-[10px] font-black uppercase text-emerald-700">
+            <p className="truncate text-[9px] font-black uppercase tracking-[0.14em] text-brand-hover">
               Live practice room
             </p>
           </div>
@@ -264,17 +263,17 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
 
       <main className="min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
         <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
-          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-lg border border-white/80 p-6 shadow-xl shadow-slate-900/10">
+          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-[#E6DED2] p-6 shadow-[0_20px_48px_-36px_rgba(36,33,29,0.4)]">
             <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
               <Ibot3DAvatar isSpeaking={botIsSpeaking} />
 
-              <div className="rounded-lg border border-white/80 bg-white/[0.94] px-5 py-4 shadow-lg shadow-slate-200/60">
-                <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
+              <div className="rounded-2xl border border-[#E6DED2] bg-white/[0.94] px-5 py-4 shadow-lg shadow-[#1F1D1A]/5">
+                <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-brand-hover">
                   <span
                     className={`h-2 w-2 rounded-full ${
                       isRecording || botIsSpeaking || botIsProcessing
-                        ? 'animate-pulse bg-emerald-500'
-                        : 'bg-slate-300'
+                        ? 'animate-pulse bg-brand-accent'
+                        : 'bg-[#B8AA9A]'
                     }`}
                   />
                   Practice status
@@ -296,10 +295,10 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
             </div>
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-lg border border-white/80 bg-white/[0.92] shadow-xl shadow-slate-900/10">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-[#E6DED2] bg-white/[0.92] shadow-[0_20px_48px_-36px_rgba(36,33,29,0.4)]">
+            <div className="flex items-center justify-between gap-3 border-b border-[#E6DED2] px-5 py-4">
               <div>
-                <p className="text-[10px] font-black uppercase text-emerald-700">
+                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-brand-hover">
                   Practice room
                 </p>
                 <h2 className="mt-1 text-sm font-black text-slate-950">
@@ -316,7 +315,6 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
 
             <div className="min-h-0 flex-1 p-4">
               <LiveTranscriptPanel
-                localIdentity={localParticipant.identity}
                 isBotSpeaking={botIsSpeaking}
               />
             </div>

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { livekitService } from '../services/livekit';
-import type { LiveKitTokenResponse } from '../services/livekit';
+import type { LiveKitTokenResponse } from '../../../types/livekit.types';
 
 const demoTokenErrorMessage = (errorValue: unknown) => {
   const error = errorValue as {

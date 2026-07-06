@@ -3,14 +3,16 @@ import '@livekit/components-styles/index.css';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  VideoTrack,
   useConnectionState,
+  useDataChannel,
   useLocalParticipant,
   useRoomContext,
   useTranscriptions,
   useVoiceAssistant,
 } from '@livekit/components-react';
-import { ConnectionState } from 'livekit-client';
-import { LIVEKIT_FORCE_RELAY } from '../../../config/livekit';
+import { ConnectionState, Track } from 'livekit-client';
+import { INTERVIEW_CLOSING_EVENT, INTERVIEW_DATA_TOPIC, LIVEKIT_FORCE_RELAY } from '../../../config/livekit';
 import {
   AudioLines,
   ChevronRight,
@@ -18,12 +20,15 @@ import {
   Mic,
   MicOff,
   PhoneOff,
+  Video,
+  VideoOff,
   ShieldCheck,
   Sparkles,
   Wifi,
 } from 'lucide-react';
 import { useLiveKitInterviewToken } from '../hooks/useLiveKitInterviewToken';
 import type { ChatMessage } from '../../../types/socket.types';
+import { IbotMark } from '../../../components/ui/IbotMark';
 import {
   CompletionNotice,
   Ibot3DAvatar,
@@ -34,16 +39,9 @@ import {
 
 const TRANSCRIPTION_FINAL_ATTRIBUTE = 'lk.transcription_final';
 const TRANSCRIPTION_SEGMENT_ATTRIBUTE = 'lk.segment_id';
-const TURN_GROUP_GAP_MS = 12_000;
-const MAX_RENDERED_TRANSCRIPTION_SEGMENTS = 96;
-const CLOSING_MESSAGE_MARKERS = [
-  'thank you for completing the interview',
-  'thank you for completing your interview',
-  'thank you for completing it',
-  'next step will be handled after this session',
-  'i have enough information from this interview',
-  'i have captured your responses',
-];
+const MAX_RENDERED_TRANSCRIPT_MESSAGES = 64;
+// Matches every backend CLOSING template prefix when the data-channel signal is missed.
+const CLOSING_TRANSCRIPT_PREFIX = 'thank you for completing your interview with';
 
 type LiveTranscription = ReturnType<typeof useTranscriptions>[number];
 
@@ -62,6 +60,7 @@ const isFinalTranscription = (transcription: LiveTranscription) => {
 };
 
 const appendTranscriptText = (current: string, next: string) => {
+  // New STT segment within the same speaker bubble.
   const existing = current.trim();
   const incoming = next.trim();
   if (!existing) return incoming;
@@ -71,6 +70,7 @@ const appendTranscriptText = (current: string, next: string) => {
 };
 
 const mergeLiveSegmentText = (current: string, next: string) => {
+  // Interim/final refinements for the same lk.segment_id.
   const existing = current.trim();
   const incoming = next.trim();
 
@@ -82,44 +82,33 @@ const mergeLiveSegmentText = (current: string, next: string) => {
   return `${existing} ${incoming}`;
 };
 
-const isAssistantIdentity = (identity: string, localIdentity: string) => {
-  const normalized = identity.toLowerCase();
-  const local = localIdentity.toLowerCase();
-
-  if (normalized === local) return false;
-
-  return (
-    normalized.startsWith('interview-bot') ||
-    normalized.includes('agent') ||
-    normalized.includes('bot')
-  );
-};
+const isAssistantIdentity = (identity: string) =>
+  identity.toLowerCase().startsWith('interview-bot');
 
 const isClosingInterviewMessage = (message: ChatMessage) => {
   if (message.role !== 'assistant') return false;
 
   const text = message.text.toLowerCase().replace(/\s+/g, ' ').trim();
-  return CLOSING_MESSAGE_MARKERS.some((marker) => text.includes(marker));
+  return text.startsWith(CLOSING_TRANSCRIPT_PREFIX);
 };
 
-const buildTurnMessages = (
-  transcriptions: LiveTranscription[],
-  localIdentity: string,
-): ChatMessage[] => {
+const parseInterviewDataPayload = (payload: Uint8Array) => {
+  try {
+    return JSON.parse(new TextDecoder().decode(payload)) as { type?: string };
+  } catch {
+    return null;
+  }
+};
+
+const buildTurnMessages = (transcriptions: LiveTranscription[]): ChatMessage[] => {
   const grouped: Array<
     ChatMessage & {
       participantIdentity: string;
       segmentIds: Set<string>;
-      lastTimestampMs: number;
     }
   > = [];
 
-  const recentTranscriptions =
-    transcriptions.length > MAX_RENDERED_TRANSCRIPTION_SEGMENTS
-      ? transcriptions.slice(-MAX_RENDERED_TRANSCRIPTION_SEGMENTS)
-      : transcriptions;
-
-  const sorted = [...recentTranscriptions]
+  const sorted = [...transcriptions]
     .filter((transcription) => transcription.text?.trim())
     .sort(
       (a, b) =>
@@ -129,7 +118,7 @@ const buildTurnMessages = (
 
   for (const transcription of sorted) {
     const identity = transcription.participantInfo.identity;
-    const role = isAssistantIdentity(identity, localIdentity) ? 'assistant' : 'user';
+    const role = isAssistantIdentity(identity) ? 'assistant' : 'user';
     const timestampMs = normalizeTimestampMs(transcription.streamInfo.timestamp);
     const rawSegmentId =
       transcription.streamInfo.attributes?.[TRANSCRIPTION_SEGMENT_ATTRIBUTE] ||
@@ -140,9 +129,7 @@ const buildTurnMessages = (
     const last = grouped[grouped.length - 1];
     const canMerge =
       last &&
-      last.role === role &&
-      last.participantIdentity === identity &&
-      timestampMs - last.lastTimestampMs <= TURN_GROUP_GAP_MS;
+      last.participantIdentity === identity;
 
     if (canMerge) {
       if (last.segmentIds.has(segmentId)) {
@@ -152,7 +139,6 @@ const buildTurnMessages = (
         last.text = appendTranscriptText(last.text, transcription.text);
       }
       last.isFinal = Boolean(last.isFinal && isFinal);
-      last.lastTimestampMs = Math.max(last.lastTimestampMs, timestampMs);
       continue;
     }
 
@@ -164,11 +150,10 @@ const buildTurnMessages = (
       timestamp: new Date(timestampMs),
       participantIdentity: identity,
       segmentIds: new Set([segmentId]),
-      lastTimestampMs: timestampMs,
     });
   }
 
-  return grouped.map((message) => ({
+  const messages = grouped.map((message) => ({
     id: message.id,
     role: message.role,
     text: message.text,
@@ -176,21 +161,23 @@ const buildTurnMessages = (
     timestamp: message.timestamp,
     replyType: message.replyType,
   }));
+
+  return messages.length > MAX_RENDERED_TRANSCRIPT_MESSAGES
+    ? messages.slice(-MAX_RENDERED_TRANSCRIPT_MESSAGES)
+    : messages;
 };
 
 export const LiveTranscriptPanel = React.memo(function LiveTranscriptPanel({
-  localIdentity,
   isBotSpeaking,
   onClosingMessage,
 }: {
-  localIdentity: string;
   isBotSpeaking: boolean;
   onClosingMessage?: () => void;
 }) {
   const transcriptions = useTranscriptions();
   const messages = useMemo(
-    () => buildTurnMessages(transcriptions, localIdentity),
-    [localIdentity, transcriptions],
+    () => buildTurnMessages(transcriptions),
+    [transcriptions],
   );
   const hasClosingMessage = useMemo(
     () => messages.some(isClosingInterviewMessage),
@@ -264,30 +251,36 @@ interface InterviewRoomProps {
 
 export const InterviewControlDock: React.FC<{
   isMuted: boolean;
-  isToggling: boolean;
+  isMicToggling: boolean;
+  isCameraEnabled: boolean;
+  isCameraToggling: boolean;
   onToggleMicrophone: () => void;
+  onToggleCamera: () => void;
   onEndSession: () => void;
 }> = ({
   isMuted,
-  isToggling,
+  isMicToggling,
+  isCameraEnabled,
+  isCameraToggling,
   onToggleMicrophone,
+  onToggleCamera,
   onEndSession,
 }) => (
-  <div className="flex items-center gap-2 rounded-2xl border border-white/80 bg-slate-950/90 p-2 shadow-2xl shadow-slate-950/30 ring-1 ring-slate-900/10 backdrop-blur-xl">
+  <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-brand-charcoal/95 p-2 shadow-2xl shadow-black/25 ring-1 ring-black/10 backdrop-blur-xl">
     <button
       type="button"
       onClick={onToggleMicrophone}
-      disabled={isToggling}
-      className={`group inline-flex h-12 min-w-28 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 ${
+      disabled={isMicToggling}
+      className={`group inline-flex h-11 min-w-28 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 ${
         isMuted
-          ? 'bg-rose-500 text-white hover:bg-rose-600'
-          : 'bg-white text-slate-800 hover:bg-emerald-500 hover:text-white'
+          ? 'bg-brand-soft text-brand-hover hover:bg-[#EAD7BE]'
+          : 'bg-white text-brand-charcoal hover:bg-brand-soft'
       }`}
       title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
       aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
       aria-pressed={isMuted}
     >
-      {isToggling ? (
+      {isMicToggling ? (
         <Loader2 className="h-4 w-4 animate-spin" />
       ) : isMuted ? (
         <MicOff className="h-4 w-4" />
@@ -296,11 +289,33 @@ export const InterviewControlDock: React.FC<{
       )}
       {isMuted ? 'Unmute' : 'Mute'}
     </button>
+    <button
+      type="button"
+      onClick={onToggleCamera}
+      disabled={isCameraToggling}
+      className={`group inline-flex h-11 min-w-32 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 ${
+        isCameraEnabled
+          ? 'bg-white text-brand-charcoal hover:bg-brand-soft'
+          : 'bg-brand-soft text-brand-hover hover:bg-[#EAD7BE]'
+      }`}
+      title={isCameraEnabled ? 'Turn camera off' : 'Turn camera on'}
+      aria-label={isCameraEnabled ? 'Turn camera off' : 'Turn camera on'}
+      aria-pressed={!isCameraEnabled}
+    >
+      {isCameraToggling ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : isCameraEnabled ? (
+        <Video className="h-4 w-4 transition-transform group-hover:scale-110" />
+      ) : (
+        <VideoOff className="h-4 w-4" />
+      )}
+      {isCameraEnabled ? 'Camera off' : 'Camera on'}
+    </button>
     <span className="h-8 w-px bg-white/15" aria-hidden="true" />
     <button
       type="button"
       onClick={onEndSession}
-      className="group inline-flex h-12 min-w-28 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-xs font-black text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-rose-500 hover:shadow-lg active:translate-y-0 active:scale-[0.97]"
+      className="group inline-flex h-11 min-w-28 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-xs font-black text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-rose-500 hover:shadow-lg active:translate-y-0 active:scale-[0.97]"
       title="End session"
     >
       <PhoneOff className="h-4 w-4 transition-transform group-hover:-rotate-6" />
@@ -322,19 +337,19 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
 
   if (!data) {
     return (
-      <div className="ibot-interview-room-bg relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden p-6 text-slate-900">
-        <div className="relative w-full max-w-xl rounded-lg border border-white/80 bg-white/[0.86] p-8 text-center shadow-2xl shadow-slate-900/10 backdrop-blur-2xl">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 via-green-500 to-sky-500 text-white shadow-xl shadow-emerald-500/20">
+      <div className="ibot-candidate-shell ibot-interview-room-bg relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden p-6 text-[#1F1D1A]">
+        <div className="relative w-full max-w-xl rounded-3xl border border-[#E6DED2] bg-white/95 p-9 text-center shadow-[0_28px_80px_-42px_rgba(36,33,29,0.35)] backdrop-blur-2xl">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-charcoal text-[#E8C794] shadow-xl shadow-black/15">
             <Sparkles className="h-9 w-9" />
           </div>
 
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-700">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#D9C4A7] bg-brand-soft px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-brand-hover">
             <ShieldCheck className="h-3.5 w-3.5" />
             Secure live room
           </div>
-          <h1 className="font-display text-3xl font-black text-slate-950">AI interview setup</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm font-medium leading-relaxed text-slate-600">
-            Connect when you are ready. Your microphone will be enabled for a live, voice-first interview.
+          <h1 className="font-display text-3xl font-black tracking-[-0.035em] text-[#1F1D1A]">AI interview setup</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm font-medium leading-relaxed text-[#706A61]">
+            Connect when you are ready. Your microphone and camera will be enabled for the live interview.
           </p>
 
           {error && (
@@ -346,7 +361,7 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
           <button
             onClick={startInterview}
             disabled={loading}
-            className="mt-7 inline-flex items-center gap-2 rounded-lg bg-slate-950 px-8 py-4 text-sm font-black text-white shadow-xl shadow-slate-900/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-700/20 active:translate-y-0 active:scale-[0.98] disabled:opacity-60"
+            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-brand-charcoal px-8 py-4 text-sm font-black text-white shadow-xl shadow-black/15 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-[0_18px_38px_-22px_rgba(154,106,48,0.7)] active:translate-y-0 active:scale-[0.98] disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -376,7 +391,9 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
         noiseSuppression: true,
         autoGainControl: true,
       }}
-      video={false}
+      video={{
+        facingMode: 'user',
+      }}
       options={{
         adaptiveStream: true,
         dynacast: true,
@@ -415,18 +432,44 @@ function InterviewStage({
 }) {
   const room = useRoomContext();
   const connectionState = useConnectionState();
-  const { isMicrophoneEnabled, lastMicrophoneError, localParticipant, microphoneTrack } = useLocalParticipant();
+  const {
+    cameraTrack,
+    isCameraEnabled,
+    isMicrophoneEnabled,
+    lastCameraError,
+    lastMicrophoneError,
+    localParticipant,
+    microphoneTrack,
+  } = useLocalParticipant();
   const { agent, state: agentState } = useVoiceAssistant();
 
   const [micError, setMicError] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [micMutedByUser, setMicMutedByUser] = useState(false);
   const [isMicToggling, setIsMicToggling] = useState(false);
+  const [isCameraToggling, setIsCameraToggling] = useState(false);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
   const [sessionPhase, setSessionPhase] = useState<'active' | 'complete' | 'ended'>('active');
-  const [closingMessageDetected, setClosingMessageDetected] = useState(false);
+  const [closingSignalReceived, setClosingSignalReceived] = useState(false);
   const hasConnectedRef = useRef(false);
   const hasAutoDisconnectedRef = useRef(false);
   const hasCompletionNotifiedRef = useRef(false);
+  const closingSignalReceivedRef = useRef(false);
+
+  const signalInterviewClosing = useCallback(() => {
+    if (closingSignalReceivedRef.current) return;
+    closingSignalReceivedRef.current = true;
+    setClosingSignalReceived(true);
+  }, []);
+
+  const handleInterviewDataMessage = useCallback((message: { payload: Uint8Array }) => {
+    const parsed = parseInterviewDataPayload(message.payload);
+    if (parsed?.type === INTERVIEW_CLOSING_EVENT) {
+      signalInterviewClosing();
+    }
+  }, [signalInterviewClosing]);
+
+  useDataChannel(INTERVIEW_DATA_TOPIC, handleInterviewDataMessage);
 
   useEffect(() => {
     if (
@@ -478,7 +521,30 @@ function InterviewStage({
     }
   };
 
+  const toggleCamera = async () => {
+    if (connectionState !== ConnectionState.Connected || isCameraToggling) return;
+
+    const enableCamera = !isCameraEnabled;
+    setIsCameraToggling(true);
+    try {
+      const publication = await localParticipant.setCameraEnabled(enableCamera, {
+        facingMode: 'user',
+      });
+      setCameraError(
+        enableCamera && !publication
+          ? 'Camera was not published to the room.'
+          : null,
+      );
+    } catch (err) {
+      setCameraError(err instanceof Error ? err.message : 'Unable to update camera.');
+    } finally {
+      setIsCameraToggling(false);
+    }
+  };
+
   const endSession = () => {
+    if (!window.confirm('Are you sure you want to end this interview?')) return;
+
     setSessionPhase('ended');
     room.disconnect();
     if (onExit) onExit();
@@ -488,9 +554,11 @@ function InterviewStage({
   const botIsSpeaking = agentState === 'speaking';
   const botIsProcessing = agentState === 'thinking';
   const micIsPublished = Boolean(microphoneTrack) && isMicrophoneEnabled;
+  const cameraIsPublished = Boolean(cameraTrack) && isCameraEnabled;
   const agentIsReady = Boolean(agent) && agentState !== 'connecting' && agentState !== 'disconnected';
   const isRecording = isLive && micIsPublished && agentState === 'listening';
   const displayedMicError = micError || lastMicrophoneError?.message || null;
+  const displayedCameraError = cameraError || lastCameraError?.message || null;
   const readinessText = (() => {
     if (connectionState === ConnectionState.Connecting) return 'Connecting to LiveKit';
     if (!isLive) return 'Connection closed';
@@ -505,15 +573,20 @@ function InterviewStage({
     return 'Ready for your response';
   })();
 
-  const markClosingMessageDetected = useCallback(() => {
-    setClosingMessageDetected(true);
-  }, []);
-
   const notifyCompletion = useCallback(() => {
     if (hasCompletionNotifiedRef.current) return;
     hasCompletionNotifiedRef.current = true;
-    if (onComplete) onComplete();
+    onComplete?.();
   }, [onComplete]);
+
+  const finalizeAsComplete = useCallback(() => {
+    setSessionPhase('complete');
+    notifyCompletion();
+  }, [notifyCompletion]);
+
+  const finalizeAsEnded = useCallback(() => {
+    setSessionPhase('ended');
+  }, []);
 
   useEffect(() => {
     if (connectionState === ConnectionState.Connected) {
@@ -532,11 +605,9 @@ function InterviewStage({
   }, [agentIsReady, isLive, timerStartedAtMs]);
 
   useEffect(() => {
-    if (!closingMessageDetected || botIsSpeaking || sessionPhase !== 'active') return;
+    if (!closingSignalReceived || botIsSpeaking || sessionPhase !== 'active') return;
 
     const closeTimer = window.setTimeout(() => {
-      setSessionPhase('complete');
-
       if (
         !hasAutoDisconnectedRef.current &&
         connectionState !== ConnectionState.Disconnected
@@ -544,11 +615,11 @@ function InterviewStage({
         hasAutoDisconnectedRef.current = true;
         room.disconnect();
       }
-      notifyCompletion();
+      finalizeAsComplete();
     }, 400);
 
     return () => window.clearTimeout(closeTimer);
-  }, [botIsSpeaking, closingMessageDetected, connectionState, notifyCompletion, room, sessionPhase]);
+  }, [botIsSpeaking, closingSignalReceived, connectionState, finalizeAsComplete, room, sessionPhase]);
 
   useEffect(() => {
     if (
@@ -559,9 +630,13 @@ function InterviewStage({
       return;
     }
 
-    setSessionPhase(closingMessageDetected ? 'complete' : 'ended');
-    if (closingMessageDetected) notifyCompletion();
-  }, [closingMessageDetected, connectionState, notifyCompletion, sessionPhase]);
+    if (closingSignalReceived) {
+      finalizeAsComplete();
+      return;
+    }
+
+    finalizeAsEnded();
+  }, [closingSignalReceived, connectionState, finalizeAsComplete, finalizeAsEnded, sessionPhase]);
 
   let statusStr: 'idle' | 'connecting' | 'connected' | 'complete' | 'error' | 'closed' = 'idle';
   if (sessionPhase === 'complete') statusStr = 'complete';
@@ -572,19 +647,17 @@ function InterviewStage({
   else if (connectionState === ConnectionState.Disconnected) statusStr = 'closed';
 
   return (
-    <div className="ibot-interview-room-bg relative isolate flex h-full min-h-0 w-full flex-col overflow-hidden text-slate-900">
-      <div className="pointer-events-none absolute -left-24 top-24 h-80 w-80 rounded-full bg-emerald-300/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-cyan-300/15 blur-3xl" />
+    <div className="ibot-candidate-shell ibot-interview-room-bg relative isolate flex h-full min-h-0 w-full flex-col overflow-hidden text-[#1F1D1A]">
+      <div className="pointer-events-none absolute -left-24 top-24 h-80 w-80 rounded-full bg-brand-accent/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[#D7AA6A]/10 blur-3xl" />
 
-      <header className="z-20 flex min-h-[76px] items-center justify-between gap-4 border-b border-slate-200/70 bg-white/85 px-4 py-3 shadow-sm shadow-slate-200/40 backdrop-blur-xl sm:px-6">
+      <header className="z-20 flex min-h-[70px] items-center justify-between gap-4 border-b border-[#E6DED2] bg-white/90 px-6 py-3 shadow-sm shadow-[#1F1D1A]/5 backdrop-blur-xl">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-green-500 to-sky-500 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/70">
-              <Sparkles className="h-5 w-5" />
-            </div>
+            <IbotMark />
             <div className="min-w-0">
-              <p className="truncate text-sm font-black text-slate-950">AI Interview</p>
-              <p className="truncate text-[10px] font-black uppercase text-emerald-700">Live voice room</p>
+              <p className="truncate font-display text-sm font-black text-[#1F1D1A]">AI Interview</p>
+              <p className="truncate text-[9px] font-black uppercase tracking-[0.15em] text-brand-hover">Live interview room</p>
             </div>
           </div>
         </div>
@@ -623,28 +696,28 @@ function InterviewStage({
         </div>
       </header>
 
-      <main className="relative z-10 min-h-0 flex-1 p-4 pb-24 sm:p-5 sm:pb-24 lg:p-6 lg:pb-24">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.78fr)]">
-          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/80 p-6 shadow-2xl shadow-slate-900/10 ring-1 ring-white/60">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
-            <div className="pointer-events-none absolute bottom-0 left-1/2 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-300/80 to-transparent" />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-300/10 blur-3xl" />
+      <main className="relative z-10 min-h-0 flex-1 p-5 pb-20">
+        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1680px] grid-cols-[minmax(420px,0.88fr)_minmax(560px,1.12fr)] gap-4">
+          <div className="grid min-h-0 grid-rows-2 gap-4">
+          <section className="ibot-stage-panel relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-3xl border border-[#E6DED2] p-4 shadow-[0_18px_46px_-34px_rgba(36,33,29,0.35)]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-accent/70 to-transparent" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-accent/10 blur-3xl" />
 
             {sessionPhase === 'active' ? (
-              <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
-                <Ibot3DAvatar isSpeaking={botIsSpeaking} />
+              <div className="relative z-10 flex h-full w-full flex-col items-center justify-center text-center">
+                <Ibot3DAvatar isSpeaking={botIsSpeaking} compact />
 
-                <div className="rounded-2xl border border-white/90 bg-white/90 px-6 py-4 shadow-xl shadow-slate-200/60 ring-1 ring-slate-100/80 backdrop-blur-xl">
-                  <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-emerald-700">
-                    <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                    Session state
+                <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/90 bg-white/90 px-5 py-3 shadow-lg shadow-[#1F1D1A]/5 ring-1 ring-[#E6DED2] backdrop-blur-xl">
+                  <div className="mb-1.5 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-[0.14em] text-brand-hover">
+                    <span className={`h-2 w-2 rounded-full ${isRecording || botIsSpeaking || botIsProcessing ? 'bg-brand-accent' : 'bg-[#B8AA9A]'}`} />
+                    Interviewer status
                   </div>
-                  <p className="text-lg font-black text-slate-950">{readinessText}</p>
+                  <p className="text-sm font-black text-[#1F1D1A]">{readinessText}</p>
                 </div>
 
                 {connectionState === ConnectionState.Connecting && (
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/90 px-4 py-2 text-xs font-black text-slate-600 shadow-sm">
-                    <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                    <Loader2 className="h-4 w-4 animate-spin text-brand-accent" />
                     Connecting...
                   </div>
                 )}
@@ -668,11 +741,56 @@ function InterviewStage({
 
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-white/80 bg-white/90 shadow-2xl shadow-slate-900/10 ring-1 ring-white/60 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100/80 bg-white/55 px-5 py-4 backdrop-blur">
+          <section className="relative min-h-0 overflow-hidden rounded-3xl border border-[#D8CCBC] bg-brand-charcoal shadow-[0_22px_50px_-34px_rgba(36,33,29,0.75)]">
+            <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/65 to-transparent px-5 pb-8 pt-4 text-white">
               <div>
-                <p className="text-[10px] font-black uppercase text-emerald-700">Live room</p>
-                <h2 className="mt-1 text-sm font-black text-slate-950">Transcript</h2>
+                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#E8C794]">Candidate video</p>
+                <p className="mt-0.5 text-xs font-bold">Your camera preview</p>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black ${
+                cameraIsPublished
+                  ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
+                  : 'border-white/20 bg-white/10 text-white/75'
+              }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${cameraIsPublished ? 'bg-emerald-400' : 'bg-white/45'}`} />
+                {cameraIsPublished ? 'Camera on' : 'Camera off'}
+              </span>
+            </div>
+
+            {cameraIsPublished && cameraTrack ? (
+              <VideoTrack
+                trackRef={{
+                  participant: localParticipant,
+                  publication: cameraTrack,
+                  source: Track.Source.Camera,
+                }}
+                className="h-full w-full scale-x-[-1] object-cover"
+              />
+            ) : (
+              <div className="flex h-full min-h-[220px] flex-col items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(185,131,63,0.2),transparent_38%)] px-8 text-center text-white">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-[#E8C794]">
+                  <VideoOff className="h-6 w-6" />
+                </div>
+                <p className="mt-4 text-sm font-black">Your camera is off</p>
+                <p className="mt-1 max-w-xs text-[11px] font-medium leading-relaxed text-white/55">
+                  Use the camera control below whenever you are ready to show your video.
+                </p>
+              </div>
+            )}
+
+            {displayedCameraError && (
+              <div className="absolute inset-x-4 bottom-4 z-20 rounded-xl border border-amber-300/35 bg-[#2F2922]/90 px-3 py-2.5 text-[10px] font-semibold text-amber-100 backdrop-blur">
+                Camera issue: {displayedCameraError}
+              </div>
+            )}
+          </section>
+          </div>
+
+          <section className="ibot-caption-panel flex min-h-0 flex-col overflow-hidden rounded-3xl border border-[#E6DED2] bg-white/92 shadow-[0_22px_54px_-38px_rgba(36,33,29,0.45)] backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-[#E6DED2] bg-white/65 px-6 py-4 backdrop-blur">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-brand-hover">Live conversation</p>
+                <h2 className="mt-1 font-display text-base font-black text-[#1F1D1A]">Interview transcript</h2>
               </div>
               {isRecording ? (
                 <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-100">
@@ -687,26 +805,23 @@ function InterviewStage({
                   </span>
                   Speak clearly
                 </div>
-              ) : (
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-500">
-                  Auto scroll
+              ) : botIsSpeaking ? (
+                <span className="rounded-full border border-[#E6DED2] bg-white px-3 py-1.5 text-[10px] font-black text-[#706A61]">
+                  Interviewer speaking
                 </span>
-              )}
+              ) : botIsProcessing ? (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[10px] font-black text-amber-700">
+                  Processing
+                </span>
+              ) : null}
             </div>
 
-            <div className="min-h-0 flex-1 p-4">
+            <div className="min-h-0 flex-1 p-5">
               <LiveTranscriptPanel
-                localIdentity={room.localParticipant.identity}
                 isBotSpeaking={botIsSpeaking}
-                onClosingMessage={markClosingMessageDetected}
+                onClosingMessage={signalInterviewClosing}
               />
             </div>
-
-            {sessionPhase !== 'active' && (
-              <div className="border-t border-slate-100 bg-white/70 px-4 py-3">
-                <CompletionNotice type={sessionPhase === 'complete' ? 'complete' : 'ended'} />
-              </div>
-            )}
           </section>
         </div>
       </main>
@@ -715,8 +830,11 @@ function InterviewStage({
         <div className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2">
           <InterviewControlDock
             isMuted={micMutedByUser}
-            isToggling={isMicToggling}
+            isMicToggling={isMicToggling}
+            isCameraEnabled={cameraIsPublished}
+            isCameraToggling={isCameraToggling}
             onToggleMicrophone={toggleMicrophone}
+            onToggleCamera={toggleCamera}
             onEndSession={endSession}
           />
         </div>

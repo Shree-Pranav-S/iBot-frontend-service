@@ -1,6 +1,7 @@
 ﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assessmentService } from "../features/dashboard/services/assessment";
 import { candidateService } from "../features/dashboard/services/candidate";
+import { evaluationService } from "../features/dashboard/services/evaluation";
 import { notificationService } from "../features/dashboard/services/notification";
 import type {
   AssessmentSummaryResponse,
@@ -149,7 +150,8 @@ export const useUpdateCandidateDecision = () => {
 export const useGenerateRejectionFeedback = () =>
   useMutation<AIRejectionFeedbackResponse, Error, string>({
     mutationFn: async (candidateId) => {
-      const response = await candidateService.generateRejectionFeedback(candidateId);
+      const response =
+        await evaluationService.generateRejectionFeedback(candidateId);
       if (!response.success || !response.data) {
         throw new Error(response.message || "Failed to generate rejection feedback");
       }
@@ -213,7 +215,7 @@ export const useRecruiterEvaluations = () => {
   return useQuery<RecruiterEvaluationListItem[], Error>({
     queryKey: ["evaluations"],
     queryFn: async () => {
-      const resp = await candidateService.getRecruiterEvaluations();
+      const resp = await evaluationService.getRecruiterEvaluations();
       if (!resp.success || !resp.data)
         throw new Error(resp.message || "Failed to fetch evaluations");
       return resp.data;
@@ -237,7 +239,7 @@ export const useCandidateEvaluation = (caId: string | null) => {
     queryKey: ["candidate-evaluation", caId],
     queryFn: async () => {
       if (!caId) return null;
-      const resp = await candidateService.getCandidateEvaluation(caId);
+      const resp = await evaluationService.getCandidateEvaluation(caId);
       if (!resp.success || !resp.data)
         throw new Error(resp.message || "Failed to fetch candidate evaluation");
       return resp.data;
@@ -267,7 +269,7 @@ export const useInterviewTranscript = (caId: string | null) => {
     queryKey: ["transcript", caId],
     queryFn: async () => {
       if (!caId) return null;
-      const resp = await candidateService.getInterviewTranscript(caId);
+      const resp = await evaluationService.getInterviewTranscript(caId);
       if (!resp.success || !resp.data)
         throw new Error(resp.message || "Failed to fetch transcript");
       return resp.data;

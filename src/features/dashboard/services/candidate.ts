@@ -4,14 +4,10 @@ import type {
   CandidateAssessmentListItem,
   BulkUploadResponse,
   TokenValidationResponse,
-  InterviewEvaluationResponse,
   RecruiterDecisionResponse,
-  AIRejectionFeedbackResponse,
-  RecruiterEvaluationListItem,
   SingleCandidateResponse,
   ExistingCandidateListItem,
   EnrollCandidateResponse,
-  InterviewTranscriptResponse,
 } from '../../../types/candidate.types';
 
 // Candidate service
@@ -132,17 +128,6 @@ export const candidateService = {
     return response.data;
   },
 
-
-  /**
-   * Fetch all evaluated interviews for the current recruiter.
-   */
-  async getRecruiterEvaluations(): Promise<APIResponse<RecruiterEvaluationListItem[]>> {
-    const response = await api.get<APIResponse<RecruiterEvaluationListItem[]>>(
-      '/candidates/evaluations',
-    );
-    return response.data;
-  },
-
   /**
    * Persist recruiter hiring decision for a candidate assessment.
    */
@@ -159,28 +144,6 @@ export const candidateService = {
   },
 
   /**
-   * Generate editable, candidate-facing rejection feedback from evaluation evidence.
-   */
-  async generateRejectionFeedback(
-    caId: string,
-  ): Promise<APIResponse<AIRejectionFeedbackResponse>> {
-    const response = await api.post<APIResponse<AIRejectionFeedbackResponse>>(
-      `/candidates/${caId}/rejection-feedback`,
-    );
-    return response.data;
-  },
-
-  /**
-   * Fetch evaluation report for a candidate assessment.
-   */
-  async getCandidateEvaluation(caId: string): Promise<APIResponse<InterviewEvaluationResponse>> {
-    const response = await api.get<APIResponse<InterviewEvaluationResponse>>(
-      `/candidates/${caId}/evaluation`,
-    );
-    return response.data;
-  },
-
-  /**
    * Delete a candidate registration from an assessment.
    */
   async deleteCandidate(caId: string): Promise<APIResponse<null>> {
@@ -188,15 +151,6 @@ export const candidateService = {
     return response.data;
   },
 
-  /**
-   * Fetch the interview transcript for a candidate assessment.
-   */
-  async getInterviewTranscript(caId: string): Promise<APIResponse<InterviewTranscriptResponse>> {
-    const response = await api.get<APIResponse<InterviewTranscriptResponse>>(
-      `/candidates/${caId}/transcript`,
-    );
-    return response.data;
-  },
 };
 
 

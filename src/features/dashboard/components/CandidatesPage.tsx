@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
+import MarkdownView from '../../../components/ui/MarkdownView';
 import {
   useAssessments,
   useCandidates,
@@ -1514,8 +1515,11 @@ export const CandidatesPage: React.FC = () => {
                       {enrollment.role_name || 'Role not assigned'}
                     </p>
                   </header>
-                  <div className="whitespace-pre-wrap p-4 text-xs font-medium leading-relaxed text-slate-700">
-                    {enrollment.jd_text || 'No job description text is available for this assessment.'}
+                  <div className="p-4">
+                    <MarkdownView
+                      content={enrollment.jd_text}
+                      emptyText="No job description text is available for this assessment."
+                    />
                   </div>
                 </section>
               ))}

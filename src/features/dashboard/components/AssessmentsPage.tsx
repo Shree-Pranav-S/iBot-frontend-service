@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import MDEditor from '@uiw/react-md-editor';
+import '@uiw/react-md-editor/markdown-editor.css';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
+import MarkdownView from '../../../components/ui/MarkdownView';
 import {
   useAssessments,
   useAssessmentDetails,
@@ -455,13 +458,21 @@ export const AssessmentsPage: React.FC = () => {
   const selectedStatus = selectedAssessment
     ? assessmentStatusMeta(selectedAssessment.status)
     : null;
-
   const renderInstanceBadge = (id: string) => {
     const num = instanceNumbers.get(id);
     if (!num) return null;
+    const assessment = assessments.find((a) => a.id === id);
+    const dateStr = assessment
+      ? new Date(assessment.created_at).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : '';
+    const badgeText = dateStr ? `#${num} - ${dateStr}` : `#${num}`;
     return (
       <span className="inline-flex items-center rounded-full border border-[#D8C9B5] bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold text-brand-hover">
-        #{num}
+        {badgeText}
       </span>
     );
   };
@@ -989,9 +1000,11 @@ export const AssessmentsPage: React.FC = () => {
                         </header>
                         <div className="flex min-h-56 flex-col p-4">
                           <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                            <p className="line-clamp-[10] whitespace-pre-line text-[10px] font-medium leading-5 text-slate-600">
-                              {selectedAssessment.jd_text || 'No job description text is available.'}
-                            </p>
+                            <MarkdownView
+                              content={selectedAssessment.jd_text}
+                              className="prose-sm text-[10px] leading-5"
+                              emptyText="No job description text is available."
+                            />
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 to-transparent" />
                           </div>
                           <button
@@ -1389,7 +1402,7 @@ export const AssessmentsPage: React.FC = () => {
       {/* â”€â”€ Create Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showCreateModal && (
         <div className="ibot-overlay">
-          <div className="ibot-modal max-w-3xl max-h-[90vh]">
+          <div className="ibot-modal max-w-4xl max-h-[90vh]">
             <div className="flex min-h-0 flex-1 flex-col animate-scaleIn">
             <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
             <div className="flex shrink-0 items-start justify-between border-b border-default bg-gradient-to-r from-brand-soft via-white to-[#FCFAF6] px-6 py-4">
@@ -1569,13 +1582,24 @@ export const AssessmentsPage: React.FC = () => {
 
                 {/* JD Input */}
                 {createJdType === 'text' ? (
-                  <textarea
-                    required value={createJdText}
-                    onChange={(e) => setCreateJdText(e.target.value)}
-                    placeholder="Paste the job requirements and qualifications..."
-                    rows={4}
-                    className={`${inputStyles} resize-none`}
-                  />
+                  <div className="flex flex-col gap-1.5">
+                    <div data-color-mode="light" className="ibot-md-editor overflow-hidden rounded-lg border border-default">
+                      <MDEditor
+                        value={createJdText}
+                        onChange={(val) => setCreateJdText(val ?? '')}
+                        height={420}
+                        preview="edit"
+                        visibleDragbar
+                        textareaProps={{
+                          placeholder:
+                            'Paste the job description here. Use the toolbar to add headings, bold text, bullet lists, and links so the JD is clearly formatted.',
+                        }}
+                      />
+                    </div>
+                    <p className="text-[9px] font-semibold text-slate-400">
+                      Supports rich formatting (Markdown): headings, bold/italic, lists, and links. Use the eye icon to preview.
+                    </p>
+                  </div>
                 ) : (
                   <div className="relative flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-center transition-all duration-300 hover:border-brand-accent hover:bg-brand-soft/30">
                     <FileText className="h-6 w-6 text-slate-400 animate-pulse" />
@@ -1658,8 +1682,11 @@ export const AssessmentsPage: React.FC = () => {
             </div>
 
             <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-white to-brand-soft/30 p-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 text-xs font-medium leading-6 text-slate-700 whitespace-pre-wrap shadow-sm">
-                {selectedAssessment.jd_text || 'No job description text is available.'}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <MarkdownView
+                  content={selectedAssessment.jd_text}
+                  emptyText="No job description text is available."
+                />
               </div>
             </div>
 

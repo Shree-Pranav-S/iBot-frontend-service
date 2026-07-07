@@ -32,13 +32,21 @@ export function buildAssessmentInstanceNumbers(
   return result;
 }
 
-/** Title with #N suffix when multiple campaigns share the same title and role. */
+/** Title with #N suffix and creation date when multiple campaigns share the same title and role. */
 export function formatAssessmentTitle(
   assessment: AssessmentSummaryResponse,
   instanceNumbers: Map<string, number>,
 ): string {
   const num = instanceNumbers.get(assessment.id);
-  return num ? `${assessment.title} #${num}` : assessment.title;
+  if (num) {
+    const dateStr = new Date(assessment.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    return `${assessment.title} #${num} - ${dateStr}`;
+  }
+  return assessment.title;
 }
 
 export interface AssessmentSelectOption {

@@ -104,9 +104,13 @@ export const useCandidates = (assessmentId: string | null) => {
 
 export const useBulkUploadCandidates = () => {
   const client = useQueryClient();
-  return useMutation<BulkUploadResponse, Error, File>({
-    mutationFn: async (csvFile) => {
-      const resp = await candidateService.bulkUploadCandidates(csvFile);
+  return useMutation<
+    BulkUploadResponse,
+    Error,
+    { csvFile: File; assessmentId: string }
+  >({
+    mutationFn: async ({ csvFile, assessmentId }) => {
+      const resp = await candidateService.bulkUploadCandidates(csvFile, assessmentId);
       if (!resp.success || !resp.data)
         throw new Error(resp.message || "Failed to process CSV upload");
       return resp.data;

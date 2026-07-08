@@ -15,12 +15,16 @@ import type {
 export const candidateService = {
   /**
    * Upload a CSV file of candidates for bulk processing.
-   * The backend matches each candidate by assessment_id,
-   * creates records, and dispatches invitation emails.
+   * The selected assessment applies to every row; the backend creates
+   * records and dispatches invitation emails.
    */
-  async bulkUploadCandidates(csvFile: File): Promise<APIResponse<BulkUploadResponse>> {
+  async bulkUploadCandidates(
+    csvFile: File,
+    assessmentId: string,
+  ): Promise<APIResponse<BulkUploadResponse>> {
     const formData = new FormData();
     formData.append('csv_file', csvFile);
+    formData.append('assessment_id', assessmentId);
 
     const response = await api.post<APIResponse<BulkUploadResponse>>(
       '/candidates/bulk-upload',

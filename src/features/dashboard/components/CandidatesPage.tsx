@@ -185,14 +185,31 @@ export const CandidatesPage: React.FC = () => {
   // CSV Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [bulkAssessmentId, setBulkAssessmentId] = useState(
+    () => (searchParams.get('assessment') && searchParams.get('assessment') !== 'all'
+      ? searchParams.get('assessment')!
+      : ''),
+  );
   const [dragOver, setDragOver] = useState(false);
   const [uploadResult, setUploadResult] = useState<BulkUploadResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetUploadModal = () => {
     setCsvFile(null);
+    setBulkAssessmentId(
+      selectedCampaignId !== 'all' ? selectedCampaignId : '',
+    );
     setUploadResult(null);
     setDragOver(false);
+  };
+
+  const openUploadModal = () => {
+    if (assessments.length === 0) {
+      toastError('No Campaigns', 'Create a campaign first.');
+      return;
+    }
+    resetUploadModal();
+    setShowUploadModal(true);
   };
 
   // Manual Create modal state
@@ -370,9 +387,12 @@ export const CandidatesPage: React.FC = () => {
   };
 
   const handleBulkUpload = async () => {
-    if (!csvFile) return;
+    if (!csvFile || !bulkAssessmentId) return;
     try {
-      const result = await bulkUploadMutation.mutateAsync(csvFile);
+      const result = await bulkUploadMutation.mutateAsync({
+        csvFile,
+        assessmentId: bulkAssessmentId,
+      });
       setUploadResult(result);
       if (result.failed_rows === 0) {
         toastSuccess('Upload Complete', `${result.successful_rows} candidate(s) invited.`);
@@ -584,13 +604,7 @@ export const CandidatesPage: React.FC = () => {
             Enroll
           </button>
           <button
-            onClick={() => {
-              if (assessments.length === 0) {
-                toastError('No Campaigns', 'Create a campaign first.');
-                return;
-              }
-              setShowUploadModal(true);
-            }}
+            onClick={openUploadModal}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-default bg-white px-3.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover active:translate-y-0 active:scale-[0.97]"
             id="upload-csv-btn"
           >
@@ -619,7 +633,7 @@ export const CandidatesPage: React.FC = () => {
             <p className="font-semibold text-slate-500 text-sm">No candidates found</p>
             <p className="text-xs text-slate-400 mt-1">Try resetting filters or upload a CSV to invite candidates</p>
             <button
-              onClick={() => setShowUploadModal(true)}
+              onClick={openUploadModal}
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-hover transition-all shadow-sm hover:scale-[1.03] active:scale-[0.97]"
             >
               <Upload className="h-3 w-3" />
@@ -1096,36 +1110,30 @@ export const CandidatesPage: React.FC = () => {
             <div className="ibot-scrollbar flex-1 overflow-y-auto">
               <div className="px-6 py-5 flex flex-col gap-4">
                 {/* CSV Format Info */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assessment</label>
+                  <CustomSelect
+                    value={bulkAssessmentId}
+                    onChange={setBulkAssessmentId}
+                    options={assessmentSelectOptions}
+                    placeholder="Select an assessment"
+                    className="w-full"
+                  />
+                  <p className="text-[9px] text-slate-400 font-semibold">
+                    All candidates in the CSV will be invited to this assessment
+                  </p>
+                </div>
+
                 <div className="flex items-start gap-2 rounded-lg border border-default bg-brand-soft/45 p-3 transition-all hover:border-brand-accent">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-hover" />
                   <div className="text-[10px] text-slate-500 leading-relaxed font-bold">
-                    Required columns:{' '}
+                    Required CSV columns:{' '}
                     <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">name</code>,{' '}
                     <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">email</code>,{' '}
-                    <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">resume</code>,{' '}
-                    <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">assessment_id</code>
-                    {assessments.length > 0 && (
-                      <div className="mt-2 border border-slate-200 rounded-md overflow-hidden">
-                        <div className="bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">Your Assessment IDs</div>
-                        <div className="divide-y divide-slate-100 max-h-28 overflow-y-auto ibot-scrollbar">
-                          {assessments.map((assessment) => (
-                            <div key={assessment.id} className="flex items-center justify-between px-2 py-1.5 hover:bg-white transition-colors gap-2">
-                              <span className="text-[9px] text-slate-600 font-semibold truncate">
-                                {formatAssessmentTitle(assessment, instanceNumbers)} ({assessment.role_name})
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => { navigator.clipboard.writeText(assessment.id); toastSuccess('Copied', 'Assessment ID copied to clipboard.'); }}
-                                className="shrink-0 rounded border border-default bg-white px-1.5 py-0.5 font-mono text-[8px] text-brand-hover transition-colors hover:border-brand-accent hover:bg-brand-soft"
-                                title="Click to copy"
-                              >
-                                {assessment.id.slice(0, 8)}…
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <code className="bg-white border border-slate-200 px-1 py-0.5 rounded text-[9px] font-mono">resume</code>
+                    <p className="mt-1.5 text-[9px] font-semibold text-slate-400">
+                      Resume column: Google Drive link to a PDF for each candidate
+                    </p>
                   </div>
                 </div>
 
@@ -1247,7 +1255,7 @@ export const CandidatesPage: React.FC = () => {
                   </button>
                   <button
                     onClick={handleBulkUpload}
-                    disabled={!csvFile || bulkUploadMutation.isPending}
+                    disabled={!csvFile || !bulkAssessmentId || bulkUploadMutation.isPending}
                     className="flex items-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2 text-xs font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-hover active:translate-y-0 active:scale-[0.97] disabled:opacity-50"
                     id="submit-upload-btn"
                   >

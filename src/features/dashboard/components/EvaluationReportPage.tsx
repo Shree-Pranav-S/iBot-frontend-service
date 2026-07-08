@@ -118,6 +118,7 @@ export const EvaluationReportPage: React.FC = () => {
   } = useEvaluationDecision();
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
   const [detailModal, setDetailModal] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [transcriptModalOpen, setTranscriptModalOpen] = useState(false);
   const hasAutoPrinted = useRef(false);
 
   const skills = useMemo(() => {
@@ -133,6 +134,7 @@ export const EvaluationReportPage: React.FC = () => {
 
     hasAutoPrinted.current = true;
     setDetailModal(null);
+    setTranscriptModalOpen(false);
     closeDecision();
 
     const nextParams = new URLSearchParams(searchParams);
@@ -176,12 +178,16 @@ export const EvaluationReportPage: React.FC = () => {
   const recommendation = recommendationMeta(evaluation.hiring_recommendation);
   const decision = decisionMeta(evaluation.recruiter_decision);
   const candidateName = evaluation.candidate_name || 'Candidate';
-  const isTranscriptTab = activeTab === 'transcript';
   const hiringRedFlag = recruiterFacingRedFlag(evaluation.recommendation_override_reason);
   const executiveSummary = cleanRecruiterNarrative(evaluation.overall_summary);
   const recommendationReasoning = cleanRecruiterNarrative(evaluation.recommendation_reasoning);
 
   const navigateToTab = (tab: ReportTab) => {
+    if (tab === 'transcript') {
+      setTranscriptModalOpen(true);
+      return;
+    }
+
     setActiveTab(tab);
     window.requestAnimationFrame(() => {
       document.getElementById('evaluation-tab-content')?.focus({ preventScroll: true });
@@ -199,6 +205,7 @@ export const EvaluationReportPage: React.FC = () => {
   const handlePrintReport = () => {
     if (isTranscriptLoading) return;
     setDetailModal(null);
+    setTranscriptModalOpen(false);
     closeDecision();
     window.requestAnimationFrame(() => window.print());
   };
@@ -238,17 +245,15 @@ export const EvaluationReportPage: React.FC = () => {
 
           {/* ── Candidate Hero Card ─────────────────────────────────── */}
           <section className="ibot-section-surface shrink-0 overflow-hidden print:shadow-none">
-            <div className={`${isTranscriptTab ? 'h-1' : 'h-2'} bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover`} />
-            <div className={isTranscriptTab ? 'px-4 py-2.5 sm:px-5' : 'p-4 sm:px-5 sm:py-4'}>
-              <div className={`flex flex-col xl:flex-row xl:items-center xl:justify-between ${isTranscriptTab ? 'gap-2.5' : 'gap-4'}`}>
-                <div className={`flex min-w-0 ${isTranscriptTab ? 'items-center gap-3' : 'items-start gap-4'}`}>
-                  <div className={`flex shrink-0 items-center justify-center bg-gradient-to-br from-brand-accent to-brand-hover font-display font-black text-white shadow-lg shadow-black/15 ${
-                    isTranscriptTab ? 'h-10 w-10 rounded-xl text-sm' : 'h-12 w-12 rounded-2xl text-[16px]'
-                  }`}>
+            <div className="h-2 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+            <div className="p-4 sm:px-5 sm:py-4">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-accent to-brand-hover font-display text-[16px] font-black text-white shadow-lg shadow-black/15">
                     {candidateInitials(candidateName)}
                   </div>
                   <div className="min-w-0">
-                    <div className={isTranscriptTab ? 'hidden' : 'flex flex-wrap gap-2'}>
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => navigateToTab('overview')}
@@ -273,12 +278,8 @@ export const EvaluationReportPage: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    <h1 className={`font-display font-black tracking-tight text-slate-950 ${
-                      isTranscriptTab ? 'text-[16px] sm:text-lg' : 'mt-2 text-xl sm:text-2xl'
-                    }`}>{candidateName}</h1>
-                    <div className={`flex flex-wrap gap-x-4 gap-y-1 font-semibold text-slate-500 ${
-                      isTranscriptTab ? 'mt-0.5 text-xs' : 'mt-1.5 text-[11px]'
-                    }`}>
+                    <h1 className="mt-2 font-display text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{candidateName}</h1>
+                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-500">
                       {evaluation.role_name && (
                         <span className="inline-flex items-center gap-1.5">
                           <Target className="h-3.5 w-3.5 text-slate-400" />
@@ -301,7 +302,7 @@ export const EvaluationReportPage: React.FC = () => {
                         </a>
                       )}
                     </div>
-                    {evaluation.recruiter_feedback && !isTranscriptTab && (
+                    {evaluation.recruiter_feedback && (
                       <p className="mt-1.5 line-clamp-1 text-[10px] font-semibold text-brand-hover">
                         Recruiter note: {evaluation.recruiter_feedback}
                       </p>
@@ -338,35 +339,41 @@ export const EvaluationReportPage: React.FC = () => {
               role="tablist"
               aria-label="Evaluation report sections"
             >
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-controls="evaluation-tab-content"
-                  onClick={() => navigateToTab(tab.id)}
-                  className={`inline-flex min-w-0 items-center justify-center gap-1.5 truncate rounded-lg px-2.5 py-2 text-[11px] font-black transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-brand-charcoal text-white shadow-sm'
-                      : 'text-slate-500 hover:bg-white hover:text-brand-hover'
-                  }`}
-                >
-                  {tab.icon}
-                  <span className="truncate">{tab.label}</span>
-                  {reportTabCount(tab.id, evaluation, transcript) !== null && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                        activeTab === tab.id
-                          ? 'bg-white/10 text-white'
-                          : 'bg-slate-200/80 text-slate-500'
-                      }`}
-                    >
-                      {reportTabCount(tab.id, evaluation, transcript)}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {TABS.map((tab) => {
+                const selected =
+                  tab.id === 'transcript'
+                    ? transcriptModalOpen
+                    : activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls="evaluation-tab-content"
+                    onClick={() => navigateToTab(tab.id)}
+                    className={`inline-flex min-w-0 items-center justify-center gap-1.5 truncate rounded-lg px-2.5 py-2 text-[11px] font-black transition-all ${
+                      selected
+                        ? 'bg-brand-charcoal text-white shadow-sm'
+                        : 'text-slate-500 hover:bg-white hover:text-brand-hover'
+                    }`}
+                  >
+                    {tab.icon}
+                    <span className="truncate">{tab.label}</span>
+                    {reportTabCount(tab.id, evaluation, transcript) !== null && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                          selected
+                            ? 'bg-white/10 text-white'
+                            : 'bg-slate-200/80 text-slate-500'
+                        }`}
+                      >
+                        {reportTabCount(tab.id, evaluation, transcript)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </nav>
           </section>
 
@@ -375,9 +382,7 @@ export const EvaluationReportPage: React.FC = () => {
             id="evaluation-tab-content"
             role="tabpanel"
             tabIndex={-1}
-            className={`ibot-scrollbar min-h-0 flex-1 pr-1 pb-3 outline-none ${
-              activeTab === 'transcript' ? 'overflow-hidden' : 'overflow-y-auto'
-            }`}
+            className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1 pb-3 outline-none"
           >
           {activeTab === 'overview' && (
             <OverviewTab
@@ -407,16 +412,6 @@ export const EvaluationReportPage: React.FC = () => {
           {activeTab === 'integrity' && (
             <IntegrityTab evaluation={evaluation} onNavigate={navigateToTab} />
           )}
-          {activeTab === 'transcript' && (
-            <TranscriptTab
-              transcript={transcript?.turns ?? []}
-              totalElapsed={transcript?.total_elapsed_secs ?? 0}
-              isLoading={isTranscriptLoading}
-              isError={isTranscriptError}
-              onDownload={handleDownloadTranscript}
-            />
-          )}
-
           {/* ── Decision Banner ─────────────────────────────────────── */}
           </div>
         </div>
@@ -461,6 +456,24 @@ export const EvaluationReportPage: React.FC = () => {
           <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
             {detailModal.content}
           </div>
+        </CenteredDialog>
+      )}
+
+      {transcriptModalOpen && (
+        <CenteredDialog
+          onClose={() => setTranscriptModalOpen(false)}
+          labelledBy="evaluation-transcript-title"
+          className="h-[calc(100dvh-2rem)] max-w-6xl"
+        >
+          <TranscriptTab
+            transcript={transcript?.turns ?? []}
+            totalElapsed={transcript?.total_elapsed_secs ?? 0}
+            isLoading={isTranscriptLoading}
+            isError={isTranscriptError}
+            onDownload={handleDownloadTranscript}
+            onClose={() => setTranscriptModalOpen(false)}
+            titleId="evaluation-transcript-title"
+          />
         </CenteredDialog>
       )}
 
@@ -1042,8 +1055,8 @@ const DimensionsTab: React.FC<{
   evaluation: InterviewEvaluationResponse;
   onDetailModal: (m: { title: string; content: React.ReactNode }) => void;
 }> = ({ evaluation, onDetailModal }) => (
-  <div className="space-y-4 animate-fadeIn">
-    <div className="grid gap-4 xl:grid-cols-3">
+  <div className="space-y-3 animate-fadeIn">
+    <div className="grid items-start gap-3 xl:grid-cols-3">
       {[
         { title: 'Self introduction', score: evaluation.intro_section_score, summary: evaluation.intro_section_summary, evidence: evaluation.intro_section_evidence, icon: <UserRound className="h-4 w-4" /> },
         { title: 'Behaviour & culture', score: evaluation.behavioural_cultural_score, summary: evaluation.behavioural_cultural_summary, evidence: evaluation.behavioural_cultural_evidence, icon: <Users className="h-4 w-4" /> },
@@ -1075,7 +1088,7 @@ const DimensionsTab: React.FC<{
               ),
             })
           }
-          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
+          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -1084,10 +1097,10 @@ const DimensionsTab: React.FC<{
             </div>
             <span className={`text-lg font-black ${scoreTextClass(dim.score)}`}>{dim.score.toFixed(1)}</span>
           </div>
-          <div className="mt-3"><ScoreBar score={dim.score} compact /></div>
-          <p className="mt-4 text-[11px] font-medium leading-6 text-slate-600">{dim.summary}</p>
-          <EvidenceList evidence={dim.evidence} empty="No direct evidence was recorded." />
-          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
+          <div className="mt-2"><ScoreBar score={dim.score} compact /></div>
+          <p className="mt-2.5 text-[11px] font-medium leading-5 text-slate-600 line-clamp-4">{dim.summary}</p>
+          <EvidenceList evidence={dim.evidence} empty="No direct evidence was recorded." compact maxItems={2} />
+          <p className="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
             Open full evidence
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </p>
@@ -1095,9 +1108,9 @@ const DimensionsTab: React.FC<{
       ))}
     </div>
 
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <SectionTitle icon={<MessageSquareText className="h-4 w-4 text-brand-hover" />} title="Communication by interview section" subtitle="Clarity, structure, tone, and engagement assessed across each phase." />
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="mt-3 grid gap-2.5 lg:grid-cols-3">
         {Object.entries(evaluation.section_communication_scores ?? {}).map(([section, details]) => (
           <SectionCommunicationCard key={section} section={section} details={details} />
         ))}
@@ -1171,7 +1184,9 @@ const TranscriptTab: React.FC<{
   isLoading: boolean;
   isError: boolean;
   onDownload: () => void;
-}> = ({ transcript, totalElapsed, isLoading, isError, onDownload }) => {
+  onClose?: () => void;
+  titleId?: string;
+}> = ({ transcript, totalElapsed, isLoading, isError, onDownload, onClose, titleId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [speakerFilter, setSpeakerFilter] = useState<
     'all' | 'interviewer' | 'candidate'
@@ -1213,10 +1228,21 @@ const TranscriptTab: React.FC<{
     });
     return Array.from(firstTurnBySection.entries());
   }, [transcript]);
+  const floatingCloseButton = onClose ? (
+    <button
+      type="button"
+      onClick={onClose}
+      className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-700"
+      aria-label="Close transcript"
+    >
+      <X className="h-4 w-4" />
+    </button>
+  ) : null;
 
   if (isLoading) {
     return (
-      <div className="grid h-full min-h-[360px] place-items-center rounded-2xl border border-slate-200 bg-white">
+      <div className="relative grid h-full min-h-[360px] place-items-center rounded-2xl border border-slate-200 bg-white">
+        {floatingCloseButton}
         <div className="text-center">
           <Loader2 className="mx-auto h-7 w-7 animate-spin text-brand-accent" />
           <p className="mt-3 text-[11px] font-bold text-slate-500">Loading full transcript…</p>
@@ -1227,7 +1253,8 @@ const TranscriptTab: React.FC<{
 
   if (isError) {
     return (
-      <div className="grid h-full min-h-[360px] place-items-center rounded-2xl border border-rose-200 bg-rose-50/40">
+      <div className="relative grid h-full min-h-[360px] place-items-center rounded-2xl border border-rose-200 bg-rose-50/40">
+        {floatingCloseButton}
         <div className="max-w-md text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-rose-400" />
           <h3 className="mt-3 text-[13px] font-black text-rose-900">Transcript could not be loaded</h3>
@@ -1241,7 +1268,8 @@ const TranscriptTab: React.FC<{
 
   if (transcript.length === 0) {
     return (
-      <div className="animate-fadeIn rounded-2xl border border-dashed border-slate-200 bg-white/60 p-10 text-center shadow-sm">
+      <div className="relative flex h-full min-h-[360px] flex-col items-center justify-center animate-fadeIn rounded-2xl border border-dashed border-slate-200 bg-white/60 p-10 text-center shadow-sm">
+        {floatingCloseButton}
         <MessageSquareText className="mx-auto h-10 w-10 text-slate-300" />
         <h3 className="mt-3 text-[13px] font-black text-slate-700">No transcript available</h3>
         <p className="mt-1 text-[11px] font-medium text-slate-400">
@@ -1256,13 +1284,13 @@ const TranscriptTab: React.FC<{
   return (
     <div className="h-full min-h-0 animate-fadeIn">
       <div className="ibot-panel flex h-full min-h-0 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-white via-white to-brand-soft/70 px-5 py-3.5">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-white via-white to-brand-soft/70 px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-default bg-brand-soft text-brand-hover">
               <MessageSquareText className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[16px] font-black text-slate-950">Interview transcript</p>
+              <p id={titleId} className="text-[16px] font-black text-slate-950">Interview transcript</p>
               <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
                 {transcript.length} turns · {elapsedMins > 0 ? `${elapsedMins} min` : 'duration unavailable'} · continuous transcript
               </p>
@@ -1277,10 +1305,20 @@ const TranscriptTab: React.FC<{
               <FileDown className="h-3.5 w-3.5" />
               Download
             </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close transcript"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </header>
 
-        <div className="shrink-0 space-y-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3">
+        <div className="shrink-0 space-y-2 border-b border-slate-200 bg-slate-50/70 px-4 py-2.5">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -1346,9 +1384,9 @@ const TranscriptTab: React.FC<{
           )}
         </div>
 
-        <div className="ibot-transcript-scroll min-h-0 flex-1 overflow-y-auto bg-slate-50/45 px-4 py-4 sm:px-6 sm:py-5">
-          <div className="mx-auto w-full max-w-5xl space-y-4">
-          <p className="text-[11px] font-bold text-slate-500">
+        <div className="ibot-transcript-scroll min-h-0 flex-1 overflow-y-auto bg-slate-50/45 px-4 py-3 sm:px-5">
+          <div className="mx-auto w-full max-w-5xl space-y-2.5">
+          <p className="text-[10px] font-bold text-slate-500">
             Showing {filteredTranscript.length} of {transcript.length} turns
           </p>
           {filteredTranscript.map((turn) => {
@@ -1358,13 +1396,13 @@ const TranscriptTab: React.FC<{
               <div
                 id={`transcript-turn-${turn.turn_number}`}
                 key={turn.turn_id || turn.turn_number}
-                className={`scroll-mt-24 flex gap-4 rounded-2xl border border-l-4 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5 ${
+                className={`scroll-mt-20 flex gap-3 rounded-xl border border-l-4 bg-white p-3 shadow-sm transition-shadow hover:shadow-md ${
                   isBot
-                    ? 'border-slate-200 border-l-slate-500 sm:mr-10'
-                    : 'border-[#D7C2A8] border-l-brand-accent sm:ml-10'
+                    ? 'border-slate-200 border-l-slate-500 sm:mr-8'
+                    : 'border-[#D7C2A8] border-l-brand-accent sm:ml-8'
                 }`}
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black shadow-sm ${isBot ? 'bg-brand-charcoal text-white' : 'bg-brand-accent text-white'}`}>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-black shadow-sm ${isBot ? 'bg-brand-charcoal text-white' : 'bg-brand-accent text-white'}`}>
                   {isBot ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1386,10 +1424,10 @@ const TranscriptTab: React.FC<{
                       )}
                     </div>
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap text-sm font-normal leading-7 text-slate-800">
+                  <p className="mt-2 whitespace-pre-wrap text-sm font-normal leading-6 text-slate-800">
                     {turn.text || '[No transcribed text]'}
                   </p>
-                  <p className="mt-3 border-t border-slate-100 pt-2.5 text-[10px] font-bold text-slate-500">
+                  <p className="mt-2 border-t border-slate-100 pt-2 text-[10px] font-bold text-slate-500">
                     {[
                       `Turn ${turn.turn_number}`,
                       turn.section ? formatLabel(turn.section) : null,
@@ -1547,17 +1585,25 @@ const SectionCommunicationCard: React.FC<{ section: string; details: SectionComm
   </details>
 );
 
-const EvidenceList: React.FC<{ evidence: string[]; empty: string; compact?: boolean }> = ({ evidence, empty, compact = false }) => (
-  <div className={compact ? 'mt-3' : 'mt-4'}>
-    <p className="mb-2 text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">Evidence</p>
-    <ul className="space-y-2">
-      {evidence.map((item, i) => (
-        <li key={i} className="border-l-2 border-brand-accent bg-white px-3 py-2 text-[10px] font-medium leading-5 text-slate-600 shadow-sm">{item}</li>
+const EvidenceList: React.FC<{ evidence: string[]; empty: string; compact?: boolean; maxItems?: number }> = ({ evidence, empty, compact = false, maxItems }) => {
+  const visibleEvidence = maxItems ? evidence.slice(0, maxItems) : evidence;
+  const hiddenCount = maxItems ? Math.max(evidence.length - maxItems, 0) : 0;
+
+  return (
+  <div className={compact ? 'mt-2' : 'mt-3'}>
+    <p className="mb-1.5 text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">Evidence</p>
+    <ul className="space-y-1.5">
+      {visibleEvidence.map((item, i) => (
+        <li key={i} className="border-l-2 border-brand-accent bg-white px-2.5 py-1.5 text-[10px] font-medium leading-5 text-slate-600 shadow-sm">{item}</li>
       ))}
+      {hiddenCount > 0 && (
+        <li className="text-[10px] font-semibold text-slate-400">+{hiddenCount} more in full view</li>
+      )}
       {evidence.length === 0 && <li className="text-[10px] font-semibold text-slate-400">{empty}</li>}
     </ul>
   </div>
-);
+  );
+};
 
 const SeverityTile: React.FC<{ label: string; value: number; tone: 'slate' | 'emerald' | 'amber' | 'rose' }> = ({ label, value, tone }) => {
   const styles = { slate: 'border-slate-200 bg-white text-slate-800', emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800', amber: 'border-amber-200 bg-amber-50 text-amber-800', rose: 'border-rose-200 bg-rose-50 text-rose-800' };

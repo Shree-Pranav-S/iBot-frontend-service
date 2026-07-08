@@ -76,7 +76,7 @@ export const NotificationCenter: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-[48px] z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-default bg-white shadow-[0_28px_70px_-28px_rgba(36,33,29,0.34)]">
+        <div className="absolute right-0 top-[48px] z-[60] w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-default bg-white shadow-[0_28px_70px_-28px_rgba(36,33,29,0.34)]">
           <div className="h-[3px] bg-brand-accent" />
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5">
             <div>

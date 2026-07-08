@@ -77,8 +77,8 @@ export const MainLayout: React.FC = () => {
   return (
     <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-primary">
       {/* ── Sidebar – expands as a width overlay so main content never reflows ── */}
-      <aside className="group/sidebar relative z-30 hidden h-full w-[88px] shrink-0 sm:block">
-        <div className="absolute inset-y-0 left-0 z-30 flex w-[88px] flex-col overflow-hidden border-r border-white/10 bg-sidebar text-white shadow-[18px_0_52px_rgba(36,33,29,0.2)] transition-[width] duration-300 ease-out will-change-[width] group-hover/sidebar:w-[304px]">
+      <aside className="group/sidebar relative z-50 hidden h-full w-[88px] shrink-0 sm:block">
+        <div className="absolute inset-y-0 left-0 z-50 flex w-[88px] flex-col overflow-hidden border-r border-white/10 bg-sidebar text-white shadow-[18px_0_52px_rgba(36,33,29,0.2)] transition-[width] duration-300 ease-out will-change-[width] group-hover/sidebar:w-[304px]">
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand-accent/25 via-sidebar-alt/50 to-transparent pointer-events-none" />
 
         {/* Logo */}
@@ -181,7 +181,7 @@ export const MainLayout: React.FC = () => {
       {/* ── Main content ── */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className={`ibot-page-header-band z-10 flex shrink-0 items-center justify-between px-4 sm:px-6 lg:px-7 ${
+          className={`ibot-page-header-band z-40 flex shrink-0 items-center justify-between px-4 sm:px-6 lg:px-7 ${
             isReportPage ? 'h-[60px]' : 'h-[68px]'
           }`}
         >

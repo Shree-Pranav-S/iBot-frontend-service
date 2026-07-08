@@ -137,20 +137,17 @@ export const DashboardPage: React.FC = () => {
       },
       {
         label: 'Interviewing',
-        description: 'Live or in progress',
         value: stageCounts.interviewing,
         barClass: 'bg-brand-accent',
         live: true,
       },
       {
         label: 'Awaiting report',
-        description: 'Interview complete',
         value: stageCounts.awaitingEvaluation,
         barClass: 'bg-brand-hover',
       },
       {
         label: 'Evaluated',
-        description: 'Report available',
         value: stageCounts.evaluated,
         barClass: 'bg-brand-charcoal',
       },
@@ -181,7 +178,7 @@ export const DashboardPage: React.FC = () => {
       {
         label: 'Interview completion',
         value: `${completionRate}%`,
-        helper: `${completedInterviews} of ${candidates.length} completed`,
+        helper: `${completedInterviews} completed`,
         icon: TrendingUp,
         to: '/candidates',
       },
@@ -204,21 +201,17 @@ export const DashboardPage: React.FC = () => {
       pendingDecisions > 0
         ? {
             title: `${pluralize(pendingDecisions, 'decision')} ready for review`,
-            copy: 'The latest interview evidence is in. Review reports and keep strong candidates moving.',
           }
         : closingSoon > 0
           ? {
               title: `${pluralize(closingSoon, 'assessment')} closing soon`,
-              copy: 'Check candidate coverage before the remaining interview windows close.',
             }
           : activeAssessments.length > 0
             ? {
                 title: 'Your hiring pipeline is on track',
-                copy: 'Candidate activity, evaluations, and campaign deadlines — all in one view.',
               }
             : {
                 title: 'Build your first interview assessment',
-                copy: 'Create a role, define the interview plan, and begin inviting candidates.',
               };
 
     return {
@@ -267,9 +260,6 @@ export const DashboardPage: React.FC = () => {
                 <h2 className="font-display text-lg font-extrabold tracking-[-0.035em] text-slate-950">
                   {dashboard.priority.title}
                 </h2>
-                <p className="hidden max-w-xl truncate text-[13px] font-medium text-slate-500 md:block">
-                  {dashboard.priority.copy}
-                </p>
               </div>
             </div>
 
@@ -359,7 +349,6 @@ export const DashboardPage: React.FC = () => {
           >
             <PanelHeader
               title="Candidate flow"
-              subtitle="Where candidates are in the interview process"
               to="/candidates"
               action="Open pipeline"
               accentClass="dashboard-panel-accent-emerald"
@@ -378,13 +367,10 @@ export const DashboardPage: React.FC = () => {
                           {stage.live && stage.value > 0 && (
                             <span className="h-1.5 w-1.5 rounded-full bg-brand-accent dashboard-live-dot" />
                           )}
-                          <p className="truncate text-[13px] font-semibold text-slate-700">
+                          <p className="truncate text-[13px] font-semibold text-black">
                             {stage.label}
                           </p>
                         </div>
-                        <p className="truncate text-[11px] font-medium text-slate-400">
-                          {stage.description}
-                        </p>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/60">
                         {!loading && (
@@ -397,7 +383,7 @@ export const DashboardPage: React.FC = () => {
                           />
                         )}
                       </div>
-                      <p className="text-right font-display text-[15px] font-extrabold text-slate-900">
+                      <p className="text-right font-display text-[15px] font-extrabold text-black">
                         {loading ? '—' : stage.value}
                       </p>
                     </div>
@@ -433,7 +419,6 @@ export const DashboardPage: React.FC = () => {
           >
             <PanelHeader
               title="Evaluation intelligence"
-              subtitle="Recent reports and hiring outcomes"
               to="/evaluations"
               action="View all"
               accentClass="dashboard-panel-accent-indigo"
@@ -492,7 +477,6 @@ export const DashboardPage: React.FC = () => {
           >
             <PanelHeader
               title="Priority queue"
-              subtitle="What needs your attention next"
               accentClass="dashboard-panel-accent-amber"
             />
 
@@ -607,7 +591,7 @@ export const DashboardPage: React.FC = () => {
 
 const PanelHeader: React.FC<{
   title: string;
-  subtitle: string;
+  subtitle?: string;
   to?: string;
   action?: string;
   accentClass?: string;
@@ -619,7 +603,9 @@ const PanelHeader: React.FC<{
       <h3 className="truncate font-display text-sm font-bold tracking-[-0.01em] text-slate-900">
         {title}
       </h3>
-      <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">{subtitle}</p>
+      {subtitle ? (
+        <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">{subtitle}</p>
+      ) : null}
     </div>
     {to && action && (
       <NavLink
@@ -665,7 +651,6 @@ const CompletionGauge: React.FC<{ value: number }> = ({ value }) => {
         </div>
       </div>
       <p className="mt-1.5 text-xs font-semibold text-slate-700">Completion</p>
-      <p className="mt-0.5 text-[11px] font-medium text-slate-400">All candidates</p>
     </div>
   );
 };

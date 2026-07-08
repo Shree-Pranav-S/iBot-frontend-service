@@ -38,6 +38,36 @@ interface WaitingRoomProps {
   onSessionInvalid: () => void;
 }
 
+const WAITING_ROOM_MEDIA_READY_KEY = 'ibot.waitingRoom.mediaReady';
+
+const readRememberedMediaReady = () => {
+  try {
+    const raw = sessionStorage.getItem(WAITING_ROOM_MEDIA_READY_KEY);
+    if (!raw) return { mic: false, camera: false };
+    const parsed = JSON.parse(raw) as Partial<Record<'mic' | 'camera', boolean>>;
+    return {
+      mic: Boolean(parsed.mic),
+      camera: Boolean(parsed.camera),
+    };
+  } catch {
+    return { mic: false, camera: false };
+  }
+};
+
+const rememberMediaReady = (kind: 'mic' | 'camera', ready: boolean) => {
+  try {
+    const current = readRememberedMediaReady();
+    const next = { ...current, [kind]: ready };
+    if (!next.mic && !next.camera) {
+      sessionStorage.removeItem(WAITING_ROOM_MEDIA_READY_KEY);
+      return;
+    }
+    sessionStorage.setItem(WAITING_ROOM_MEDIA_READY_KEY, JSON.stringify(next));
+  } catch {
+    // Session storage is only a convenience for the current waiting-room visit.
+  }
+};
+
 export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   invitationToken,
   sessionToken,
@@ -50,9 +80,15 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const [details, setDetails] = useState<TokenValidationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rememberedMediaReady] = useState(readRememberedMediaReady);
+  const autoRestoreAttemptedRef = useRef(false);
 
-  const [micStatus, setMicStatus] = useState<'idle' | 'granted' | 'denied' | 'checking'>('idle');
-  const [cameraStatus, setCameraStatus] = useState<'idle' | 'granted' | 'denied' | 'checking'>('idle');
+  const [micStatus, setMicStatus] = useState<'idle' | 'granted' | 'denied' | 'checking'>(
+    rememberedMediaReady.mic ? 'checking' : 'idle',
+  );
+  const [cameraStatus, setCameraStatus] = useState<'idle' | 'granted' | 'denied' | 'checking'>(
+    rememberedMediaReady.camera ? 'checking' : 'idle',
+  );
   const [cameraDeviceLabel, setCameraDeviceLabel] = useState<string | null>(null);
   const [micVolume, setMicVolume] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -181,13 +217,31 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
     };
   }, [checkLatency]);
 
-  const requestMicPermission = async () => {
+  const cleanupMic = useCallback(() => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    lastVolumeUpdateRef.current = 0;
+    lastVolumeRef.current = 0;
+  }, []);
+
+  const requestMicPermission = useCallback(async () => {
     setMicStatus('checking');
     cleanupMic();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      rememberMediaReady('mic', true);
       setMicStatus('granted');
 
       const AudioCtx =
@@ -233,29 +287,13 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
       animationRef.current = requestAnimationFrame(updateVolume);
     } catch {
+      rememberMediaReady('mic', false);
       setMicStatus('denied');
       setMicVolume(0);
     }
-  };
+  }, [cleanupMic]);
 
-  const cleanupMic = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close().catch(() => {});
-      audioCtxRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    lastVolumeUpdateRef.current = 0;
-    lastVolumeRef.current = 0;
-  };
-
-  const cleanupCamera = () => {
+  const cleanupCamera = useCallback(() => {
     if (cameraStreamRef.current) {
       cameraStreamRef.current.getTracks().forEach((track) => {
         track.onended = null;
@@ -267,9 +305,9 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       videoPreviewRef.current.srcObject = null;
     }
     setCameraDeviceLabel(null);
-  };
+  }, []);
 
-  const requestCameraPermission = async () => {
+  const requestCameraPermission = useCallback(async () => {
     setCameraStatus('checking');
     cleanupCamera();
 
@@ -291,17 +329,36 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
       videoTrack.onended = () => {
         cleanupCamera();
+        rememberMediaReady('camera', false);
         setCameraStatus('idle');
       };
 
       cameraStreamRef.current = stream;
       setCameraDeviceLabel(videoTrack.label || null);
+      rememberMediaReady('camera', true);
       setCameraStatus('granted');
     } catch {
       cleanupCamera();
+      rememberMediaReady('camera', false);
       setCameraStatus('denied');
     }
-  };
+  }, [cleanupCamera]);
+
+  useEffect(() => {
+    if (autoRestoreAttemptedRef.current) return;
+    autoRestoreAttemptedRef.current = true;
+
+    const restoreTimer = window.setTimeout(() => {
+      if (rememberedMediaReady.mic) {
+        void requestMicPermission();
+      }
+      if (rememberedMediaReady.camera) {
+        void requestCameraPermission();
+      }
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
+  }, [rememberedMediaReady, requestCameraPermission, requestMicPermission]);
 
   useEffect(() => {
     const video = videoPreviewRef.current;
@@ -329,7 +386,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
       cleanupMic();
       cleanupCamera();
     };
-  }, []);
+  }, [cleanupCamera, cleanupMic]);
 
   const startRecording = () => {
     if (!streamRef.current) return;

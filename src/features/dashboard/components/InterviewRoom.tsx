@@ -630,12 +630,16 @@ function InterviewStage({
       return;
     }
 
-    if (closingSignalReceived) {
-      finalizeAsComplete();
-      return;
-    }
+    const finalizeTimer = window.setTimeout(() => {
+      if (closingSignalReceived) {
+        finalizeAsComplete();
+        return;
+      }
 
-    finalizeAsEnded();
+      finalizeAsEnded();
+    }, 0);
+
+    return () => window.clearTimeout(finalizeTimer);
   }, [closingSignalReceived, connectionState, finalizeAsComplete, finalizeAsEnded, sessionPhase]);
 
   let statusStr: 'idle' | 'connecting' | 'connected' | 'complete' | 'error' | 'closed' = 'idle';

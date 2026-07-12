@@ -8,7 +8,10 @@ export const useRecruiterRealtime = () => {
   const queryClient = useQueryClient();
   const { success, warning } = useToast();
   const toastRef = useRef({ success, warning });
-  toastRef.current = { success, warning };
+
+  useEffect(() => {
+    toastRef.current = { success, warning };
+  }, [success, warning]);
 
   const handledEventIds = useRef(new Set<string>());
   const isInitialConnect = useRef(true);

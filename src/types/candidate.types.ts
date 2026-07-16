@@ -206,6 +206,14 @@ export interface AIRejectionFeedbackResponse {
   feedback: string;
 }
 
+export interface AIApprovalFeedbackResponse {
+  feedback: string;
+}
+
+export type AIDecisionFeedbackResponse =
+  | AIApprovalFeedbackResponse
+  | AIRejectionFeedbackResponse;
+
 export interface ExistingCandidateListItem {
   id: string;
   full_name: string;

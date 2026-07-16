@@ -651,11 +651,11 @@ function InterviewStage({
   else if (connectionState === ConnectionState.Disconnected) statusStr = 'closed';
 
   return (
-    <div className="ibot-candidate-shell ibot-interview-room-bg relative isolate flex h-full min-h-0 w-full flex-col overflow-hidden text-[#1F1D1A]">
+    <div className="ibot-candidate-shell ibot-interview-room-bg relative isolate flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden text-[#1F1D1A]">
       <div className="pointer-events-none absolute -left-24 top-24 h-80 w-80 rounded-full bg-brand-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-[#D7AA6A]/10 blur-3xl" />
 
-      <header className="z-20 flex min-h-[70px] items-center justify-between gap-4 border-b border-[#E6DED2] bg-white/90 px-6 py-3 shadow-sm shadow-[#1F1D1A]/5 backdrop-blur-xl">
+      <header className="z-20 flex min-h-[70px] items-center justify-between gap-2 border-b border-[#E6DED2] bg-white/90 px-3 py-3 shadow-sm shadow-[#1F1D1A]/5 backdrop-blur-xl sm:gap-4 sm:px-6">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-3">
             <IbotMark />
@@ -700,10 +700,10 @@ function InterviewStage({
         </div>
       </header>
 
-      <main className="relative z-10 min-h-0 flex-1 p-5 pb-20">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1680px] grid-cols-[minmax(420px,0.88fr)_minmax(560px,1.12fr)] gap-4">
-          <div className="grid min-h-0 grid-rows-2 gap-4">
-          <section className="ibot-stage-panel relative flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-3xl border border-[#E6DED2] p-4 shadow-[0_18px_46px_-34px_rgba(36,33,29,0.35)]">
+      <main className="ibot-scrollbar relative z-10 min-h-0 flex-1 overflow-y-auto p-3 pb-24 sm:p-5 sm:pb-24 xl:overflow-hidden">
+        <div className="mx-auto grid h-auto min-h-0 w-full max-w-[1680px] grid-cols-1 gap-4 xl:h-full xl:grid-cols-[minmax(420px,0.88fr)_minmax(560px,1.12fr)]">
+          <div className="grid min-h-0 gap-4 xl:grid-rows-2">
+          <section className="ibot-stage-panel relative flex min-h-[300px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-[#E6DED2] p-4 shadow-[0_18px_46px_-34px_rgba(36,33,29,0.35)] xl:min-h-0">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-accent/70 to-transparent" />
             <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-accent/10 blur-3xl" />
 
@@ -745,7 +745,7 @@ function InterviewStage({
 
           </section>
 
-          <section className="relative min-h-0 overflow-hidden rounded-3xl border border-[#D8CCBC] bg-brand-charcoal shadow-[0_22px_50px_-34px_rgba(36,33,29,0.75)]">
+          <section className="relative min-h-[300px] overflow-hidden rounded-3xl border border-[#D8CCBC] bg-brand-charcoal shadow-[0_22px_50px_-34px_rgba(36,33,29,0.75)] xl:min-h-0">
             <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/65 to-transparent px-5 pb-8 pt-4 text-white">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#E8C794]">Candidate video</p>
@@ -790,7 +790,7 @@ function InterviewStage({
           </section>
           </div>
 
-          <section className="ibot-caption-panel flex min-h-0 flex-col overflow-hidden rounded-3xl border border-[#E6DED2] bg-white/92 shadow-[0_22px_54px_-38px_rgba(36,33,29,0.45)] backdrop-blur-xl">
+          <section className="ibot-caption-panel flex min-h-[420px] flex-col overflow-hidden rounded-3xl border border-[#E6DED2] bg-white/92 shadow-[0_22px_54px_-38px_rgba(36,33,29,0.45)] backdrop-blur-xl xl:min-h-0">
             <div className="flex items-center justify-between gap-3 border-b border-[#E6DED2] bg-white/65 px-6 py-4 backdrop-blur">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.15em] text-brand-hover">Live conversation</p>

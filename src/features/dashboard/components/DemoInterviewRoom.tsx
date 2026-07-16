@@ -48,7 +48,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
 
   if (!data) {
     return (
-      <div className="ibot-candidate-shell ibot-interview-room-bg fixed inset-0 z-50 flex h-screen w-screen items-center justify-center overflow-hidden p-6 text-[#1F1D1A]">
+      <div className="ibot-candidate-shell ibot-interview-room-bg fixed inset-0 z-50 flex h-dvh w-full min-w-0 items-center justify-center overflow-y-auto p-4 text-[#1F1D1A] sm:p-6">
         <div className="relative w-full max-w-xl rounded-3xl border border-[#E6DED2] bg-white/[0.94] p-8 text-center shadow-[0_28px_80px_-42px_rgba(36,33,29,0.35)] backdrop-blur-2xl">
           <button
             type="button"
@@ -114,7 +114,7 @@ export const DemoInterviewRoom: React.FC<DemoInterviewRoomProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-white">
+    <div className="fixed inset-0 z-50 flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-white">
       <LiveKitRoom
         token={data.token}
         serverUrl={data.livekit_url}
@@ -227,8 +227,8 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
   })();
 
   return (
-    <div className="ibot-candidate-shell ibot-interview-room-bg relative flex h-full min-h-0 w-full flex-col overflow-hidden text-[#1F1D1A]">
-      <header className="z-20 flex min-h-[70px] items-center justify-between gap-4 border-b border-[#E6DED2] bg-white/[0.94] px-6 py-3 shadow-sm shadow-[#1F1D1A]/5">
+    <div className="ibot-candidate-shell ibot-interview-room-bg relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden text-[#1F1D1A]">
+      <header className="z-20 flex min-h-[70px] items-center justify-between gap-2 border-b border-[#E6DED2] bg-white/[0.94] px-3 py-3 shadow-sm shadow-[#1F1D1A]/5 sm:gap-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <IbotMark />
           <div className="min-w-0">
@@ -261,9 +261,9 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 p-4 sm:p-5 lg:p-6">
-        <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
-          <section className="ibot-stage-panel relative flex min-h-[360px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-[#E6DED2] p-6 shadow-[0_20px_48px_-36px_rgba(36,33,29,0.4)]">
+      <main className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-3 sm:p-5 xl:overflow-hidden xl:p-6">
+        <div className="mx-auto grid h-auto min-h-0 w-full max-w-[1500px] grid-cols-1 gap-4 xl:h-full xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
+          <section className="ibot-stage-panel relative flex min-h-[300px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-[#E6DED2] p-4 shadow-[0_20px_48px_-36px_rgba(36,33,29,0.4)] sm:min-h-[360px] sm:p-6 xl:min-h-0">
             <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-5 text-center">
               <Ibot3DAvatar isSpeaking={botIsSpeaking} />
 
@@ -295,7 +295,7 @@ function DemoInterviewStage({ onExit }: { onExit: () => void }) {
             </div>
           </section>
 
-          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-[#E6DED2] bg-white/[0.92] shadow-[0_20px_48px_-36px_rgba(36,33,29,0.4)]">
+          <section className="ibot-caption-panel flex min-h-[320px] flex-col overflow-hidden rounded-3xl border border-[#E6DED2] bg-white/[0.92] shadow-[0_20px_48px_-36px_rgba(36,33,29,0.4)] xl:min-h-0">
             <div className="flex items-center justify-between gap-3 border-b border-[#E6DED2] px-5 py-4">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.14em] text-brand-hover">

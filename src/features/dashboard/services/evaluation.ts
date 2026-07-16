@@ -1,6 +1,7 @@
 import { api } from "../../../config/api";
 import type { APIResponse } from "../../../types/api.types";
 import type {
+  AIApprovalFeedbackResponse,
   AIRejectionFeedbackResponse,
   InterviewEvaluationResponse,
   InterviewTranscriptResponse,
@@ -39,6 +40,15 @@ export const evaluationService = {
   ): Promise<APIResponse<AIRejectionFeedbackResponse>> {
     const response = await api.post<APIResponse<AIRejectionFeedbackResponse>>(
       `/evaluations/${caId}/rejection-feedback`,
+    );
+    return response.data;
+  },
+
+  async generateApprovalFeedback(
+    caId: string,
+  ): Promise<APIResponse<AIApprovalFeedbackResponse>> {
+    const response = await api.post<APIResponse<AIApprovalFeedbackResponse>>(
+      `/evaluations/${caId}/approval-feedback`,
     );
     return response.data;
   },

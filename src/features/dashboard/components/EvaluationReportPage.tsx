@@ -212,7 +212,7 @@ export const EvaluationReportPage: React.FC = () => {
 
   return (
     <>
-      <div className="h-full min-h-0 overflow-hidden animate-fadeIn print:hidden">
+      <div className="ibot-scrollbar h-full min-h-0 overflow-y-auto overflow-x-hidden animate-fadeIn print:hidden lg:overflow-hidden">
         <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-3">
 
           {/* ── Top Nav Bar ─────────────────────────────────────────── */}
@@ -221,7 +221,7 @@ export const EvaluationReportPage: React.FC = () => {
               <ArrowLeft className="h-4 w-4" />
               Back to Evaluations
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-brand-accent" />}
               <span className="hidden text-[11px] font-bold text-slate-500 sm:inline">
                 Generated {formatDateTime(evaluation.generated_at)}
@@ -248,7 +248,7 @@ export const EvaluationReportPage: React.FC = () => {
             <div className="h-2 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
             <div className="p-4 sm:px-5 sm:py-4">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex min-w-0 items-start gap-4">
+                <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-accent to-brand-hover font-display text-[16px] font-black text-white shadow-lg shadow-black/15">
                     {candidateInitials(candidateName)}
                   </div>
@@ -295,7 +295,7 @@ export const EvaluationReportPage: React.FC = () => {
                       {evaluation.candidate_email && (
                         <a
                           href={`mailto:${evaluation.candidate_email}`}
-                          className="inline-flex items-center gap-1.5 transition-colors hover:text-brand-hover"
+                          className="inline-flex min-w-0 items-center gap-1.5 break-all transition-colors hover:text-brand-hover"
                         >
                           <Mail className="h-3.5 w-3.5 text-slate-400" />
                           {evaluation.candidate_email}
@@ -310,12 +310,12 @@ export const EvaluationReportPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-wrap gap-2 print:hidden">
+                <div className="flex w-full shrink-0 flex-wrap gap-2 print:hidden xl:w-auto">
                   <button
                     type="button"
                     onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'APPROVED')}
                     disabled={isDecisionFinalized(evaluation.recruiter_decision)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
                   >
                     <UserCheck className="h-4 w-4" />
                     Hire
@@ -324,7 +324,7 @@ export const EvaluationReportPage: React.FC = () => {
                     type="button"
                     onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'REJECTED')}
                     disabled={isDecisionFinalized(evaluation.recruiter_decision)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
                   >
                     <UserX className="h-4 w-4" />
                     Reject
@@ -335,7 +335,7 @@ export const EvaluationReportPage: React.FC = () => {
 
             {/* Tab navigation */}
             <nav
-              className="grid grid-cols-3 gap-1 border-t border-slate-200 bg-slate-50/80 px-3 py-2 sm:grid-cols-6"
+              className="grid grid-cols-2 gap-1 border-t border-slate-200 bg-slate-50/80 px-3 py-2 sm:grid-cols-3 md:grid-cols-6"
               role="tablist"
               aria-label="Evaluation report sections"
             >
@@ -382,7 +382,7 @@ export const EvaluationReportPage: React.FC = () => {
             id="evaluation-tab-content"
             role="tabpanel"
             tabIndex={-1}
-            className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto pr-1 pb-3 outline-none"
+            className="ibot-scrollbar min-h-[320px] flex-1 overflow-y-auto pb-3 pr-1 outline-none lg:min-h-0"
           >
           {activeTab === 'overview' && (
             <OverviewTab

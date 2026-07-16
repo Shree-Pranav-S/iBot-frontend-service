@@ -207,9 +207,9 @@ export const EvaluationsPage: React.FC = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden animate-fadeIn print:hidden">
+      <div className="ibot-scrollbar flex h-full min-h-0 flex-col gap-3 overflow-y-auto overflow-x-hidden animate-fadeIn print:hidden lg:overflow-hidden">
         {/* Compact command strip */}
-        <section className="ibot-section-toolbar relative z-20 flex shrink-0 items-center justify-between gap-5 overflow-visible px-4 py-3 transition-shadow hover:shadow-[0_12px_30px_rgba(185,131,63,0.12)]">
+        <section className="ibot-section-toolbar relative z-20 flex shrink-0 flex-col gap-4 overflow-visible px-4 py-3 transition-shadow hover:shadow-[0_12px_30px_rgba(185,131,63,0.12)] xl:flex-row xl:items-center xl:justify-between xl:gap-5">
           <div className="flex min-w-0 items-center gap-3.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-charcoal text-white shadow-lg shadow-black/15 transition-transform duration-200 hover:rotate-3 hover:scale-105">
               <BarChart3 className="h-5 w-5" />
@@ -230,14 +230,14 @@ export const EvaluationsPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="grid shrink-0 grid-cols-4 divide-x divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/80">
+          <div className="grid w-full shrink-0 grid-cols-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/80 sm:grid-cols-4 sm:divide-x sm:divide-slate-200 xl:w-auto">
             {[
               { label: 'Reports', value: String(stats.total), tone: 'text-slate-900' },
               { label: 'Average', value: stats.average.toFixed(1), tone: 'text-brand-hover' },
               { label: 'Hired', value: String(stats.approved), tone: 'text-emerald-700' },
               { label: 'Rejected', value: String(stats.rejected), tone: 'text-rose-700' },
             ].map((item) => (
-              <div key={item.label} className="min-w-20 px-3.5 py-2 text-center">
+              <div key={item.label} className="min-w-0 border-b border-slate-200 px-3.5 py-2 text-center odd:border-r sm:border-b-0 sm:odd:border-r-0">
                 <p className={`font-display text-[16px] font-black ${item.tone}`}>{item.value}</p>
                 <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-400">
                   {item.label}
@@ -248,9 +248,9 @@ export const EvaluationsPage: React.FC = () => {
         </section>
 
         {/* Candidate Grid */}
-        <section className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
-          <header className="shrink-0 border-b border-slate-200 bg-[#FCFAF6]/70 px-5 py-3">
-            <div className="flex items-center justify-between gap-4">
+        <section className="ibot-section-surface flex min-h-0 shrink-0 flex-col overflow-hidden lg:flex-1">
+          <header className="shrink-0 border-b border-slate-200 bg-[#FCFAF6]/70 px-3 py-3 sm:px-5">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand-hover ring-1 ring-default transition-transform duration-200 hover:rotate-3 hover:scale-105">
                   <UserRoundSearch className="h-4 w-4" />
@@ -262,8 +262,8 @@ export const EvaluationsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="relative block w-60">
+              <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:items-center">
+                <label className="relative block w-full sm:col-span-2 xl:w-60">
                   <span className="sr-only">Search candidate reports</span>
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -283,7 +283,8 @@ export const EvaluationsPage: React.FC = () => {
                     { value: 'all', label: 'All assessments' },
                     ...assessmentOptions,
                   ]}
-                  buttonClassName="h-10 w-52"
+                  buttonClassName="h-10 w-full xl:w-52"
+                  className="w-full xl:w-auto"
                 />
                 <CustomSelect
                   value={sort}
@@ -293,11 +294,12 @@ export const EvaluationsPage: React.FC = () => {
                     { value: 'rank', label: 'Best rank' },
                     { value: 'recent', label: 'Most recent' },
                   ]}
-                  buttonClassName="h-10 w-40"
+                  buttonClassName="h-10 w-full xl:w-40"
+                  className="w-full xl:w-auto"
                 />
               </div>
             </div>
-            <div className="mt-2.5 flex items-center gap-2">
+            <div className="ibot-scrollbar mt-2.5 flex items-center gap-2 overflow-x-auto pb-1">
               {([
                 { value: 'all', label: 'All reports', count: contextualCounts.total },
                 { value: 'PENDING', label: 'Pending', count: contextualCounts.pending },
@@ -353,8 +355,55 @@ export const EvaluationsPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-hidden">
-              <table className="w-full table-fixed border-collapse text-left">
+              <div className="ibot-scrollbar grid gap-3 overflow-y-auto p-3 lg:hidden">
+                {visibleEvaluations.map((evaluation) => {
+                  const recommendation = recommendationMeta(evaluation.hiring_recommendation);
+                  const decision = decisionMeta(evaluation.recruiter_decision);
+                  return (
+                    <article
+                      key={evaluation.candidate_assessment_id}
+                      className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-accent hover:bg-brand-soft/30"
+                      onClick={() => setSelectedEvaluation(evaluation)}
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br font-display text-xs font-black text-white shadow-md ring-4 ${candidateAvatarTone(evaluation.candidate_name)}`}>
+                          {candidateInitials(evaluation.candidate_name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-extrabold text-slate-900">{evaluation.candidate_name}</p>
+                          <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{evaluation.candidate_email}</p>
+                          <p className="mt-2 truncate text-xs font-bold text-slate-800">{evaluation.assessment_title}</p>
+                          <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{evaluation.role_name}</p>
+                        </div>
+                        <span className={`font-display text-xl font-black ${scoreTextClass(evaluation.overall_score)}`}>
+                          {evaluation.overall_score.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <StatusPill {...recommendation} />
+                        <StatusPill {...decision} />
+                        <span className="text-[10px] font-semibold text-slate-400">{formatDateTime(evaluation.generated_at)}</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3" onClick={(event) => event.stopPropagation()}>
+                        <button type="button" onClick={() => setSelectedEvaluation(evaluation)} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-charcoal px-3 text-[11px] font-black text-white">
+                          <Eye className="h-3.5 w-3.5" /> Review
+                        </button>
+                        <button type="button" onClick={() => requestDecision(evaluation.candidate_assessment_id, evaluation.candidate_name, evaluation.recruiter_decision, 'APPROVED')} disabled={isDecisionFinalized(evaluation.recruiter_decision)} className="flex h-9 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 disabled:opacity-30" aria-label={`Hire ${evaluation.candidate_name}`}>
+                          <UserCheck className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={() => requestDecision(evaluation.candidate_assessment_id, evaluation.candidate_name, evaluation.recruiter_decision, 'REJECTED')} disabled={isDecisionFinalized(evaluation.recruiter_decision)} className="flex h-9 w-10 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 disabled:opacity-30" aria-label={`Reject ${evaluation.candidate_name}`}>
+                          <UserX className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={() => handleViewFullReport(evaluation.candidate_assessment_id)} className="flex h-9 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500" aria-label={`Open ${evaluation.candidate_name}'s full report`}>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="ibot-scrollbar hidden min-h-0 flex-1 overflow-auto lg:block">
+              <table className="min-w-[980px] w-full table-fixed border-collapse text-left">
                 <thead className="border-b border-slate-200 bg-slate-50/95">
                   <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
                     <th className="w-[20%] px-4 py-3">Candidate</th>
@@ -471,7 +520,7 @@ export const EvaluationsPage: React.FC = () => {
               </div>
 
               {/* Pagination footer */}
-              <div className="mt-auto flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-5 py-2.5">
+              <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 bg-slate-50/80 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <p className="text-[11px] font-semibold text-slate-500">
                   Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, sortedEvaluations.length)} of {sortedEvaluations.length}
                 </p>

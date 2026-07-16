@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Clock,
   FileText,
-  Gauge,
   Headphones,
   Info,
   Loader2,
@@ -469,7 +468,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
   if (loading) {
     return (
-      <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-screen flex-col items-center justify-center overflow-hidden p-6">
+      <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-dvh flex-col items-center justify-center overflow-hidden p-4 sm:p-6">
         <div className="relative">
           <div className="absolute -inset-5 animate-pulse rounded-full bg-brand-accent/20 blur-2xl" />
           <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-brand-hover shadow-xl shadow-brand-accent/10">
@@ -484,7 +483,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
   if (error || !details) {
     return (
-      <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-screen items-center justify-center overflow-hidden p-6">
+      <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-dvh items-center justify-center overflow-hidden p-4 sm:p-6">
         <div className="w-full max-w-md space-y-5 rounded-2xl border border-red-100 bg-white/90 p-8 text-center shadow-2xl shadow-red-900/10 backdrop-blur-xl">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-200 bg-red-50 text-red-500">
             <AlertTriangle className="h-7 w-7" />
@@ -508,17 +507,36 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const completedChecks = [isOnline, micStatus === 'granted', cameraStatus === 'granted'].filter(Boolean).length;
   const setupPercent = Math.round((completedChecks / 3) * 100);
   const overviewItems = [
-    'Keep this tab active during the interview.',
     'Use a quiet, well-lit room and speak naturally.',
-    'Do not close the browser after the session starts.',
-    'Complete the setup checks before joining live mode.',
+    'Keep this tab open and active throughout the interview.',
+    'Allow enough uninterrupted time to complete the session.',
+  ];
+  const readinessChecks = [
+    {
+      label: 'Connection',
+      detail: isOnline ? (latencyChecking ? 'Checking quality…' : latencyInfo.text) : 'Offline',
+      ready: isOnline,
+      icon: isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />,
+    },
+    {
+      label: 'Camera',
+      detail: cameraStatus === 'granted' ? 'Camera ready' : cameraStatus === 'checking' ? 'Checking…' : 'Permission needed',
+      ready: cameraStatus === 'granted',
+      icon: cameraStatus === 'granted' ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />,
+    },
+    {
+      label: 'Microphone',
+      detail: micStatus === 'granted' ? 'Microphone ready' : micStatus === 'checking' ? 'Checking…' : 'Permission needed',
+      ready: micStatus === 'granted',
+      icon: <Mic className="h-4 w-4" />,
+    },
   ];
 
   return (
-    <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-screen flex-col overflow-hidden text-[#1F1D1A]">
+    <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-dvh min-w-0 flex-col overflow-hidden text-[#1F1D1A]">
       <audio ref={testAudioRef} onEnded={() => setIsPlayingTest(false)} className="hidden" />
 
-      <header className="z-20 flex h-[72px] shrink-0 items-center justify-between border-b border-[#E6DED2] bg-white/92 px-6 shadow-sm shadow-[#1F1D1A]/5 backdrop-blur-xl">
+      <header className="z-20 flex min-h-[68px] shrink-0 items-center justify-between gap-2 border-b border-[#E6DED2] bg-white/92 px-3 py-2 shadow-sm shadow-[#1F1D1A]/5 backdrop-blur-xl sm:h-[72px] sm:px-6 sm:py-0">
         <div className="flex min-w-0 items-center gap-3">
           <IbotMark />
           <div className="min-w-0">
@@ -528,7 +546,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
                 Waiting Room
               </span>
             </div>
-            <p className="truncate text-xs font-semibold text-[#706A61]">Complete setup checks before joining.</p>
+            <p className="hidden truncate text-xs font-semibold text-[#706A61] sm:block">Complete setup checks before joining.</p>
           </div>
         </div>
 
@@ -550,407 +568,128 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
         </div>
       </header>
 
-      <main className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6">
-        <div className="mx-auto grid min-h-full w-full max-w-7xl gap-5 lg:grid-cols-[minmax(0,1fr)_430px]">
-          <section className="flex min-h-0 flex-col gap-5">
-            <div className="ibot-hero-panel relative overflow-hidden rounded-2xl border border-white/80 p-5 shadow-xl shadow-slate-200/50 sm:p-6">
-              <div className="relative z-10">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Invitation verified
+      <main className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
+          <section className="ibot-hero-panel relative overflow-hidden rounded-2xl border border-white/80 p-4 shadow-xl shadow-slate-200/50 sm:p-6">
+            <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-[11px] font-black text-emerald-700 shadow-sm">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Invitation verified
                 </div>
-                <h1 className="font-display text-3xl font-black text-slate-950 sm:text-4xl">
-                  Welcome, {details.candidate_name}
+                <h1 className="mt-3 font-display text-2xl font-black text-slate-950 sm:text-3xl">
+                  Hi {details.candidate_name}, let’s get you ready
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-[#706A61]">
-                  Run the final checks below, then choose practice mode or start the live assessment. Test your camera and microphone here before joining.
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-[#706A61]">
+                  Complete the three checks below. When they are ready, you can practice or begin the live interview.
                 </p>
-
-                <div className="mt-5 rounded-2xl border border-[#D9C4A7] bg-white/90 p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase text-slate-400">Assessment</p>
-                  <p className="mt-1 text-lg font-black text-brand-hover">{details.assessment_title}</p>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <InfoTile icon={<CalendarDays className="h-4 w-4" />} label="Valid Until" value={getFormatDate(details.window_end)} />
-                  <InfoTile icon={<Clock className="h-4 w-4" />} label="Duration" value={`${details.interview_duration_mins} minutes`} />
-                  <InfoTile icon={<Gauge className="h-4 w-4" />} label="Status" value={details.status} />
+              </div>
+              <div className="min-w-0 rounded-2xl border border-[#D9C4A7] bg-white/90 p-4 shadow-sm lg:w-[360px]">
+                <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Your assessment</p>
+                <p className="mt-1 truncate text-base font-black text-brand-hover">{details.assessment_title}</p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-bold text-slate-600">
+                  <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-brand-accent" />{details.interview_duration_mins} minutes</span>
+                  <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-brand-accent" />Available until {getFormatDate(details.window_end)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="ibot-panel p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm font-black text-slate-950">Setup progress</h2>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    Camera, microphone, and connection checks protect interview quality.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setInstructionsOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#D9C4A7] bg-brand-soft px-3 py-2 text-xs font-black text-brand-hover transition-all hover:border-brand-accent hover:bg-[#EAD7BE] active:scale-[0.98]"
-                >
-                  Interview rules
-                  <Info className="h-3.5 w-3.5" />
-                </button>
+            <div className="relative z-10 mt-5">
+              <div className="mb-2 flex items-center justify-between text-[11px] font-black text-slate-500">
+                <span>{completedChecks} of 3 checks complete</span><span>{setupPercent}%</span>
               </div>
-
-              <div className="mt-5">
-                <div className="mb-2 flex items-center justify-between text-xs font-black text-slate-500">
-                  <span>{completedChecks} of 3 checks complete</span>
-                  <span>{setupPercent}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-hover transition-all duration-700"
-                    style={{ width: `${setupPercent}%` }}
-                  />
-                </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200">
+                <div className="h-full rounded-full bg-gradient-to-r from-brand-accent to-brand-hover transition-all duration-700" style={{ width: `${setupPercent}%` }} />
               </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {overviewItems.slice(0, 4).map((item) => (
-                  <div key={item} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                    <div className="flex gap-3">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" />
-                      <p className="text-xs font-semibold leading-relaxed text-slate-600">{item}</p>
-                    </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {readinessChecks.map((check) => (
+                  <div key={check.label} className={`flex min-w-0 items-center gap-3 rounded-xl border px-3 py-3 ${check.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white/85 text-slate-600'}`}>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${check.ready ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{check.icon}</span>
+                    <span className="min-w-0"><span className="block text-xs font-black">{check.label}</span><span className="block truncate text-[10px] font-semibold opacity-75">{check.detail}</span></span>
+                    {check.ready && <CheckCircle2 className="ml-auto h-4 w-4 shrink-0 text-emerald-600" />}
                   </div>
                 ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <div className="flex gap-3">
-                  <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <div>
-                    <p className="text-xs font-black text-amber-900">Proctored assessment</p>
-                    <p className="mt-1 text-[11px] font-semibold leading-relaxed text-amber-800">
-                      Browser focus, media input, and session continuity may be monitored for assessment integrity.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="ibot-start-panel flex flex-col gap-4 rounded-2xl border border-[#E6DED2] p-5 shadow-xl shadow-brand-accent/10 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#D9C4A7] bg-white/80 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-brand-hover">
-                  <Sparkles className="h-3 w-3" />
-                  Final step
-                </div>
-                <p className="text-lg font-black text-slate-950">Ready to begin?</p>
-                <p className={`mt-1 text-sm font-semibold ${isReady ? 'text-brand-hover' : 'text-red-600'}`}>
-                  {isReady
-                    ? 'Camera, microphone, and network checks are complete.'
-                    : 'Enable camera and microphone access and stay online to continue.'}
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={onStartDemo}
-                  disabled={!isReady}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black transition-all active:scale-[0.98] ${
-                    isReady
-                      ? 'border-[#D9C4A7] bg-white text-brand-hover shadow-sm hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft hover:shadow-md'
-                      : 'cursor-not-allowed border-slate-200 bg-white/60 text-slate-400'
-                  }`}
-                >
-                  <Headphones className="h-4 w-4" />
-                  Demo Interview
-                </button>
-                <button
-                  onClick={() => setConfirmStartOpen(true)}
-                  disabled={!isReady}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white transition-all active:scale-[0.98] ${
-                    isReady
-                      ? 'bg-brand-charcoal shadow-lg shadow-black/15 hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-brand-accent/15'
-                      : 'cursor-not-allowed bg-slate-300 shadow-none'
-                  }`}
-                >
-                  Start Interview
-                  <ChevronRight className="h-4 w-4" />
-                </button>
               </div>
             </div>
           </section>
 
-          <aside className="flex min-h-0 flex-col gap-5">
-            <div className="ibot-panel p-5">
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-sm font-black text-slate-950">Connection Quality</h2>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">Needed for real-time speech processing.</p>
-                </div>
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                    isOnline ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-red-50 text-red-600 ring-1 ring-red-100'
-                  }`}
-                >
-                  {isOnline ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <CheckCard
-                  label="Network"
-                  value={isOnline ? 'Online' : 'Offline'}
-                  state={isOnline ? 'good' : 'bad'}
-                />
-                <div className={`rounded-xl p-4 ring-1 ${latencyInfo.bg} ${latencyInfo.ring}`}>
-                  <p className="text-[10px] font-black uppercase text-slate-400">Latency</p>
-                  <p className={`mt-1 text-sm font-black ${latencyInfo.color}`}>
-                    {latencyChecking ? 'Checking...' : latencyInfo.text}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={checkLatency}
-                disabled={latencyChecking || !isOnline}
-                className="mt-4 w-full rounded-xl border border-[#E6DED2] bg-white px-3 py-2.5 text-xs font-black text-[#706A61] transition-all hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Retest Connection
-              </button>
-            </div>
-
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
             <div className="ibot-panel overflow-hidden">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-                <div>
-                  <h2 className="text-sm font-black text-slate-950">Camera Check</h2>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">Grant access and confirm your video preview.</p>
-                </div>
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                    cameraStatus === 'granted'
-                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
-                      : 'bg-slate-50 text-slate-400 ring-1 ring-slate-100'
-                  }`}
-                >
-                  <Video className="h-5 w-5" />
-                </div>
-              </div>
-
-              <div className="p-5">
-                <div className="flex items-center justify-between gap-3">
-                  {cameraStatus === 'granted' ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Ready
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-500">
-                      Permission required
-                    </span>
-                  )}
-                  {cameraStatus !== 'granted' && (
-                    <button
-                      onClick={requestCameraPermission}
-                      disabled={cameraStatus === 'checking'}
-                      className="rounded-xl bg-brand-charcoal px-4 py-2.5 text-xs font-black text-white shadow-lg shadow-black/10 transition-all hover:-translate-y-0.5 hover:bg-brand-hover disabled:opacity-50"
-                    >
-                      {cameraStatus === 'checking' ? 'Checking...' : 'Enable Camera'}
-                    </button>
-                  )}
-                </div>
-
-                <div className="relative mt-5 overflow-hidden rounded-2xl border border-[#D8CCBC] bg-brand-charcoal shadow-inner">
+              <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+                <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-brand-hover">Step 1</p><h2 className="mt-1 text-sm font-black text-slate-950">Check your camera</h2><p className="mt-1 text-xs font-semibold text-slate-500">Make sure your face is centered and clearly lit.</p></div>
+                <button onClick={requestCameraPermission} disabled={cameraStatus === 'checking'} className={`rounded-xl px-4 py-2.5 text-xs font-black transition-all disabled:opacity-50 ${cameraStatus === 'granted' ? 'border border-[#D9C4A7] bg-white text-brand-hover hover:bg-brand-soft' : 'bg-brand-charcoal text-white hover:bg-brand-hover'}`}>
+                  {cameraStatus === 'checking' ? 'Checking…' : cameraStatus === 'granted' ? 'Retest camera' : 'Enable camera'}
+                </button>
+              </header>
+              <div className="p-4 sm:p-5">
+                <div className="relative overflow-hidden rounded-2xl border border-[#D8CCBC] bg-brand-charcoal shadow-inner">
                   <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/65 to-transparent px-4 pb-6 pt-3 text-white">
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#E8C794]">Camera preview</p>
-                      <p className="mt-0.5 text-[11px] font-bold">Your live video feed</p>
-                    </div>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black ${
-                        cameraStatus === 'granted'
-                          ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
-                          : 'border-white/20 bg-white/10 text-white/75'
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          cameraStatus === 'granted' ? 'bg-emerald-400' : 'bg-white/45'
-                        }`}
-                      />
-                      {cameraStatus === 'granted' ? 'Camera on' : 'Camera off'}
-                    </span>
+                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#E8C794]">Camera preview</p>
+                    <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black ${cameraStatus === 'granted' ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100' : 'border-white/20 bg-white/10 text-white/75'}`}>{cameraStatus === 'granted' ? 'Camera on' : 'Camera off'}</span>
                   </div>
-
                   {cameraStatus === 'granted' ? (
-                    <video
-                      ref={videoPreviewRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      className="aspect-video w-full scale-x-[-1] object-cover"
-                    />
+                    <video ref={videoPreviewRef} autoPlay muted playsInline className="aspect-video w-full scale-x-[-1] object-cover" />
                   ) : (
                     <div className="flex aspect-video flex-col items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(185,131,63,0.2),transparent_38%)] px-6 text-center text-white">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-[#E8C794]">
-                        <VideoOff className="h-5 w-5" />
-                      </div>
-                      <p className="mt-3 text-sm font-black">Camera preview unavailable</p>
-                      <p className="mt-1 max-w-xs text-[11px] font-medium leading-relaxed text-white/55">
-                        Enable camera access to verify lighting, framing, and that your video is working.
-                      </p>
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-[#E8C794]"><VideoOff className="h-5 w-5" /></div>
+                      <p className="mt-3 text-sm font-black">Enable your camera to preview your framing</p>
                     </div>
                   )}
                 </div>
-
-                {cameraStatus === 'granted' && (
-                  <div className="mt-4 space-y-3">
-                    {cameraDeviceLabel && (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5">
-                        <p className="text-[10px] font-black uppercase text-slate-400">Active device</p>
-                        <p className="mt-1 text-xs font-semibold text-slate-700">{cameraDeviceLabel}</p>
-                      </div>
-                    )}
-                    <p className="text-[11px] font-semibold leading-relaxed text-slate-500">
-                      Confirm your face is clearly visible, well lit, and centered. You can adjust camera settings in the live interview room if needed.
-                    </p>
-                    <button
-                      onClick={requestCameraPermission}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#D9C4A7] bg-white px-3 py-2 text-xs font-black text-brand-hover transition-all hover:bg-brand-soft"
-                    >
-                      <Video className="h-3.5 w-3.5" />
-                      Retest Camera
-                    </button>
-                  </div>
-                )}
-
-                {cameraStatus === 'denied' && (
-                  <div className="mt-4 flex gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                    <p className="leading-relaxed">
-                      Camera access was denied. Check browser permissions for this site, ensure no other app is using the camera, and reload the page.
-                    </p>
-                  </div>
-                )}
+                {cameraStatus === 'granted' && cameraDeviceLabel && <p className="mt-3 truncate text-[10px] font-semibold text-slate-500">Using {cameraDeviceLabel}</p>}
+                {cameraStatus === 'denied' && <div className="mt-3 flex gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" /><p>Camera access was denied. Allow camera access in your browser settings, then retry.</p></div>}
               </div>
             </div>
 
-            <div className="ibot-panel overflow-hidden">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-                <div>
-                  <h2 className="text-sm font-black text-slate-950">Microphone Check</h2>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">Grant access and verify playback.</p>
+            <div className="flex flex-col gap-4">
+              <div className="ibot-panel p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-brand-hover">Step 2</p><h2 className="mt-1 text-sm font-black text-slate-950">Check your connection</h2><p className="mt-1 text-xs font-semibold text-slate-500">A stable connection keeps the conversation smooth.</p></div>
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isOnline ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{isOnline ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}</span>
                 </div>
-                <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                    micStatus === 'granted'
-                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
-                      : 'bg-slate-50 text-slate-400 ring-1 ring-slate-100'
-                  }`}
-                >
-                  <Mic className="h-5 w-5" />
-                </div>
+                <div className={`mt-4 flex items-center justify-between gap-3 rounded-xl px-3 py-3 ring-1 ${latencyInfo.bg} ${latencyInfo.ring}`}><span className="text-xs font-black text-slate-700">{isOnline ? 'Online' : 'Offline'}</span><span className={`text-xs font-black ${latencyInfo.color}`}>{latencyChecking ? 'Checking…' : latencyInfo.text}</span></div>
+                <button onClick={checkLatency} disabled={latencyChecking || !isOnline} className="mt-3 w-full rounded-xl border border-[#E6DED2] bg-white px-3 py-2.5 text-xs font-black text-[#706A61] hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover disabled:opacity-50">Retest connection</button>
               </div>
 
-              <div className="p-5">
-                <div className="flex items-center justify-between gap-3">
-                  {micStatus === 'granted' ? (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Ready
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-500">
-                      Permission required
-                    </span>
-                  )}
-                  {micStatus !== 'granted' && (
-                    <button
-                      onClick={requestMicPermission}
-                      disabled={micStatus === 'checking'}
-                      className="rounded-xl bg-brand-charcoal px-4 py-2.5 text-xs font-black text-white shadow-lg shadow-black/10 transition-all hover:-translate-y-0.5 hover:bg-brand-hover disabled:opacity-50"
-                    >
-                      {micStatus === 'checking' ? 'Checking...' : 'Enable Mic'}
-                    </button>
-                  )}
+              <div className="ibot-panel p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-brand-hover">Step 3</p><h2 className="mt-1 text-sm font-black text-slate-950">Check your microphone</h2><p className="mt-1 text-xs font-semibold text-slate-500">Speak normally and confirm the meter moves.</p></div>
+                  <button onClick={requestMicPermission} disabled={micStatus === 'checking'} className={`rounded-xl px-4 py-2.5 text-xs font-black transition-all disabled:opacity-50 ${micStatus === 'granted' ? 'border border-[#D9C4A7] bg-white text-brand-hover hover:bg-brand-soft' : 'bg-brand-charcoal text-white hover:bg-brand-hover'}`}>{micStatus === 'checking' ? 'Checking…' : micStatus === 'granted' ? 'Retest mic' : 'Enable mic'}</button>
                 </div>
-
                 {micStatus === 'granted' && (
-                  <div className="mt-5 space-y-4">
-                    <div>
-                      <div className="mb-2 flex items-center justify-between text-xs font-black text-slate-500">
-                        <span className="flex items-center gap-1.5">
-                          <Volume2 className="h-3.5 w-3.5" />
-                          Input Activity
-                        </span>
-                        <span>{micVolume}%</span>
-                      </div>
-                      <div className="flex h-12 items-end gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                        {Array.from({ length: 18 }).map((_, index) => {
-                          const filled = micVolume >= ((index + 1) / 18) * 100;
-                          const height = 18 + ((index % 6) * 4);
-                          return (
-                            <span
-                              key={index}
-                              className={`flex-1 rounded-full transition-all duration-100 ${
-                                filled ? 'bg-emerald-500' : 'bg-slate-200'
-                              }`}
-                              style={{ height: `${height}px` }}
-                            />
-                          );
-                        })}
-                      </div>
+                  <div className="mt-4">
+                    <div className="mb-2 flex items-center justify-between text-[11px] font-black text-slate-500"><span className="flex items-center gap-1.5"><Volume2 className="h-3.5 w-3.5" />Input activity</span><span>{micVolume}%</span></div>
+                    <div className="flex h-10 items-end gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      {Array.from({ length: 18 }).map((_, index) => <span key={index} className={`flex-1 rounded-full transition-all ${micVolume >= ((index + 1) / 18) * 100 ? 'bg-emerald-500' : 'bg-slate-200'}`} style={{ height: `${12 + ((index % 6) * 3)}px` }} />)}
                     </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                      <h4 className="text-xs font-black text-slate-900">Playback Test</h4>
-                      <p className="mt-1 text-[11px] font-semibold leading-relaxed text-slate-500">
-                        Record five seconds and play it back to confirm input and output.
-                      </p>
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
-                        {!isRecording ? (
-                          <button
-                            onClick={startRecording}
-                            disabled={isPlayingTest}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#D9C4A7] bg-white px-3 py-2 text-xs font-black text-brand-hover transition-all hover:bg-brand-soft disabled:opacity-40"
-                          >
-                            <Play className="h-3.5 w-3.5" />
-                            Record 5s
-                          </button>
-                        ) : (
-                          <button
-                            onClick={stopRecording}
-                            className="inline-flex animate-pulse items-center gap-1.5 rounded-xl bg-red-500 px-3 py-2 text-xs font-black text-white transition-all hover:bg-red-600"
-                          >
-                            <Square className="h-3.5 w-3.5" />
-                            Stop ({5 - recordingSeconds}s)
-                          </button>
-                        )}
-
-                        {audioUrl && !isRecording && (
-                          <button
-                            onClick={playRecordedAudio}
-                            disabled={isPlayingTest}
-                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-black transition-all ${
-                              isPlayingTest
-                                ? 'border border-slate-200 bg-white text-slate-400'
-                                : 'border border-[#D9C4A7] bg-white text-brand-hover hover:bg-brand-soft'
-                            }`}
-                          >
-                            <Volume2 className="h-3.5 w-3.5" />
-                            {isPlayingTest ? 'Playing...' : 'Play Sample'}
-                          </button>
-                        )}
-                      </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {!isRecording ? <button onClick={startRecording} disabled={isPlayingTest} className="inline-flex items-center gap-1.5 rounded-xl border border-[#D9C4A7] bg-white px-3 py-2 text-xs font-black text-brand-hover disabled:opacity-40"><Play className="h-3.5 w-3.5" />Record 5s</button> : <button onClick={stopRecording} className="inline-flex animate-pulse items-center gap-1.5 rounded-xl bg-red-500 px-3 py-2 text-xs font-black text-white"><Square className="h-3.5 w-3.5" />Stop ({5 - recordingSeconds}s)</button>}
+                      {audioUrl && !isRecording && <button onClick={playRecordedAudio} disabled={isPlayingTest} className="inline-flex items-center gap-1.5 rounded-xl border border-[#D9C4A7] bg-white px-3 py-2 text-xs font-black text-brand-hover disabled:opacity-40"><Volume2 className="h-3.5 w-3.5" />{isPlayingTest ? 'Playing…' : 'Play sample'}</button>}
                     </div>
                   </div>
                 )}
-
-                {micStatus === 'denied' && (
-                  <div className="mt-4 flex gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                    <p className="leading-relaxed">
-                      Microphone access was denied. Check browser permissions for this site and reload the page.
-                    </p>
-                  </div>
-                )}
+                {micStatus === 'denied' && <div className="mt-3 flex gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" /><p>Microphone access was denied. Allow microphone access in your browser settings, then retry.</p></div>}
               </div>
             </div>
-          </aside>
+          </section>
+
+          <section className="ibot-panel p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-brand-accent" /><h2 className="text-sm font-black text-slate-950">Before you begin</h2></div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">{overviewItems.map((item) => <div key={item} className="flex gap-2 rounded-xl bg-slate-50 p-3"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" /><p className="text-[11px] font-semibold leading-relaxed text-slate-600">{item}</p></div>)}</div>
+                <button onClick={() => setInstructionsOpen(true)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-brand-hover hover:text-brand-charcoal"><Info className="h-3.5 w-3.5" />Read interview rules and privacy details</button>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:max-w-sm"><div className="flex gap-2"><Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><p className="text-[11px] font-semibold leading-relaxed text-amber-900">This is a proctored assessment. Browser focus, media input, and session continuity may be monitored.</p></div></div>
+            </div>
+          </section>
+
+          <section className="ibot-start-panel flex flex-col gap-4 rounded-2xl border border-[#E6DED2] p-4 shadow-xl shadow-brand-accent/10 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div><div className="inline-flex items-center gap-2 rounded-full border border-[#D9C4A7] bg-white/80 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-brand-hover"><Sparkles className="h-3 w-3" />Final step</div><p className="mt-2 text-lg font-black text-slate-950">{isReady ? 'You’re ready to begin' : 'Complete all three checks'}</p><p className={`mt-1 text-sm font-semibold ${isReady ? 'text-brand-hover' : 'text-red-600'}`}>{isReady ? 'Practice first or start the live interview when you are comfortable.' : 'Camera, microphone, and connection must be ready before you continue.'}</p></div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button onClick={onStartDemo} disabled={!isReady} className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black ${isReady ? 'border-[#D9C4A7] bg-white text-brand-hover hover:bg-brand-soft' : 'cursor-not-allowed border-slate-200 bg-white/60 text-slate-400'}`}><Headphones className="h-4 w-4" />Practice first</button>
+              <button onClick={() => setConfirmStartOpen(true)} disabled={!isReady} className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white ${isReady ? 'bg-brand-charcoal shadow-lg shadow-black/15 hover:bg-brand-hover' : 'cursor-not-allowed bg-slate-300'}`}>Start interview<ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </section>
         </div>
       </main>
 
@@ -1046,33 +785,6 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
     </div>
   );
 };
-
-const InfoTile: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
-  icon,
-  label,
-  value,
-}) => (
-  <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-    <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand-hover ring-1 ring-[#D9C4A7]">
-      {icon}
-    </div>
-    <p className="text-[10px] font-black uppercase text-slate-400">{label}</p>
-    <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
-  </div>
-);
-
-const CheckCard: React.FC<{ label: string; value: string; state: 'good' | 'bad' }> = ({
-  label,
-  value,
-  state,
-}) => (
-  <div className={`rounded-xl p-4 ring-1 ${state === 'good' ? 'bg-emerald-50 ring-emerald-100' : 'bg-red-50 ring-red-100'}`}>
-    <p className="text-[10px] font-black uppercase text-slate-400">{label}</p>
-    <p className={`mt-1 text-sm font-black ${state === 'good' ? 'text-emerald-700' : 'text-red-600'}`}>
-      {value}
-    </p>
-  </div>
-);
 
 const ModalShell: React.FC<{
   children: React.ReactNode;

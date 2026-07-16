@@ -13,7 +13,7 @@ import type {
   BulkUploadResponse,
   InterviewEvaluationResponse,
   RecruiterDecisionResponse,
-  AIRejectionFeedbackResponse,
+  AIDecisionFeedbackResponse,
   RecruiterEvaluationListItem,
   SingleCandidateResponse,
   ExistingCandidateListItem,
@@ -151,13 +151,18 @@ export const useUpdateCandidateDecision = () => {
   });
 };
 
-export const useGenerateRejectionFeedback = () =>
-  useMutation<AIRejectionFeedbackResponse, Error, string>({
-    mutationFn: async (candidateId) => {
-      const response =
-        await evaluationService.generateRejectionFeedback(candidateId);
+export const useGenerateDecisionFeedback = () =>
+  useMutation<
+    AIDecisionFeedbackResponse,
+    Error,
+    { candidateId: string; decision: "APPROVED" | "REJECTED" }
+  >({
+    mutationFn: async ({ candidateId, decision }) => {
+      const response = decision === "APPROVED"
+        ? await evaluationService.generateApprovalFeedback(candidateId)
+        : await evaluationService.generateRejectionFeedback(candidateId);
       if (!response.success || !response.data) {
-        throw new Error(response.message || "Failed to generate rejection feedback");
+        throw new Error(response.message || "Failed to generate decision feedback");
       }
       return response.data;
     },

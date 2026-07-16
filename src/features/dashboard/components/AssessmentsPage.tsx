@@ -31,7 +31,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
-  LayoutGrid,
   CalendarDays,
   ArrowUpRight,
   Code2,
@@ -148,7 +147,18 @@ function formatAssessmentDate(iso: string): string {
   });
 }
 
-type DetailTab = 'overview' | 'candidates';
+function formatAssessmentDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatPlanSectionName(sectionName: string): string {
+  return sectionName === 'self_intro' ? 'Introduction' : sectionName.replace(/_/g, ' ');
+}
+
+type DetailTab = 'interview-plan' | 'jd-analysis' | 'job-description' | 'candidates';
 
 interface PaginationFooterProps {
   page: number;
@@ -224,7 +234,8 @@ export const AssessmentsPage: React.FC = () => {
   const [candidatesPage, setCandidatesPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
-  const [detailTab, setDetailTab] = useState<DetailTab>('overview');
+  const [detailTab, setDetailTab] = useState<DetailTab>('interview-plan');
+  const [showPlanModal, setShowPlanModal] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
 
@@ -308,10 +319,6 @@ export const AssessmentsPage: React.FC = () => {
     safeSidebarPage * sidebarPageSize,
     (safeSidebarPage + 1) * sidebarPageSize,
   );
-  const browseRowCount = Math.max(
-    1,
-    Math.ceil(visibleCampaigns.length / browseCapacity.cols) || 1,
-  );
   const sidebarRowCount = Math.max(1, visibleSidebarCampaigns.length);
 
   const visibleCandidates = assessmentCandidates.slice(
@@ -325,13 +332,13 @@ export const AssessmentsPage: React.FC = () => {
       setSidebarPage(Math.floor(index / sidebarPageSize));
     }
     setSelectedId(id);
-    setDetailTab('overview');
+    setDetailTab('interview-plan');
     setCandidatesPage(0);
   };
 
   const handleBackToBrowse = () => {
     setSelectedId(null);
-    setDetailTab('overview');
+    setDetailTab('interview-plan');
     setCandidatesPage(0);
   };
 
@@ -409,7 +416,7 @@ export const AssessmentsPage: React.FC = () => {
 
       setSidebarPage(0);
       setSelectedId(created.id);
-      setDetailTab('overview');
+      setDetailTab('interview-plan');
       setCandidatesPage(0);
       toastSuccess('Campaign Created', 'Assessment launched successfully.');
     } catch (err: unknown) {
@@ -455,6 +462,19 @@ export const AssessmentsPage: React.FC = () => {
     (c) => c.status === 'IN_PROGRESS',
   ).length;
   const invitedCandidates = totalCandidates - completedCandidates - inProgressCandidates;
+  const activeAssessmentCount = assessments.filter(
+    (assessment) => assessment.status === 'ACTIVE',
+  ).length;
+  const draftAssessmentCount = assessments.filter(
+    (assessment) => assessment.status === 'DRAFT' || assessment.status === 'PROCESSING',
+  ).length;
+  const closedAssessmentCount = assessments.filter(
+    (assessment) => assessment.status === 'CLOSED',
+  ).length;
+  const showBrowseCreateTile =
+    visibleCampaigns.length > 0
+    && visibleCampaigns.length < campaignPageSize
+    && safeCampaignPage === campaignPageCount - 1;
   const selectedStatus = selectedAssessment
     ? assessmentStatusMeta(selectedAssessment.status)
     : null;
@@ -492,7 +512,7 @@ export const AssessmentsPage: React.FC = () => {
           key={assessment.id}
           type="button"
           onClick={() => handleSelectAssessment(assessment.id)}
-          className={`group relative flex h-full min-h-[92px] w-full flex-col justify-center overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-colors duration-200 ${
+          className={`group relative flex h-full min-h-[126px] w-full flex-col overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 ${
             isSelected
               ? 'border-brand-accent bg-brand-soft/75 shadow-md shadow-black/10'
               : 'border-default bg-surface hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md'
@@ -518,7 +538,32 @@ export const AssessmentsPage: React.FC = () => {
               {status.label}
             </span>
           </div>
-          <ArrowUpRight className={`absolute bottom-3 right-3 h-3.5 w-3.5 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100 ${palette.meta}`} />
+
+          <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-slate-200/80 pt-2.5 pl-1">
+            <div className="min-w-0">
+              <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">Duration</p>
+              <p className="mt-0.5 truncate text-[9px] font-black text-slate-700">
+                {assessment.interview_duration_mins} min
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">Starts</p>
+              <p className="mt-0.5 truncate text-[9px] font-black text-slate-700">
+                {formatAssessmentDateShort(assessment.window_start)}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">Ends</p>
+              <p className="mt-0.5 truncate text-[9px] font-black text-slate-700">
+                {formatAssessmentDateShort(assessment.window_end)}
+              </p>
+            </div>
+          </div>
+
+          <div className={`mt-auto flex items-center justify-between pl-1 pt-2 text-[8px] font-black ${isSelected ? 'text-brand-hover' : 'text-slate-400'}`}>
+            <span>{isSelected ? 'Currently viewing' : 'Open assessment'}</span>
+            <ArrowUpRight className={`h-3.5 w-3.5 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${palette.meta}`} />
+          </div>
         </button>
       );
     }
@@ -608,13 +653,24 @@ export const AssessmentsPage: React.FC = () => {
     if (compact) {
       return (
         <div className="ibot-section-toolbar flex flex-shrink-0 items-center justify-between px-3 py-3">
-          <div>
-            <h2 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-brand-hover">
-              <Briefcase className="h-4 w-4 text-brand-hover" />
-              Campaigns
-            </h2>
-            <p className="mt-0.5 text-[9px] font-bold text-slate-400">{assessments.length} total</p>
-          </div>
+          <button
+            type="button"
+            onClick={handleBackToBrowse}
+            className="group flex min-w-0 items-center gap-2 text-left"
+            aria-label="Back to all assessments"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-default bg-white text-slate-500 shadow-sm transition-all group-hover:-translate-x-0.5 group-hover:border-brand-accent group-hover:text-brand-hover">
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[10px] font-black uppercase tracking-wider text-brand-hover">
+                Assessments
+              </span>
+              <span className="mt-0.5 block text-[8px] font-bold text-slate-400">
+                Back to all {assessments.length}
+              </span>
+            </span>
+          </button>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
@@ -679,7 +735,8 @@ export const AssessmentsPage: React.FC = () => {
               { value: 'start', label: 'Start date' },
               { value: 'title', label: 'Title A–Z' },
             ]}
-            buttonClassName="min-w-[142px]"
+            buttonClassName="w-full sm:min-w-[142px]"
+            className="w-full sm:w-auto"
           />
           <button
             type="button"
@@ -695,7 +752,7 @@ export const AssessmentsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden">
+    <div className="ibot-scrollbar flex h-full min-h-0 overflow-y-auto overflow-x-hidden lg:overflow-hidden">
       {!selectedId ? (
         /* ── Browse mode: full-width campaign grid ── */
         <div className="ibot-assessments-frame flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden">
@@ -720,7 +777,34 @@ export const AssessmentsPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div ref={browseGridRef} className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/35">
+            <div className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-brand-soft/30">
+              <div className="grid flex-shrink-0 grid-cols-2 border-b border-slate-200 bg-white md:grid-cols-4">
+                {[
+                  { label: 'Total assessments', value: assessments.length, icon: Briefcase, tone: 'text-brand-hover bg-brand-soft' },
+                  { label: 'Active now', value: activeAssessmentCount, icon: CircleDot, tone: 'text-emerald-700 bg-emerald-50' },
+                  { label: 'Draft & processing', value: draftAssessmentCount, icon: Sliders, tone: 'text-amber-700 bg-amber-50' },
+                  { label: 'Closed', value: closedAssessmentCount, icon: CheckCircle2, tone: 'text-slate-600 bg-slate-100' },
+                ].map((metric, index) => {
+                  const Icon = metric.icon;
+                  return (
+                    <div
+                      key={metric.label}
+                      className={`flex items-center gap-2.5 px-4 py-3 ${index > 0 ? 'border-l border-slate-200' : ''} ${index === 2 ? 'border-l-0 border-t md:border-l md:border-t-0' : ''} ${index === 3 ? 'border-t md:border-t-0' : ''}`}
+                    >
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${metric.tone}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-base font-black leading-none text-slate-900">{metric.value}</p>
+                        <p className="mt-1 truncate text-[8px] font-black uppercase tracking-wider text-slate-400">
+                          {metric.label}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div ref={browseGridRef} className="flex min-h-0 flex-1">
               {filteredAssessments.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
                   <Layers3 className="h-9 w-9 text-slate-300" />
@@ -738,17 +822,33 @@ export const AssessmentsPage: React.FC = () => {
                 </div>
               ) : (
                 <div
-                  className="grid min-h-0 flex-1 gap-3 p-4"
+                  className="ibot-scrollbar grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-4"
                   style={{
                     gridTemplateColumns: `repeat(${browseCapacity.cols}, minmax(0, 1fr))`,
-                    gridTemplateRows: `repeat(${browseRowCount}, minmax(${CARD_MIN_H}px, 1fr))`,
+                    gridAutoRows: `${Math.max(CARD_MIN_H, 224)}px`,
                   }}
                 >
                   {visibleCampaigns.map((assessment) =>
                     renderCampaignCard(assessment, { stretch: true }),
                   )}
+                  {showBrowseCreateTile && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateModal(true)}
+                      className="group flex h-full min-h-[210px] flex-col items-center justify-center rounded-xl border border-dashed border-[#D8C9B5] bg-white/70 p-6 text-center transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft/60 hover:shadow-md"
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8C9B5] bg-white text-brand-hover shadow-sm transition-transform group-hover:scale-105">
+                        <Plus className="h-5 w-5" />
+                      </span>
+                      <p className="mt-3 text-xs font-black text-slate-800">Create another assessment</p>
+                      <p className="mt-1 max-w-[220px] text-[9px] font-semibold leading-4 text-slate-500">
+                        Build a focused interview plan for another role or hiring campaign.
+                      </p>
+                    </button>
+                  )}
                 </div>
               )}
+              </div>
               <PaginationFooter
                 page={safeCampaignPage}
                 pageSize={campaignPageSize}
@@ -760,8 +860,8 @@ export const AssessmentsPage: React.FC = () => {
         </div>
       ) : (
         /* ── Detail mode: side list + detail panel ── */
-        <div className="flex h-full min-h-0 w-full gap-4 overflow-hidden">
-          <div className="flex w-[264px] flex-shrink-0 flex-col gap-3 overflow-hidden transition-all duration-300">
+        <div className="flex h-full min-h-0 w-full gap-0 overflow-hidden lg:gap-4">
+          <div className="hidden w-[304px] flex-shrink-0 flex-col gap-3 overflow-hidden transition-all duration-300 lg:flex">
             {renderCampaignHeader(true)}
 
             {loadingAssessments ? (
@@ -772,10 +872,12 @@ export const AssessmentsPage: React.FC = () => {
               <div className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div
                   ref={sidebarGridRef}
-                  className="grid min-h-0 flex-1 gap-2 p-2"
+                  className="grid min-h-0 flex-1 content-start gap-2 p-2"
                   style={{
                     gridTemplateColumns: '1fr',
-                    gridTemplateRows: `repeat(${sidebarRowCount}, minmax(${SIDEBAR_CARD_MIN_H}px, 1fr))`,
+                    gridTemplateRows: `repeat(${sidebarRowCount}, minmax(${SIDEBAR_CARD_MIN_H}px, ${
+                      visibleSidebarCampaigns.length === 1 ? '154px' : '1fr'
+                    }))`,
                   }}
                 >
                   {visibleSidebarCampaigns.map((a) =>
@@ -788,6 +890,49 @@ export const AssessmentsPage: React.FC = () => {
                   total={sortedAssessments.length}
                   onPageChange={setSidebarPage}
                 />
+                {selectedAssessment && (
+                  <div className="flex-shrink-0 border-t border-slate-200 bg-gradient-to-br from-brand-soft/70 via-white to-white p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black uppercase tracking-[0.14em] text-brand-hover">
+                        Assessment at a glance
+                      </p>
+                      <span className="text-[8px] font-bold text-slate-400">
+                        {assessmentCandidates.length} candidates
+                      </span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-3 gap-1.5">
+                      {[
+                        {
+                          label: 'Sections',
+                          value: String(selectedAssessment.interview_plan?.sections.length ?? 0),
+                        },
+                        {
+                          label: 'Skills',
+                          value: String(selectedAssessment.jd_analysis?.skills.length ?? 0),
+                        },
+                        {
+                          label: 'Signals',
+                          value: String(selectedAssessment.jd_analysis?.behavioural_signals.length ?? 0),
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg border border-[#E4D8C8] bg-white px-2 py-2 text-center shadow-sm">
+                          <p className="text-xs font-black text-slate-800">{item.value}</p>
+                          <p className="mt-0.5 text-[7px] font-black uppercase tracking-wider text-slate-400">
+                            {item.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateModal(true)}
+                      className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#D8C9B5] bg-white px-2.5 py-2 text-[9px] font-black text-brand-hover shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Create another assessment
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -800,18 +945,18 @@ export const AssessmentsPage: React.FC = () => {
               </div>
             ) : selectedAssessment ? (
               <div className="ibot-section-surface flex h-full flex-col overflow-hidden animate-scaleIn">
-                <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-brand-soft/60 px-5 pb-3 pt-3">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="flex-shrink-0 border-b border-slate-200 bg-gradient-to-r from-white via-slate-50 to-brand-soft/60 px-3 pb-3 pt-3 sm:px-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="button"
                       onClick={handleBackToBrowse}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-default bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-500 shadow-sm transition-all hover:-translate-x-0.5 hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8C9B5] bg-white px-3 py-2 text-[10px] font-black text-brand-hover shadow-sm transition-all hover:-translate-x-0.5 hover:border-brand-accent hover:bg-brand-soft"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
-                      All campaigns
+                      Back to assessments
                     </button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() =>
@@ -883,194 +1028,278 @@ export const AssessmentsPage: React.FC = () => {
                     })}
                   </div>
 
-                  <div className="mt-2 flex w-fit gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setDetailTab('overview')}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[10px] font-black transition-all ${
-                        detailTab === 'overview'
-                          ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                      Overview
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDetailTab('candidates')}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[10px] font-black transition-all ${
-                        detailTab === 'candidates'
-                          ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                      Candidates
-                      <span className={`rounded-full px-1.5 py-0.5 text-[8px] ${
-                        detailTab === 'candidates' ? 'bg-white/15 text-white' : 'bg-brand-soft text-brand-hover'
-                      }`}>
-                        {assessmentCandidates.length}
-                      </span>
-                    </button>
+                  <div className="mt-3 flex w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+                    {([
+                      { value: 'interview-plan', label: 'Interview Plan', icon: Layers3 },
+                      { value: 'jd-analysis', label: 'JD Analysis', icon: BrainCircuit },
+                      { value: 'job-description', label: 'Job Description', icon: FileCheck2 },
+                      { value: 'candidates', label: 'Candidates', icon: Users },
+                    ] as Array<{ value: DetailTab; label: string; icon: React.ElementType }>).map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = detailTab === tab.value;
+                      return (
+                        <button
+                          key={tab.value}
+                          type="button"
+                          onClick={() => setDetailTab(tab.value)}
+                          className={`inline-flex min-w-max flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[9px] font-black transition-all ${
+                            isActive
+                              ? 'bg-brand-charcoal text-white shadow-sm ring-1 ring-brand-accent/20'
+                              : 'text-slate-500 hover:bg-white/70 hover:text-slate-800'
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {tab.label}
+                          {tab.value === 'candidates' && (
+                            <span className={`rounded-full px-1.5 py-0.5 text-[8px] ${
+                              isActive ? 'bg-white/15 text-white' : 'bg-brand-soft text-brand-hover'
+                            }`}>
+                              {assessmentCandidates.length}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="ibot-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4">
-                  {detailTab === 'overview' ? (
-                    <div className="grid grid-cols-1 gap-4 animate-fadeIn xl:grid-cols-12">
-                      <section className="overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-sm xl:col-span-7">
-                        <header className="flex items-center justify-between gap-3 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-violet-50 px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
-                              <BrainCircuit className="h-4 w-4" />
+                  {detailTab === 'interview-plan' && (
+                    <div className="space-y-3 animate-fadeIn">
+                      <section className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+                        <header className="flex flex-col gap-3 border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-brand-soft/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-md shadow-amber-200">
+                              <Layers3 className="h-5 w-5" />
                             </span>
-                            <div>
-                              <h3 className="text-xs font-black text-indigo-950">JD Analysis</h3>
-                              <p className="mt-0.5 text-[9px] font-bold text-indigo-500">Role intelligence and priority skills</p>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-black text-slate-950">Interview Plan</h3>
+                              <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                                The complete sequence, timing, and expected signals for this interview.
+                              </p>
                             </div>
                           </div>
                           <button
                             type="button"
-                            onClick={() => setShowAnalysisModal(true)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-[9px] font-black text-indigo-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-50"
+                            onClick={() => setShowPlanModal(true)}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-white px-3 py-2 text-[9px] font-black text-amber-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-amber-50"
                           >
-                            Full analysis
+                            Open expanded view
                             <ArrowUpRight className="h-3 w-3" />
                           </button>
                         </header>
 
-                        <div className="p-4">
-                          {selectedAssessment.jd_analysis ? (
-                            <>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
-                                  <p className="text-[8px] font-black uppercase tracking-wider text-indigo-400">Difficulty</p>
-                                  <p className="mt-1 text-xs font-black capitalize text-indigo-800">{selectedAssessment.jd_analysis.inferred_difficulty}</p>
-                                </div>
-                                <div className="rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2.5">
-                                  <p className="text-[8px] font-black uppercase tracking-wider text-violet-400">Skills identified</p>
-                                  <p className="mt-1 text-xs font-black text-violet-800">{selectedAssessment.jd_analysis.skills.length}</p>
-                                </div>
-                              </div>
-
-                              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                {selectedAssessment.jd_analysis.skills.slice(0, 4).map((skill) => (
-                                  <div key={skill.skill} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition-all hover:border-indigo-200 hover:bg-indigo-50/35">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <p className="truncate text-[10px] font-black text-slate-800">{skill.skill}</p>
-                                      <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[8px] font-black text-indigo-700">{skill.priority_score}/10</span>
-                                    </div>
-                                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                                      <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${skill.priority_score * 10}%` }} />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {selectedAssessment.jd_analysis.behavioural_signals.length > 0 && (
-                                <div className="mt-3">
-                                  <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Behavioural focus</p>
-                                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                    {selectedAssessment.jd_analysis.behavioural_signals.slice(0, 5).map((signal) => (
-                                      <span key={signal} className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[8px] font-bold text-indigo-700">{signal}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex min-h-36 flex-col items-center justify-center text-center">
-                              <BrainCircuit className="h-7 w-7 text-slate-300" />
-                              <p className="mt-2 text-[10px] font-bold text-slate-500">Analysis is still being prepared.</p>
+                        <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                          {[
+                            { label: 'Total interview time', value: `${selectedAssessment.interview_plan?.total_mins ?? selectedAssessment.interview_duration_mins} minutes` },
+                            { label: 'Plan sections', value: String(selectedAssessment.interview_plan?.sections.length ?? 0) },
+                            { label: 'Target level', value: selectedAssessment.interview_plan?.inferred_difficulty ?? 'Pending analysis' },
+                          ].map((item) => (
+                            <div key={item.label} className="px-5 py-3">
+                              <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                              <p className="mt-1 text-xs font-black capitalize text-slate-800">{item.value}</p>
                             </div>
-                          )}
+                          ))}
                         </div>
                       </section>
 
-                      <section className="overflow-hidden rounded-2xl border border-teal-100 bg-white shadow-sm xl:col-span-5">
-                        <header className="flex items-center gap-2.5 border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-emerald-50 px-4 py-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white shadow-md shadow-teal-200">
-                            <FileCheck2 className="h-4 w-4" />
-                          </span>
-                          <div>
-                            <h3 className="text-xs font-black text-teal-950">Job Description</h3>
-                            <p className="mt-0.5 text-[9px] font-bold text-teal-600">Source context for this assessment</p>
-                          </div>
-                        </header>
-                        <div className="flex min-h-56 flex-col p-4">
-                          <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                            <MarkdownView
-                              content={selectedAssessment.jd_text}
-                              className="prose-sm text-[10px] leading-5"
-                              emptyText="No job description text is available."
-                            />
-                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-50 to-transparent" />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowJdModal(true)}
-                            className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-3 py-2.5 text-[10px] font-black text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-teal-700"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            Read full JD
-                          </button>
-                        </div>
-                      </section>
-
-                      <section className="order-first overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-[0_16px_36px_-28px_rgba(154,106,48,0.55)] xl:col-span-12">
-                        <header className="flex items-center justify-between gap-3 border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-orange-50 px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-200">
-                              <Layers3 className="h-5 w-5" />
-                            </span>
-                            <div>
-                              <h3 className="text-sm font-black text-amber-950">Interview Plan</h3>
-                              <p className="mt-0.5 text-[10px] font-bold text-amber-700">Structured sequence, focus areas, and time allocation</p>
-                            </div>
-                          </div>
-                          <span className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[10px] font-black text-amber-700 shadow-sm">
-                            {selectedAssessment.interview_plan?.total_mins ?? selectedAssessment.interview_duration_mins} min total
-                          </span>
-                        </header>
-
-                        {selectedAssessment.interview_plan?.sections?.length ? (
-                          <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
-                            {selectedAssessment.interview_plan.sections.map((section, index) => (
-                              <div key={`${section.section_name}-${index}`} className="group min-h-[112px] rounded-xl border border-slate-200 bg-slate-50/60 p-4 transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50/35 hover:shadow-md">
+                      {selectedAssessment.interview_plan?.sections?.length ? (
+                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                          {selectedAssessment.interview_plan.sections.map((section, index) => {
+                            const totalMins = selectedAssessment.interview_plan?.total_mins || selectedAssessment.interview_duration_mins || 1;
+                            const percentage = Math.round((section.allocated_mins / totalMins) * 100);
+                            return (
+                              <article key={`${section.section_name}-${index}`} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-amber-300 hover:shadow-md">
                                 <div className="flex items-start gap-3">
-                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-[11px] font-black text-amber-700">{index + 1}</span>
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-[11px] font-black text-amber-700">
+                                    {index + 1}
+                                  </span>
                                   <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-start justify-between gap-3">
                                       <div className="min-w-0">
-                                        <p className="truncate text-xs font-black capitalize text-slate-900">
-                                          {section.section_name === 'self_intro' ? 'Introduction' : section.section_name.replace(/_/g, ' ')}
+                                        <h4 className="text-xs font-black capitalize text-slate-900">
+                                          {formatPlanSectionName(section.section_name)}
+                                        </h4>
+                                        <p className="mt-1 text-[9px] font-bold text-slate-500">
+                                          {section.skill || 'General assessment'}
                                         </p>
-                                        <p className="mt-1 truncate text-[10px] font-bold text-slate-500">{section.skill || 'General assessment'}</p>
                                       </div>
-                                      <span className="shrink-0 rounded-lg border border-amber-100 bg-white px-2 py-1 text-[10px] font-black text-amber-700 shadow-sm">{section.allocated_mins} min</span>
+                                      <span className="shrink-0 rounded-lg border border-amber-100 bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">
+                                        {section.allocated_mins} min
+                                      </span>
+                                    </div>
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                        <div className="h-full rounded-full bg-amber-500" style={{ width: `${percentage}%` }} />
+                                      </div>
+                                      <span className="w-8 text-right text-[8px] font-black text-slate-400">{percentage}%</span>
                                     </div>
                                     {section.expected_signals && section.expected_signals.length > 0 && (
                                       <div className="mt-3 flex flex-wrap gap-1.5">
-                                        {section.expected_signals.slice(0, 2).map((signal) => (
-                                          <span key={signal} className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[8px] font-bold leading-none text-slate-600">{signal}</span>
+                                        {section.expected_signals.map((signal) => (
+                                          <span key={signal} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[8px] font-semibold text-slate-600">
+                                            {signal}
+                                          </span>
                                         ))}
                                       </div>
                                     )}
                                   </div>
                                 </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed border-amber-200 bg-white p-8 text-center">
+                          <Layers3 className="h-8 w-8 text-slate-300" />
+                          <p className="mt-2 text-xs font-bold text-slate-600">The interview plan is still being generated.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {detailTab === 'jd-analysis' && (
+                    <div className="space-y-3 animate-fadeIn">
+                      <section className="overflow-hidden rounded-xl border border-indigo-200 bg-white shadow-sm">
+                        <header className="flex flex-col gap-3 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-violet-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-200">
+                              <BrainCircuit className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-black text-slate-950">JD Analysis</h3>
+                              <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                                Role difficulty, ranked skills, and behavioural evidence to assess.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowAnalysisModal(true)}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-[9px] font-black text-indigo-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-50"
+                          >
+                            Open expanded view
+                            <ArrowUpRight className="h-3 w-3" />
+                          </button>
+                        </header>
+
+                        {selectedAssessment.jd_analysis && (
+                          <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                            {[
+                              { label: 'Inferred difficulty', value: selectedAssessment.jd_analysis.inferred_difficulty },
+                              { label: 'Skills identified', value: String(selectedAssessment.jd_analysis.skills.length) },
+                              { label: 'Behavioural signals', value: String(selectedAssessment.jd_analysis.behavioural_signals.length) },
+                            ].map((item) => (
+                              <div key={item.label} className="px-5 py-3">
+                                <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                                <p className="mt-1 text-xs font-black capitalize text-slate-800">{item.value}</p>
                               </div>
                             ))}
                           </div>
-                        ) : (
-                          <div className="flex min-h-32 flex-col items-center justify-center p-6 text-center">
-                            <Layers3 className="h-7 w-7 text-slate-300" />
-                            <p className="mt-2 text-[10px] font-bold text-slate-500">The interview plan is still being generated.</p>
-                          </div>
                         )}
                       </section>
+
+                      {selectedAssessment.jd_analysis ? (
+                        <>
+                          <section>
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-xs font-black text-slate-800">Skill priorities</h4>
+                                <p className="mt-0.5 text-[9px] font-semibold text-slate-500">What the interview should test most deeply.</p>
+                              </div>
+                              <span className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[8px] font-black text-indigo-700">
+                                {selectedAssessment.jd_analysis.skills.length} skills
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                              {selectedAssessment.jd_analysis.skills.map((skill) => (
+                                <article key={skill.skill} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <h5 className="text-xs font-black text-slate-900">{skill.skill}</h5>
+                                    <span className="shrink-0 rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[9px] font-black text-indigo-700">
+                                      {skill.priority_score}/10
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-[10px] font-medium leading-5 text-slate-500">{skill.reasoning}</p>
+                                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${skill.priority_score * 10}%` }} />
+                                  </div>
+                                </article>
+                              ))}
+                            </div>
+                          </section>
+
+                          {selectedAssessment.jd_analysis.behavioural_signals.length > 0 && (
+                            <section className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+                              <h4 className="text-xs font-black text-slate-800">Behavioural focus</h4>
+                              <p className="mt-0.5 text-[9px] font-semibold text-slate-500">Signals to listen for across the conversation.</p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {selectedAssessment.jd_analysis.behavioural_signals.map((signal) => (
+                                  <span key={signal} className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[9px] font-bold text-emerald-700">
+                                    {signal}
+                                  </span>
+                                ))}
+                              </div>
+                            </section>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed border-indigo-200 bg-white p-8 text-center">
+                          <BrainCircuit className="h-8 w-8 text-slate-300" />
+                          <p className="mt-2 text-xs font-bold text-slate-600">The JD analysis is still being prepared.</p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
+                  )}
+
+                  {detailTab === 'job-description' && (
+                    <div className="space-y-3 animate-fadeIn">
+                      <section className="overflow-hidden rounded-xl border border-teal-200 bg-white shadow-sm">
+                        <header className="flex flex-col gap-3 border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-emerald-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white shadow-md shadow-teal-200">
+                              <FileCheck2 className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-black text-slate-950">Job Description</h3>
+                              <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                                The source role context used to build this assessment.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowJdModal(true)}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-teal-200 bg-white px-3 py-2 text-[9px] font-black text-teal-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-teal-50"
+                          >
+                            Open expanded view
+                            <ArrowUpRight className="h-3 w-3" />
+                          </button>
+                        </header>
+                        <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                          {[
+                            { label: 'Role', value: selectedAssessment.role_name },
+                            { label: 'Interview duration', value: `${selectedAssessment.interview_duration_mins} minutes` },
+                            { label: 'Assessment window', value: `${formatAssessmentDateShort(selectedAssessment.window_start)} - ${formatAssessmentDateShort(selectedAssessment.window_end)}` },
+                          ].map((item) => (
+                            <div key={item.label} className="min-w-0 px-5 py-3">
+                              <p className="text-[8px] font-black uppercase tracking-[0.12em] text-slate-400">{item.label}</p>
+                              <p className="mt-1 truncate text-xs font-black text-slate-800" title={item.value}>{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                        <MarkdownView
+                          content={selectedAssessment.jd_text}
+                          emptyText="No job description text is available."
+                        />
+                      </section>
+                    </div>
+                  )}
+
+                  {detailTab === 'candidates' && (
                     <div className="flex min-h-0 flex-1 flex-col gap-3 animate-fadeIn">
                       <div className="flex items-center justify-between rounded-2xl border border-cyan-100 bg-gradient-to-r from-cyan-50 via-white to-sky-50 px-4 py-3 shadow-sm">
                         <div className="flex items-center gap-2.5">
@@ -1202,6 +1431,138 @@ export const AssessmentsPage: React.FC = () => {
       )}
 
       {/* â”€â”€ Analysis Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {showPlanModal && selectedAssessment && (
+        <div className="ibot-overlay">
+          <div className="ibot-modal max-h-[88vh] max-w-5xl animate-scaleIn">
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+            <div className="flex shrink-0 items-center justify-between border-b border-default bg-gradient-to-r from-amber-50 via-white to-[#FCFAF6] px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-200">
+                  <Layers3 className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="font-display text-[16px] font-black text-slate-950">
+                    Interview Plan
+                  </h2>
+                  <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                    {selectedAssessment.title} - {selectedAssessment.interview_plan?.total_mins ?? selectedAssessment.interview_duration_mins} minute structure
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPlanModal(false)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 transition-all hover:scale-105 hover:bg-slate-50 hover:text-slate-600 active:scale-95"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-white via-amber-50/20 to-brand-soft/20 p-6">
+              {selectedAssessment.interview_plan?.sections?.length ? (
+                (() => {
+                  const plan = selectedAssessment.interview_plan;
+                  const sections = plan?.sections ?? [];
+                  const totalAllocated =
+                    plan?.total_mins
+                    || sections.reduce((sum, section) => sum + section.allocated_mins, 0)
+                    || 1;
+
+                  return (
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+                      <aside className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-amber-500">
+                          Plan summary
+                        </p>
+                        <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-1">
+                          <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-3 py-2.5">
+                            <p className="text-[8px] font-black uppercase tracking-wider text-amber-500">Total time</p>
+                            <p className="mt-1 text-sm font-black text-amber-800">{totalAllocated} min</p>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                            <p className="text-[8px] font-black uppercase tracking-wider text-slate-400">Sections</p>
+                            <p className="mt-1 text-sm font-black text-slate-800">{sections.length}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 space-y-2">
+                          {sections.map((section, index) => {
+                            const pct = Math.round((section.allocated_mins / totalAllocated) * 100);
+                            return (
+                              <div key={`${section.section_name}-bar-${index}`} className="space-y-1.5">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="truncate text-[9px] font-bold capitalize text-slate-500">
+                                    {formatPlanSectionName(section.section_name)}
+                                  </span>
+                                  <span className="text-[9px] font-black text-amber-700">{pct}%</span>
+                                </div>
+                                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                                  <div className="h-full rounded-full bg-amber-500" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </aside>
+
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {sections.map((section, index) => (
+                          <article key={`${section.section_name}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md">
+                            <div className="flex items-start gap-3">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-[11px] font-black text-amber-700">
+                                {index + 1}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h3 className="truncate text-xs font-black capitalize text-slate-900">
+                                      {formatPlanSectionName(section.section_name)}
+                                    </h3>
+                                    <p className="mt-1 truncate text-[10px] font-bold text-slate-500">
+                                      {section.skill || 'General assessment'}
+                                    </p>
+                                  </div>
+                                  <span className="shrink-0 rounded-lg border border-amber-100 bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700">
+                                    {section.allocated_mins} min
+                                  </span>
+                                </div>
+                                {section.expected_signals && section.expected_signals.length > 0 && (
+                                  <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {section.expected_signals.map((signal, signalIndex) => (
+                                      <span key={signalIndex} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-semibold text-slate-600">
+                                        {signal}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-amber-200 bg-white p-8 text-center">
+                  <Layers3 className="h-8 w-8 text-slate-300" />
+                  <p className="mt-2 text-xs font-bold text-slate-500">The interview plan is still being generated.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex shrink-0 justify-end border-t border-slate-200 bg-slate-50/80 p-4">
+              <button
+                type="button"
+                onClick={() => setShowPlanModal(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:scale-[1.03] hover:bg-slate-50 active:scale-[0.97]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAnalysisModal && selectedAssessment && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-4xl max-h-[88vh] relative flex flex-col bg-white">
@@ -1213,7 +1574,7 @@ export const AssessmentsPage: React.FC = () => {
                 </span>
                 <div>
                 <h2 className="font-display text-[16px] font-black text-slate-950">
-                  JD Analysis & Interview Plan
+                  JD Analysis
                 </h2>
                 <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">{selectedAssessment.title} · AI-generated from the job description</p>
                 </div>
@@ -1241,17 +1602,14 @@ export const AssessmentsPage: React.FC = () => {
                       accent: true,
                     },
                     {
-                      label: 'Planned skills',
-                      value: String(
-                        selectedAssessment.interview_plan?.sections.filter((section) => section.skill).length
-                          ?? selectedAssessment.jd_analysis.skills.length,
-                      ),
+                      label: 'Skills identified',
+                      value: String(selectedAssessment.jd_analysis.skills.length),
                       icon: Sparkles,
                     },
                     {
-                      label: 'Plan duration',
-                      value: `${selectedAssessment.interview_plan?.total_mins ?? selectedAssessment.interview_duration_mins} min`,
-                      icon: Clock,
+                      label: 'Signals',
+                      value: String(selectedAssessment.jd_analysis.behavioural_signals.length),
+                      icon: CircleDot,
                     },
                   ].map((item) => {
                     const Icon = item.icon;
@@ -1322,68 +1680,6 @@ export const AssessmentsPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Interview Plan Timeline / Labeled Stacked bar */}
-              {selectedAssessment.interview_plan?.sections && (
-                <div className="border-t border-slate-100 pt-5">
-                  <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    <Sliders className="h-3.5 w-3.5 text-amber-500" />
-                    Time Allocation
-                    <span className="ml-auto normal-case tracking-normal text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5">
-                      {selectedAssessment.interview_plan.inferred_difficulty}
-                    </span>
-                  </h3>
-                  
-                  {(() => {
-                    const totalAllocated = selectedAssessment.interview_plan.total_mins
-                      || selectedAssessment.interview_plan.sections.reduce((sum, s) => sum + s.allocated_mins, 0)
-                      || 1;
-                    return (
-                      <div className="flex flex-col gap-2.5">
-                        {selectedAssessment.interview_plan.sections.map((section, idx) => {
-                          const pct = Math.round((section.allocated_mins / totalAllocated) * 100);
-                          return (
-                            <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-white shadow-sm hover:border-amber-200 hover:shadow-md transition-all">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div>
-                                    <p className="text-xs font-bold text-slate-800 capitalize">
-                                      {section.section_name === 'self_intro' ? 'Introduction' : section.section_name.replace(/_/g, ' ')}
-                                    </p>
-                                    {section.skill && (
-                                      <p className="text-[10px] text-slate-400 font-medium mt-0.5 truncate">{section.skill}</p>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded shadow-sm shrink-0">
-                                    {section.allocated_mins} min
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-                                  </div>
-                                  <span className="text-[10px] font-bold text-slate-400 w-8 text-right">{pct}%</span>
-                                </div>
-                                {section.expected_signals && section.expected_signals.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                    {section.expected_signals.map((signal, signalIndex) => (
-                                      <span
-                                        key={signalIndex}
-                                        className="rounded-full bg-slate-50 border border-slate-100 px-2 py-0.5 text-[9px] font-medium text-slate-500"
-                                      >
-                                        {signal}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
             </div>
             
             {/* Sticky Close Button Footer with custom shadow highlight */}

@@ -505,11 +505,11 @@ export const CandidatesPage: React.FC = () => {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="ibot-scrollbar flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden lg:overflow-hidden">
       {/* ── Header Bar & Toolbar ─────────────────────────────────────────── */}
       <div className="ibot-section-toolbar relative z-20 mb-3 flex flex-shrink-0 flex-col justify-between gap-3 px-3 py-3 md:flex-row md:items-center">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
-          <label className="group relative min-w-[260px] flex-1 xl:max-w-[360px]">
+          <label className="group relative w-full min-w-0 flex-1 sm:min-w-[260px] xl:max-w-[360px]">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-brand-hover" />
             <input
               type="search"
@@ -554,7 +554,8 @@ export const CandidatesPage: React.FC = () => {
                   ]
             }
             disabled={loadingCampaigns}
-            buttonClassName="!h-10 min-w-[180px] !px-4"
+            buttonClassName="!h-10 w-full sm:min-w-[180px] !px-4"
+            className="w-full sm:w-auto"
           />
 
           <CustomSelect
@@ -569,12 +570,13 @@ export const CandidatesPage: React.FC = () => {
               { value: 'COMPLETED', label: 'Completed' },
               { value: 'EVALUATED', label: 'Evaluated' },
             ]}
-            buttonClassName="!h-10 min-w-[140px] !px-4"
+            buttonClassName="!h-10 w-full sm:min-w-[140px] !px-4"
+            className="w-full sm:w-auto"
           />
         </div>
 
         {/* Action Buttons */}
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <button
             onClick={() => {
               if (assessments.length === 0) {
@@ -615,7 +617,7 @@ export const CandidatesPage: React.FC = () => {
       </div>
 
       {/* ── Table Container ──────────────────────────────────────────────── */}
-      <div className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="ibot-section-surface flex min-h-0 shrink-0 flex-col overflow-hidden lg:flex-1">
         {loadingCandidates ? (
           <div className="flex-1 flex flex-col items-center justify-center">
             <Loader2 className="mb-2 h-7 w-7 animate-spin text-brand-accent" />
@@ -641,8 +643,64 @@ export const CandidatesPage: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="ibot-scrollbar flex-1 overflow-auto">
-            <table className="w-full text-left border-collapse">
+          <>
+          <div className="ibot-scrollbar grid gap-3 overflow-y-auto p-3 lg:hidden">
+            {visibleCandidates.map((candidate, candidateIndex) => {
+              const enrollments = candidateEnrollments(candidate);
+              const evaluated = enrollments.filter((enrollment) => enrollment.status === 'EVALUATED');
+              return (
+                <article
+                  key={candidate.id}
+                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-accent hover:bg-brand-soft/30"
+                  onClick={() => openCandidateDetails(candidate)}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-sm ${AVATAR_GRADIENTS[candidateIndex % AVATAR_GRADIENTS.length]}`}>
+                      {candidate.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-extrabold text-slate-900">{candidate.full_name}</p>
+                      <p className="mt-1 flex items-center gap-1 truncate text-[11px] font-medium text-slate-500">
+                        <Mail className="h-3 w-3 shrink-0" /> {candidate.email}
+                      </p>
+                      <p className="mt-2 truncate text-[11px] font-bold text-slate-700">
+                        {enrollments.length === 1
+                          ? assessmentLabels.get(enrollments[0].assessment_id || '') || enrollments[0].role_name
+                          : `${enrollments.length} assessments`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {getStatusBadge(candidate.status)}
+                    {getDecisionBadge(candidate.recruiter_decision)}
+                    <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold ${candidate.resume_parse_status === 'COMPLETED' ? 'border-emerald-100 bg-emerald-50 text-emerald-600' : 'border-amber-100 bg-amber-50 text-amber-600'}`}>
+                      <FileText className="h-3 w-3" /> {enrollments.length > 1 ? `${enrollments.length} files` : candidate.resume_parse_status}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3" onClick={(event) => event.stopPropagation()}>
+                    <button type="button" onClick={() => openCandidateResume(candidate)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-default bg-white px-3 text-[10px] font-bold text-slate-600">
+                      <FileText className="h-3 w-3" /> Resume
+                    </button>
+                    {enrollments.some((enrollment) => enrollment.jd_text) && (
+                      <button type="button" onClick={() => openCandidateJd(candidate)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-default bg-white px-3 text-[10px] font-bold text-slate-600">
+                        <Briefcase className="h-3 w-3" /> JD
+                      </button>
+                    )}
+                    {evaluated.length > 0 && (
+                      <button type="button" onClick={() => evaluated.length === 1 ? navigate(`/candidates/${evaluated[0].id}/report`) : openCandidateDetails(candidate)} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-default bg-white px-3 text-[10px] font-bold text-slate-600">
+                        <ClipboardList className="h-3 w-3" /> {evaluated.length > 1 ? 'Reports' : 'Report'}
+                      </button>
+                    )}
+                    <button type="button" onClick={() => handleDeleteCandidate(candidate.id)} disabled={deleteMutation.isPending} className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-500 disabled:opacity-30" aria-label={`Delete ${candidate.full_name}`}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="ibot-scrollbar hidden min-h-0 flex-1 overflow-auto lg:block">
+            <table className="min-w-[960px] w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 border-b border-slate-200 bg-[#FCFAF6]/95 backdrop-blur">
                 <tr className="h-14 text-[10px] font-extrabold uppercase tracking-[0.09em] text-slate-500">
                   <th className="cursor-pointer px-5 py-3 transition-colors hover:text-slate-700">
@@ -806,10 +864,11 @@ export const CandidatesPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* Table Footer with Pagination Controls */}
-        <div className="flex flex-shrink-0 items-center justify-between border-t border-slate-200 bg-slate-50/80 px-5 py-3 text-xs font-semibold text-slate-500">
+        <div className="flex flex-shrink-0 flex-col gap-2 border-t border-slate-200 bg-slate-50/80 px-3 py-3 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             {filteredCandidates.length > 0
               ? `Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, filteredCandidates.length)} of ${filteredCandidates.length} candidates`

@@ -73,7 +73,7 @@ export const InterviewPage: React.FC = () => {
 
     if (view === 'completed') {
       return (
-        <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-screen items-center justify-center p-6">
+        <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-dvh items-center justify-center p-4 sm:p-6">
           <div className="w-full max-w-xl rounded-3xl border border-[#E6DED2] bg-white/95 p-10 text-center shadow-[0_28px_80px_-42px_rgba(36,33,29,0.35)]">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <CheckCircle2 className="h-9 w-9" />
@@ -91,7 +91,7 @@ export const InterviewPage: React.FC = () => {
     }
 
     return (
-      <div className="ibot-candidate-shell fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-[#F7F3EA]">
+      <div className="ibot-candidate-shell fixed inset-0 z-50 flex h-dvh w-full min-w-0 flex-col overflow-hidden bg-[#F7F3EA]">
         <InterviewRoom
           token={sessionToken!}
           durationMins={durationMins}
@@ -105,7 +105,7 @@ export const InterviewPage: React.FC = () => {
   }
 
   return (
-    <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-screen items-center justify-center p-6">
+    <div className="ibot-candidate-shell ibot-waiting-room-bg flex h-dvh items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md space-y-4 rounded-3xl border border-[#E6DED2] bg-white/95 p-8 text-center shadow-[0_28px_80px_-42px_rgba(36,33,29,0.35)] backdrop-blur-xl">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600">
         <AlertTriangle className="h-6 w-6" />

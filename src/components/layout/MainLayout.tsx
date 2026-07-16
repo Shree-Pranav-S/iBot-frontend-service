@@ -75,7 +75,7 @@ export const MainLayout: React.FC = () => {
   const isReportPage = location.pathname.endsWith('/report');
 
   return (
-    <div className="ibot-recruiter-shell ibot-workspace-bg flex h-screen w-screen overflow-hidden font-body text-primary">
+    <div className="ibot-recruiter-shell ibot-workspace-bg flex h-dvh w-full min-w-0 overflow-hidden font-body text-primary">
       {/* ── Sidebar – expands as a width overlay so main content never reflows ── */}
       <aside className="group/sidebar relative z-50 hidden h-full w-[88px] shrink-0 sm:block">
         <div className="absolute inset-y-0 left-0 z-50 flex w-[88px] flex-col overflow-hidden border-r border-white/10 bg-sidebar text-white shadow-[18px_0_52px_rgba(36,33,29,0.2)] transition-[width] duration-300 ease-out will-change-[width] group-hover/sidebar:w-[304px]">

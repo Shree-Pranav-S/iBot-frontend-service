@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  useGenerateRejectionFeedback,
+  useGenerateDecisionFeedback,
   useUpdateCandidateDecision,
 } from '../../../hooks/queries';
 import { useToast } from '../../../hooks/useToast';
@@ -203,7 +203,7 @@ export const useEvaluationDecision = () => {
   const {
     mutateAsync: generateFeedbackMutation,
     isPending: isGeneratingFeedback,
-  } = useGenerateRejectionFeedback();
+  } = useGenerateDecisionFeedback();
   const { success, error: showError } = useToast();
   const [modal, setModal] = useState<{
     open: boolean;
@@ -270,7 +270,10 @@ export const useEvaluationDecision = () => {
 
   const generateFeedback = useCallback(async () => {
     try {
-      const result = await generateFeedbackMutation(modal.candidateId);
+      const result = await generateFeedbackMutation({
+        candidateId: modal.candidateId,
+        decision: modal.decision,
+      });
       return result.feedback;
     } catch (error: unknown) {
       showError(
@@ -279,7 +282,7 @@ export const useEvaluationDecision = () => {
       );
       return undefined;
     }
-  }, [generateFeedbackMutation, modal.candidateId, showError]);
+  }, [generateFeedbackMutation, modal.candidateId, modal.decision, showError]);
 
   return {
     modal,

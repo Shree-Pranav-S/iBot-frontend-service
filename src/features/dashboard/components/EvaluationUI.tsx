@@ -56,7 +56,7 @@ export const CenteredDialog: React.FC<CenteredDialogProps> = ({
 
   return createPortal(
     <div
-      className="ibot-overlay print:hidden !z-[100] !items-center !justify-center !overflow-hidden !p-4"
+      className="ibot-overlay print:hidden !z-[100] !items-center !justify-center !overflow-hidden !p-2 sm:!p-4"
       role="presentation"
       onMouseDown={closeDisabled ? undefined : onClose}
     >
@@ -406,13 +406,12 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </div>
 
           <label className="mt-5 block">
-            <span className="flex items-center justify-between gap-3">
+            <span className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-xs font-black text-slate-800">
-                {isApproval ? 'Decision note' : 'Candidate feedback'}
+                {isApproval ? 'Candidate message' : 'Candidate feedback'}
                 <span className="ml-1 font-semibold text-slate-400">(optional)</span>
               </span>
-              {!isApproval && (
-                <button
+              <button
                   type="button"
                   onClick={handleGenerateFeedback}
                   disabled={loading || generatingFeedback}
@@ -429,7 +428,6 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                       ? 'Regenerate with AI'
                       : 'Draft with AI'}
                 </button>
-              )}
             </span>
             <textarea
               value={feedback}
@@ -437,7 +435,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               rows={4}
               placeholder={
                 isApproval
-                  ? 'Add an internal note about why this candidate is moving forward…'
+                  ? 'Add a warm message about moving forward and the next steps…'
                   : 'Add constructive feedback that may be included in the rejection email…'
               }
               className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium leading-relaxed text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-brand-accent focus:ring-4 focus:ring-brand-soft"
@@ -445,11 +443,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <span className="mt-1.5 block text-right text-[10px] font-bold text-slate-400">
               {feedback.length}/2000
             </span>
-            {!isApproval && (
-              <span className="mt-1 block text-[10px] font-semibold text-slate-400">
-                AI drafts use interview evidence and remain fully editable before sending.
-              </span>
-            )}
+            <span className="mt-1 block text-[10px] font-semibold text-slate-400">
+              AI drafts use interview evidence and remain fully editable before sending.
+            </span>
           </label>
         </div>
 

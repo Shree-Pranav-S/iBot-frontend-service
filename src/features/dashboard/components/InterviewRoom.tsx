@@ -12,7 +12,14 @@ import {
   useVoiceAssistant,
 } from '@livekit/components-react';
 import { ConnectionState, Track } from 'livekit-client';
-import { INTERVIEW_CLOSING_EVENT, INTERVIEW_DATA_TOPIC, LIVEKIT_FORCE_RELAY } from '../../../config/livekit';
+import {
+  INTERVIEW_CLOSING_EVENT,
+  INTERVIEW_DATA_TOPIC,
+  INTERVIEW_PROCTORING_TOPIC,
+  INTERVIEW_TERMINATED_EVENT,
+  LIVEKIT_FORCE_RELAY,
+  TAB_SWITCH_EVENT,
+} from '../../../config/livekit';
 import {
   AudioLines,
   ChevronRight,
@@ -94,7 +101,10 @@ const isClosingInterviewMessage = (message: ChatMessage) => {
 
 const parseInterviewDataPayload = (payload: Uint8Array) => {
   try {
-    return JSON.parse(new TextDecoder().decode(payload)) as { type?: string };
+    return JSON.parse(new TextDecoder().decode(payload)) as {
+      type?: string;
+      tab_switch_count?: number;
+    };
   } catch {
     return null;
   }
@@ -449,12 +459,17 @@ function InterviewStage({
   const [isMicToggling, setIsMicToggling] = useState(false);
   const [isCameraToggling, setIsCameraToggling] = useState(false);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
-  const [sessionPhase, setSessionPhase] = useState<'active' | 'complete' | 'ended'>('active');
+  const [sessionPhase, setSessionPhase] = useState<
+    'active' | 'complete' | 'terminated' | 'ended'
+  >('active');
+  const [terminationTabSwitchCount, setTerminationTabSwitchCount] = useState(0);
   const [closingSignalReceived, setClosingSignalReceived] = useState(false);
   const hasConnectedRef = useRef(false);
   const hasAutoDisconnectedRef = useRef(false);
   const hasCompletionNotifiedRef = useRef(false);
   const closingSignalReceivedRef = useRef(false);
+  const terminationSignalReceivedRef = useRef(false);
+  const micMutedByUserRef = useRef(false);
 
   const signalInterviewClosing = useCallback(() => {
     if (closingSignalReceivedRef.current) return;
@@ -466,15 +481,22 @@ function InterviewStage({
     const parsed = parseInterviewDataPayload(message.payload);
     if (parsed?.type === INTERVIEW_CLOSING_EVENT) {
       signalInterviewClosing();
+      return;
     }
-  }, [signalInterviewClosing]);
+    if (parsed?.type === INTERVIEW_TERMINATED_EVENT) {
+      terminationSignalReceivedRef.current = true;
+      setTerminationTabSwitchCount(Math.max(6, parsed.tab_switch_count ?? 6));
+      setSessionPhase('terminated');
+      room.disconnect();
+    }
+  }, [room, signalInterviewClosing]);
 
   useDataChannel(INTERVIEW_DATA_TOPIC, handleInterviewDataMessage);
 
   useEffect(() => {
     if (
       connectionState !== ConnectionState.Connected ||
-      micMutedByUser ||
+      micMutedByUserRef.current ||
       isMicrophoneEnabled
     ) {
       return;
@@ -505,6 +527,9 @@ function InterviewStage({
     if (connectionState !== ConnectionState.Connected || isMicToggling) return;
 
     const enableMic = micMutedByUser;
+    const nextMuted = !enableMic;
+    micMutedByUserRef.current = nextMuted;
+    setMicMutedByUser(nextMuted);
     setIsMicToggling(true);
     try {
       const publication = await localParticipant.setMicrophoneEnabled(enableMic, {
@@ -512,14 +537,36 @@ function InterviewStage({
         noiseSuppression: true,
         autoGainControl: true,
       });
-      setMicMutedByUser(!enableMic);
-      setMicError(publication ? null : 'Microphone was not published to the room.');
+      setMicError(
+        enableMic && !publication
+          ? 'Microphone was not published to the room.'
+          : null,
+      );
     } catch (err) {
+      micMutedByUserRef.current = !nextMuted;
+      setMicMutedByUser(!nextMuted);
       setMicError(err instanceof Error ? err.message : 'Unable to update microphone.');
     } finally {
       setIsMicToggling(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      connectionState !== ConnectionState.Connected ||
+      !micMutedByUserRef.current ||
+      !isMicrophoneEnabled ||
+      isMicToggling
+    ) {
+      return;
+    }
+
+    void localParticipant.setMicrophoneEnabled(false).catch((err) => {
+      setMicError(
+        err instanceof Error ? err.message : 'Unable to keep microphone muted.',
+      );
+    });
+  }, [connectionState, isMicToggling, isMicrophoneEnabled, localParticipant]);
 
   const toggleCamera = async () => {
     if (connectionState !== ConnectionState.Connected || isCameraToggling) return;
@@ -553,12 +600,53 @@ function InterviewStage({
   const isLive = connectionState === ConnectionState.Connected;
   const botIsSpeaking = agentState === 'speaking';
   const botIsProcessing = agentState === 'thinking';
-  const micIsPublished = Boolean(microphoneTrack) && isMicrophoneEnabled;
+  const micIsPublished =
+    Boolean(microphoneTrack) && isMicrophoneEnabled && !micMutedByUser;
   const cameraIsPublished = Boolean(cameraTrack) && isCameraEnabled;
   const agentIsReady = Boolean(agent) && agentState !== 'connecting' && agentState !== 'disconnected';
   const isRecording = isLive && micIsPublished && agentState === 'listening';
   const displayedMicError = micError || lastMicrophoneError?.message || null;
   const displayedCameraError = cameraError || lastCameraError?.message || null;
+
+  useEffect(() => {
+    if (
+      connectionState !== ConnectionState.Connected ||
+      !agentIsReady ||
+      sessionPhase !== 'active'
+    ) {
+      return;
+    }
+
+    const reportTabSwitch = () => {
+      if (
+        document.visibilityState !== 'hidden' ||
+        closingSignalReceivedRef.current ||
+        terminationSignalReceivedRef.current
+      ) {
+        return;
+      }
+
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          type: TAB_SWITCH_EVENT,
+          event_id: window.crypto.randomUUID(),
+          occurred_at: new Date().toISOString(),
+        }),
+      );
+      void localParticipant
+        .publishData(payload, {
+          reliable: true,
+          topic: INTERVIEW_PROCTORING_TOPIC,
+        })
+        .catch((err) => {
+          console.warn('Unable to report interview tab switch', err);
+        });
+    };
+
+    document.addEventListener('visibilitychange', reportTabSwitch);
+    return () => document.removeEventListener('visibilitychange', reportTabSwitch);
+  }, [agentIsReady, connectionState, localParticipant, sessionPhase]);
+
   const readinessText = (() => {
     if (connectionState === ConnectionState.Connecting) return 'Connecting to LiveKit';
     if (!isLive) return 'Connection closed';
@@ -636,6 +724,11 @@ function InterviewStage({
         return;
       }
 
+      if (terminationSignalReceivedRef.current) {
+        setSessionPhase('terminated');
+        return;
+      }
+
       finalizeAsEnded();
     }, 0);
 
@@ -644,7 +737,7 @@ function InterviewStage({
 
   let statusStr: 'idle' | 'connecting' | 'connected' | 'complete' | 'error' | 'closed' = 'idle';
   if (sessionPhase === 'complete') statusStr = 'complete';
-  else if (sessionPhase === 'ended') statusStr = 'closed';
+  else if (sessionPhase === 'terminated' || sessionPhase === 'ended') statusStr = 'closed';
   else if (connectionState === ConnectionState.Connected && agentIsReady) statusStr = 'connected';
   else if (connectionState === ConnectionState.Connected) statusStr = 'connecting';
   else if (connectionState === ConnectionState.Connecting) statusStr = 'connecting';
@@ -734,11 +827,21 @@ function InterviewStage({
               </div>
             ) : (
               <div className="relative z-10 flex max-w-md flex-col items-center text-center" aria-live="polite">
-                <CompletionNotice type={sessionPhase === 'complete' ? 'complete' : 'ended'} />
+                <CompletionNotice
+                  type={
+                    sessionPhase === 'complete'
+                      ? 'complete'
+                      : sessionPhase === 'terminated'
+                        ? 'terminated'
+                        : 'ended'
+                  }
+                />
                 <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
                   {sessionPhase === 'complete'
                     ? 'Your interview has been submitted and the room is now closed.'
-                    : 'This interview room is no longer active.'}
+                    : sessionPhase === 'terminated'
+                      ? `The interview ended after ${terminationTabSwitchCount} tab switches were recorded.`
+                      : 'This interview room is no longer active.'}
                 </p>
               </div>
             )}

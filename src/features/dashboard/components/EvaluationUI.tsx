@@ -115,7 +115,7 @@ export const StatusPill: React.FC<{
   dot?: string;
 }> = ({ label, className, dot }) => (
   <span
-    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-extrabold tracking-[0.02em] ${className}`}
+    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-extrabold leading-none tracking-[0.02em] ${className}`}
   >
     {dot && <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />}
     {label}
@@ -291,22 +291,47 @@ export const CompetencyRadar: React.FC<{ points: RadarPoint[] }> = ({ points }) 
         const item = normalized[index];
         if (!item) return null;
         const dx = pt.x - center.x;
-        const anchor = dx < -4 ? 'end' : dx > 4 ? 'start' : 'middle';
+        const isLeftLabel = dx < -4;
+        const isRightLabel = dx > 4;
+        const anchor = isLeftLabel ? 'start' : isRightLabel ? 'end' : 'middle';
+        const labelX = isLeftLabel ? 8 : isRightLabel ? vbW - 8 : pt.x;
+        const words = item.label.trim().split(/\s+/);
+        const shouldWrap = (isLeftLabel || isRightLabel) && item.label.length > 13 && words.length > 1;
+        const splitAt = shouldWrap
+          ? words.reduce(
+              (best, _word, wordIndex) => {
+                if (wordIndex === 0 || wordIndex === words.length) return best;
+                const firstLength = words.slice(0, wordIndex).join(' ').length;
+                const secondLength = words.slice(wordIndex).join(' ').length;
+                return Math.abs(firstLength - secondLength) < best.difference
+                  ? { index: wordIndex, difference: Math.abs(firstLength - secondLength) }
+                  : best;
+              },
+              { index: 1, difference: Number.POSITIVE_INFINITY },
+            ).index
+          : words.length;
+        const labelLines = shouldWrap
+          ? [words.slice(0, splitAt).join(' '), words.slice(splitAt).join(' ')]
+          : [item.label];
         return (
           <g key={item.label}>
             <text
-              x={pt.x}
-              y={pt.y - 2}
+              x={labelX}
+              y={pt.y - (labelLines.length > 1 ? 7 : 2)}
               textAnchor={anchor}
               fontSize="9"
               fontWeight="600"
               fill="#706A61"
             >
-              {item.label}
+              {labelLines.map((line, lineIndex) => (
+                <tspan key={line} x={labelX} dy={lineIndex === 0 ? 0 : 10}>
+                  {line}
+                </tspan>
+              ))}
             </text>
             <text
-              x={pt.x}
-              y={pt.y + 11}
+              x={labelX}
+              y={pt.y + (labelLines.length > 1 ? 14 : 11)}
               textAnchor={anchor}
               fontSize="10"
               fontWeight="700"

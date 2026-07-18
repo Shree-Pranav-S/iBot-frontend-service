@@ -38,6 +38,20 @@ export const useRecruiterRealtime = () => {
       handledEventIds.current.add(event.event_id);
 
       const payload = event.payload;
+      if (event.event_type === 'ASSESSMENT_EXPIRED') {
+        void queryClient.invalidateQueries({ queryKey: ['assessments'] });
+        if (payload.assessment_id) {
+          void queryClient.invalidateQueries({
+            queryKey: ['assessments', payload.assessment_id],
+          });
+        }
+        toastRef.current.warning(
+          'Assessment closed',
+          `${payload.title ?? 'The assessment'} reached its scheduled end date.`,
+        );
+        return;
+      }
+
       if (event.event_type.startsWith('ASSESSMENT_PROCESSING_')) {
         void queryClient.invalidateQueries({ queryKey: ['assessments'] });
         if (payload.assessment_id) {

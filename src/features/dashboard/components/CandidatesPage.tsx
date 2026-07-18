@@ -51,7 +51,10 @@ import {
   Search,
 } from 'lucide-react';
 
-const PAGE_SIZE = 15;
+const DEFAULT_DESKTOP_PAGE_SIZE = 4;
+const MOBILE_PAGE_SIZE = 3;
+const ESTIMATED_TABLE_ROW_HEIGHT = 72;
+const TABLE_FIT_BUFFER = 8;
 const AVATAR_GRADIENTS = [
   'from-brand-accent to-brand-hover',
   'from-brand-charcoal to-[#4A4035]',
@@ -76,6 +79,8 @@ export const CandidatesPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_DESKTOP_PAGE_SIZE);
+  const tableViewportRef = useRef<HTMLDivElement>(null);
 
   const instanceNumbers = useMemo(
     () => buildAssessmentInstanceNumbers(assessments),
@@ -497,11 +502,47 @@ export const CandidatesPage: React.FC = () => {
     ],
   );
 
-  const totalPages = Math.ceil(filteredCandidates.length / PAGE_SIZE);
+  useEffect(() => {
+    const tableViewport = tableViewportRef.current;
+    if (!tableViewport || typeof ResizeObserver === 'undefined') return;
+
+    const updatePageSize = () => {
+      if (window.innerWidth < 1024) {
+        setPageSize(MOBILE_PAGE_SIZE);
+        return;
+      }
+
+      const header = tableViewport.querySelector('thead') as HTMLElement | null;
+      const row = tableViewport.querySelector('tbody tr') as HTMLElement | null;
+      const headerHeight = header?.getBoundingClientRect().height ?? 56;
+      const rowHeight = row?.getBoundingClientRect().height ?? ESTIMATED_TABLE_ROW_HEIGHT;
+      const availableBodyHeight = Math.max(
+        0,
+        tableViewport.clientHeight - headerHeight - TABLE_FIT_BUFFER,
+      );
+      const nextPageSize = Math.max(1, Math.floor(availableBodyHeight / rowHeight));
+
+      setPageSize((currentPageSize) =>
+        currentPageSize === nextPageSize ? currentPageSize : nextPageSize,
+      );
+    };
+
+    updatePageSize();
+    const resizeObserver = new ResizeObserver(updatePageSize);
+    resizeObserver.observe(tableViewport);
+    window.addEventListener('resize', updatePageSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updatePageSize);
+    };
+  }, [filteredCandidates.length]);
+
+  const totalPages = Math.ceil(filteredCandidates.length / pageSize);
   const currentPage = Math.min(page, Math.max(totalPages - 1, 0));
   const visibleCandidates = filteredCandidates.slice(
-    currentPage * PAGE_SIZE,
-    (currentPage + 1) * PAGE_SIZE,
+    currentPage * pageSize,
+    (currentPage + 1) * pageSize,
   );
 
   return (
@@ -699,7 +740,10 @@ export const CandidatesPage: React.FC = () => {
               );
             })}
           </div>
-          <div className="ibot-scrollbar hidden min-h-0 flex-1 overflow-auto lg:block">
+          <div
+            ref={tableViewportRef}
+            className="ibot-scrollbar hidden min-h-0 flex-1 overflow-x-auto overflow-y-hidden lg:block"
+          >
             <table className="min-w-[960px] w-full text-left border-collapse">
               <thead className="sticky top-0 z-10 border-b border-slate-200 bg-[#FCFAF6]/95 backdrop-blur">
                 <tr className="h-14 text-[10px] font-extrabold uppercase tracking-[0.09em] text-slate-500">
@@ -871,7 +915,7 @@ export const CandidatesPage: React.FC = () => {
         <div className="flex flex-shrink-0 flex-col gap-2 border-t border-slate-200 bg-slate-50/80 px-3 py-3 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             {filteredCandidates.length > 0
-              ? `Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, filteredCandidates.length)} of ${filteredCandidates.length} candidates`
+              ? `Showing ${currentPage * pageSize + 1}–${Math.min((currentPage + 1) * pageSize, filteredCandidates.length)} of ${filteredCandidates.length} candidates`
               : `Showing 0 of ${candidates.length} candidates`}
           </div>
           <div className="flex items-center gap-1.5">

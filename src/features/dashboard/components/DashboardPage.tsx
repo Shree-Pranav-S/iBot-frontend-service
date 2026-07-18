@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  ArrowUpRight,
   BriefcaseBusiness,
   CalendarClock,
   CheckCircle2,
@@ -28,17 +27,6 @@ import {
 
 const DAY_IN_MS = 86_400_000;
 
-const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
-const formatRelativeDate = (value: string) => {
-  const days = Math.floor((Date.now() - new Date(value).getTime()) / DAY_IN_MS);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  return formatDate(value);
-};
-
 const daysUntil = (value: string) =>
   Math.ceil((new Date(value).getTime() - Date.now()) / DAY_IN_MS);
 
@@ -63,6 +51,7 @@ const kpiIconTones = [
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: assessments = [], isLoading: assessmentsLoading } = useAssessments();
   const { data: candidates = [], isLoading: candidatesLoading } = useCandidates('all');
   const { data: evaluations = [], isLoading: evaluationsLoading } = useRecruiterEvaluations();
@@ -71,12 +60,6 @@ export const DashboardPage: React.FC = () => {
   const firstName = user?.full_name?.split(' ')[0] || 'Recruiter';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const todayLabel = new Intl.DateTimeFormat(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(new Date());
-
   const dashboard = useMemo(() => {
     const activeAssessments = assessments
       .filter((assessment) => assessment.status === 'ACTIVE')
@@ -157,10 +140,6 @@ export const DashboardPage: React.FC = () => {
       {
         label: 'Active assessments',
         value: activeAssessments.length,
-        helper:
-          closingSoon > 0
-            ? `${pluralize(closingSoon, 'window')} closing soon`
-            : `${assessments.length} total created`,
         icon: BriefcaseBusiness,
         to: '/assessments',
         attention: closingSoon > 0,
@@ -168,29 +147,18 @@ export const DashboardPage: React.FC = () => {
       {
         label: 'Candidates',
         value: candidates.length,
-        helper:
-          stageCounts.interviewing > 0
-            ? `${stageCounts.interviewing} interviewing now`
-            : `${stageCounts.invited} awaiting interview`,
         icon: Users,
         to: '/candidates',
       },
       {
         label: 'Interview completion',
         value: `${completionRate}%`,
-        helper: `${completedInterviews} completed`,
         icon: TrendingUp,
         to: '/candidates',
       },
       {
         label: 'Pending decisions',
         value: pendingDecisions,
-        helper:
-          pendingDecisions > 0
-            ? `${evaluations.length} reports available`
-            : evaluations.length > 0
-              ? 'Review queue is clear'
-              : 'No reports yet',
         icon: ListChecks,
         to: '/evaluations',
         attention: pendingDecisions > 0,
@@ -234,13 +202,30 @@ export const DashboardPage: React.FC = () => {
     1,
     ...dashboard.pipelineStages.map((stage) => stage.value),
   );
+  const heroTarget = dashboard.pendingDecisions > 0 ? '/evaluations' : '/candidates';
+  const priorityTarget = dashboard.pendingDecisions > 0 ? '/evaluations' : '/assessments';
+
+  const openSection =
+    (to: string) => (event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('a, button')) return;
+      if ('key' in event && event.key !== 'Enter' && event.key !== ' ') return;
+      if ('key' in event) event.preventDefault();
+      navigate(to);
+    };
 
   return (
     <div className="dashboard-viewport h-full min-h-0 overflow-hidden">
       <div className="mx-auto grid h-full w-full max-w-[1680px] grid-rows-[auto_auto_minmax(0,1fr)] gap-2.5">
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <section
-          className={`dashboard-card dashboard-enter relative overflow-hidden ${heroClass}`}
+          className={`dashboard-card dashboard-enter relative cursor-pointer overflow-hidden ${heroClass}`}
+          role="link"
+          tabIndex={0}
+          aria-label={`Open ${dashboard.pendingDecisions > 0 ? 'evaluations' : 'candidates'}`}
+          data-dashboard-destination={heroTarget}
+          onClick={openSection(heroTarget)}
+          onKeyDown={openSection(heroTarget)}
         >
           <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_84%_30%,rgba(185,131,63,0.14),transparent_62%)] lg:block" />
           <div className="relative flex flex-col justify-between gap-2.5 px-5 py-2.5 sm:flex-row sm:items-center lg:px-6">
@@ -253,8 +238,6 @@ export const DashboardPage: React.FC = () => {
                   </span>
                   {greeting}, {firstName}
                 </p>
-                <span className="hidden h-3 w-px bg-slate-200 sm:block" />
-                <p className="text-[11px] font-medium text-slate-400">{todayLabel}</p>
               </div>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                 <h2 className="font-display text-lg font-extrabold tracking-[-0.035em] text-slate-950">
@@ -323,18 +306,10 @@ export const DashboardPage: React.FC = () => {
                 {loading ? (
                   <span className="mt-2 block h-8 w-16 rounded-md ibot-shimmer" />
                 ) : (
-                  <span className="mt-0.5 block font-display text-[23px] font-extrabold leading-7 tracking-[-0.035em] text-slate-950">
+                  <span className="mt-1 block font-display text-[25px] font-extrabold leading-7 tracking-[-0.035em] text-slate-950">
                     {stat.value}
                   </span>
                 )}
-                <span
-                  className={`mt-0.5 flex items-center gap-1 text-xs font-medium ${
-                    stat.attention ? 'text-amber-700' : 'text-slate-400'
-                  }`}
-                >
-                  <span className="truncate">{stat.helper}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-brand-hover opacity-0 transition-opacity group-hover:opacity-100" />
-                </span>
               </NavLink>
             );
           })}
@@ -344,8 +319,14 @@ export const DashboardPage: React.FC = () => {
         <section className="grid min-h-0 grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,1fr)_minmax(300px,0.82fr)]">
           {/* Candidate flow */}
           <article
-            className={`dashboard-card dashboard-panel-candidate flex min-h-0 flex-col overflow-hidden ${panelClass}`}
+            className={`dashboard-card dashboard-panel-candidate flex min-h-0 cursor-pointer flex-col overflow-hidden ${panelClass}`}
             style={{ animationDelay: '170ms' }}
+            role="link"
+            tabIndex={0}
+            aria-label="Open candidate pipeline"
+            data-dashboard-destination="/candidates"
+            onClick={openSection('/candidates')}
+            onKeyDown={openSection('/candidates')}
           >
             <PanelHeader
               title="Candidate flow"
@@ -414,8 +395,14 @@ export const DashboardPage: React.FC = () => {
 
           {/* Evaluation intelligence */}
           <article
-            className={`dashboard-card dashboard-panel-evaluation flex min-h-0 flex-col overflow-hidden ${panelClass}`}
+            className={`dashboard-card dashboard-panel-evaluation flex min-h-0 cursor-pointer flex-col overflow-hidden ${panelClass}`}
             style={{ animationDelay: '210ms' }}
+            role="link"
+            tabIndex={0}
+            aria-label="Open evaluations"
+            data-dashboard-destination="/evaluations"
+            onClick={openSection('/evaluations')}
+            onKeyDown={openSection('/evaluations')}
           >
             <PanelHeader
               title="Evaluation intelligence"
@@ -425,16 +412,13 @@ export const DashboardPage: React.FC = () => {
             />
 
             <div className="dashboard-score-band shrink-0 border-b border-slate-200/70 px-5 py-2.5">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
                 <div className="flex items-baseline gap-2">
                   <p className="font-display text-[26px] font-extrabold leading-8 tracking-tight text-slate-950">
                     {evaluationsLoading ? '—' : dashboard.averageScore.toFixed(1)}
                   </p>
                   <p className="text-xs font-semibold text-slate-400">/ 10 average score</p>
                 </div>
-                <p className="text-xs font-medium text-slate-400">
-                  {pluralize(evaluations.length, 'report')}
-                </p>
               </div>
               <DecisionMixBar
                 pending={dashboard.pendingDecisions}
@@ -472,18 +456,24 @@ export const DashboardPage: React.FC = () => {
 
           {/* Priority queue */}
           <article
-            className={`dashboard-card dashboard-panel-priority flex min-h-0 flex-col overflow-hidden ${panelClass}`}
+            className={`dashboard-card dashboard-panel-priority flex min-h-0 cursor-pointer flex-col overflow-hidden ${panelClass}`}
             style={{ animationDelay: '250ms' }}
+            role="link"
+            tabIndex={0}
+            aria-label="Open priority queue"
+            data-dashboard-destination={priorityTarget}
+            onClick={openSection(priorityTarget)}
+            onKeyDown={openSection(priorityTarget)}
           >
             <PanelHeader
               title="Priority queue"
               accentClass="dashboard-panel-accent-amber"
             />
 
-            <div className="flex min-h-0 flex-1 flex-col px-4 py-3">
+            <div className="flex min-h-0 flex-1 flex-col px-4 py-2.5">
               <NavLink
                 to="/evaluations"
-                className={`group flex shrink-0 items-center gap-3 rounded-xl border p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                className={`group flex shrink-0 items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
                   dashboard.pendingDecisions > 0
                     ? 'border-[#D7C2A8] bg-brand-soft/70 hover:bg-brand-soft'
                     : 'border-slate-200/80 bg-slate-50 hover:bg-slate-100'
@@ -503,15 +493,10 @@ export const DashboardPage: React.FC = () => {
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-semibold text-slate-800">
+                  <span className="block truncate text-[13px] font-semibold text-slate-800">
                     {dashboard.pendingDecisions > 0
                       ? 'Review hiring decisions'
                       : 'Decision queue is clear'}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-500">
-                    {dashboard.pendingDecisions > 0
-                      ? `${pluralize(dashboard.pendingDecisions, 'candidate report')} waiting`
-                      : 'No recruiter action required'}
                   </span>
                 </span>
                 <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5" />
@@ -532,7 +517,7 @@ export const DashboardPage: React.FC = () => {
                 </NavLink>
               )}
 
-              <div className="mt-4 flex shrink-0 items-center justify-between px-0.5">
+              <div className="mt-3 flex shrink-0 items-center justify-between px-0.5">
                 <p className="text-[10px] font-bold uppercase tracking-[0.09em] text-slate-400">
                   Campaign deadlines
                 </p>
@@ -567,7 +552,6 @@ export const DashboardPage: React.FC = () => {
                     <DeadlineRow
                       key={assessment.id}
                       title={assessment.title}
-                      role={assessment.role_name}
                       endDate={assessment.window_end}
                     />
                   ))}
@@ -711,25 +695,20 @@ const EvaluationRow: React.FC<{ evaluation: RecruiterEvaluationListItem }> = ({ 
   return (
     <NavLink
       to={`/candidates/${evaluation.candidate_assessment_id}/report`}
-      className="group flex items-center gap-3 px-6 py-2.5 transition-all duration-200 hover:bg-brand-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent"
+      className="group flex items-center gap-3 px-6 py-3 transition-all duration-200 hover:bg-brand-soft/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent"
       aria-label={`Open ${evaluation.candidate_name}'s evaluation report`}
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[10px] font-extrabold text-brand-hover ring-1 ring-inset ring-default">
         {initials}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-[13px] font-semibold text-slate-900 group-hover:text-brand-hover">
-            {evaluation.candidate_name}
-          </p>
-          <CompactStatus {...recommendation} />
-          <span className="hidden 2xl:inline-flex">
-            <CompactStatus {...decision} />
-          </span>
-        </div>
-        <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400">
-          {evaluation.role_name} · {formatRelativeDate(evaluation.generated_at)}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <p className="truncate text-[13px] font-semibold text-slate-900 group-hover:text-brand-hover">
+          {evaluation.candidate_name}
         </p>
+        <CompactStatus {...recommendation} />
+        <span className="hidden 2xl:inline-flex">
+          <CompactStatus {...decision} />
+        </span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <span
@@ -758,9 +737,8 @@ const CompactStatus: React.FC<{
 
 const DeadlineRow: React.FC<{
   title: string;
-  role: string;
   endDate: string;
-}> = ({ title, role, endDate }) => {
+}> = ({ title, endDate }) => {
   const remaining = daysUntil(endDate);
   const urgent = remaining <= 1;
   const warning = remaining <= 3;
@@ -776,7 +754,7 @@ const DeadlineRow: React.FC<{
   return (
     <NavLink
       to="/assessments"
-      className="group flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-white/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+      className="group flex shrink-0 items-center gap-3 rounded-xl px-2.5 py-1.5 transition-all duration-200 hover:bg-white/80 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
     >
       <span
         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
@@ -789,13 +767,8 @@ const DeadlineRow: React.FC<{
       >
         {urgent ? <CircleAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-semibold text-slate-800 group-hover:text-brand-hover">
-          {title}
-        </span>
-        <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400">
-          {role} · {formatDate(endDate)}
-        </span>
+      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-800 group-hover:text-brand-hover">
+        {title}
       </span>
       <span
         className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${

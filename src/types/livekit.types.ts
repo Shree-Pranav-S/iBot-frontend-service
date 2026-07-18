@@ -4,6 +4,7 @@ export interface LiveKitTokenResponse {
   room_name: string;
   elapsed_secs: number;
   interview_started: boolean;
+  tab_switch_count: number;
 }
 
 export interface CandidateSessionBootstrapResponse {

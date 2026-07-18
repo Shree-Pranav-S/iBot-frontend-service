@@ -44,13 +44,14 @@ import {
 import type { AssessmentStatus, AssessmentSummaryResponse } from '../../../types/assessment.types';
 import { buildAssessmentInstanceNumbers } from '../utils/assessmentDisplay';
 import {
-  CARD_MIN_H,
   CARD_MIN_W,
   SIDEBAR_CARD_MIN_H,
   computeGridCapacity,
 } from '../utils/gridCapacity';
 
 const CANDIDATES_PAGE_SIZE = 5;
+const BROWSE_GRID_INSET = 32;
+const BROWSE_CARD_MIN_H = 320;
 type StatusFilter = 'all' | 'active' | 'closed';
 type SortOption = 'newest' | 'start' | 'title';
 
@@ -242,7 +243,7 @@ export const AssessmentsPage: React.FC = () => {
   const browseGridRef = useRef<HTMLDivElement>(null);
   const sidebarGridRef = useRef<HTMLDivElement>(null);
   const [browseCapacity, setBrowseCapacity] = useState(() =>
-    computeGridCapacity(800, 400, CARD_MIN_W, CARD_MIN_H),
+    computeGridCapacity(1200, 400, CARD_MIN_W, BROWSE_CARD_MIN_H),
   );
   const [sidebarCapacity, setSidebarCapacity] = useState(() =>
     computeGridCapacity(260, 400, CARD_MIN_W, SIDEBAR_CARD_MIN_H, 1),
@@ -253,7 +254,14 @@ export const AssessmentsPage: React.FC = () => {
     if (!el) return;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      setBrowseCapacity(computeGridCapacity(width, height, CARD_MIN_W, CARD_MIN_H));
+      setBrowseCapacity(
+        computeGridCapacity(
+          Math.max(0, width - BROWSE_GRID_INSET),
+          Math.max(0, height - BROWSE_GRID_INSET),
+          CARD_MIN_W,
+          BROWSE_CARD_MIN_H,
+        ),
+      );
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -475,6 +483,11 @@ export const AssessmentsPage: React.FC = () => {
     visibleCampaigns.length > 0
     && visibleCampaigns.length < campaignPageSize
     && safeCampaignPage === campaignPageCount - 1;
+  const browseItemCount = visibleCampaigns.length + (showBrowseCreateTile ? 1 : 0);
+  const browseRowCount = Math.max(
+    1,
+    Math.min(browseCapacity.rows, Math.ceil(browseItemCount / browseCapacity.cols)),
+  );
   const selectedStatus = selectedAssessment
     ? assessmentStatusMeta(selectedAssessment.status)
     : null;
@@ -574,19 +587,19 @@ export const AssessmentsPage: React.FC = () => {
         type="button"
         onClick={() => handleSelectAssessment(assessment.id)}
         className={`ibot-assessment-card group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-sm transition-colors duration-200 ${palette.border} ${
-          stretch ? 'flex h-full min-h-[210px] flex-col' : 'min-h-[210px]'
+          stretch ? 'flex h-full min-h-[320px] flex-col' : 'min-h-[210px]'
         }`}
       >
         <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${palette.line}`} />
-        <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-5 pb-4 pt-5">
+        <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-5 pb-5 pt-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-lg transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-110 ${palette.icon}`}>
-                <Code2 className="h-4 w-4" />
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-lg transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-110 ${palette.icon}`}>
+                <Code2 className="h-[18px] w-[18px]" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h3 className={`truncate text-sm font-black text-slate-900 transition-colors ${palette.title}`}>
+                  <h3 className={`truncate text-[15px] font-black text-slate-900 transition-colors ${palette.title}`}>
                     {assessment.title}
                   </h3>
                   {renderInstanceBadge(assessment.id)}
@@ -607,42 +620,60 @@ export const AssessmentsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className={`mt-4 rounded-xl border border-slate-100 bg-gradient-to-r px-3.5 py-2.5 ${palette.wash}`}>
-            <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">Role</p>
-            <p className="mt-1 truncate text-xs font-bold text-slate-800">{assessment.role_name}</p>
+          <div className={`mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#E7DCCD] bg-gradient-to-r px-4 py-3.5 ${palette.wash}`}>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">Role</p>
+              <p className="mt-1 truncate text-sm font-black text-slate-900">{assessment.role_name}</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/80 bg-white/90 text-brand-hover shadow-sm">
+              <Briefcase className="h-4 w-4" />
+            </span>
           </div>
 
-          <div className="mt-auto grid grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 pt-3.5">
+          <div className="mt-3 grid min-h-[96px] flex-1 grid-cols-3 gap-2.5">
             {[
               {
                 label: 'Duration',
                 value: `${assessment.interview_duration_mins} min`,
                 icon: Clock,
+                tone: 'border-amber-100 bg-amber-50/70 text-amber-700',
               },
               {
                 label: 'Start date',
                 value: formatAssessmentDate(assessment.window_start),
                 icon: CalendarDays,
+                tone: 'border-sky-100 bg-sky-50/70 text-sky-700',
               },
               {
                 label: 'End date',
                 value: formatAssessmentDate(assessment.window_end),
                 icon: CalendarDays,
+                tone: 'border-violet-100 bg-violet-50/70 text-violet-700',
               },
-            ].map((item, index) => {
+            ].map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className={index === 0 ? 'pr-3' : 'px-3'}>
-                  <p className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
-                    <Icon className="h-3 w-3" />
+                <div
+                  key={item.label}
+                  className={`flex min-w-0 flex-col justify-center rounded-xl border px-3 py-3 ${item.tone}`}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 shadow-sm">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="mt-2 text-[8px] font-black uppercase tracking-[0.1em] text-slate-400">
                     {item.label}
                   </p>
-                  <p className="mt-1 truncate text-[10px] font-black text-slate-700" title={item.value}>
+                  <p className="mt-1 truncate text-[10px] font-black text-slate-800" title={item.value}>
                     {item.value}
                   </p>
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2.5 text-[9px] font-black text-slate-500 transition-colors group-hover:border-brand-accent/40 group-hover:bg-brand-soft/60 group-hover:text-brand-hover">
+            <span>Open assessment</span>
+            <ArrowUpRight className={`h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${palette.meta}`} />
           </div>
         </div>
       </button>
@@ -822,10 +853,10 @@ export const AssessmentsPage: React.FC = () => {
                 </div>
               ) : (
                 <div
-                  className="ibot-scrollbar grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-4"
+                  className="grid min-h-0 flex-1 gap-3 overflow-hidden p-4"
                   style={{
                     gridTemplateColumns: `repeat(${browseCapacity.cols}, minmax(0, 1fr))`,
-                    gridAutoRows: `${Math.max(CARD_MIN_H, 224)}px`,
+                    gridTemplateRows: `repeat(${browseRowCount}, minmax(${BROWSE_CARD_MIN_H}px, 1fr))`,
                   }}
                 >
                   {visibleCampaigns.map((assessment) =>

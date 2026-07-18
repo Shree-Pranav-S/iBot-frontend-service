@@ -88,20 +88,20 @@ export const decisionMeta = (decision: string | null | undefined) => {
   if (decision === 'APPROVED') {
     return {
       label: 'Hired',
-      className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+      className: 'min-w-[78px] justify-center border-emerald-200 bg-emerald-50 text-emerald-800',
       dot: 'bg-emerald-500',
     };
   }
   if (decision === 'REJECTED') {
     return {
       label: 'Rejected',
-      className: 'border-rose-200 bg-rose-50 text-rose-800',
+      className: 'min-w-[78px] justify-center border-rose-200 bg-rose-50 text-rose-800',
       dot: 'bg-rose-500',
     };
   }
   return {
-    label: 'Decision pending',
-    className: 'border-amber-200 bg-amber-50 text-amber-800',
+    label: 'Pending',
+    className: 'min-w-[78px] justify-center border-amber-200 bg-amber-50 text-amber-800',
     dot: 'bg-amber-500',
   };
 };

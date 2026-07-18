@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Briefcase,
+  Building2,
   ChevronRight,
   ClipboardCheck,
   LayoutDashboard,
   LogOut,
+  Mail,
+  UserRound,
   Users,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useRecruiterRealtime } from '../../hooks/useRecruiterRealtime';
@@ -48,6 +52,9 @@ export const MainLayout: React.FC = () => {
   useRecruiterRealtime();
   const navigate = useNavigate();
   const location = useLocation();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const profileCloseRef = useRef<HTMLButtonElement>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -60,6 +67,20 @@ export const MainLayout: React.FC = () => {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+
+  useEffect(() => {
+    if (!showProfileModal) return;
+
+    profileCloseRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowProfileModal(false);
+      profileButtonRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showProfileModal]);
 
   const currentCopy = location.pathname.endsWith('/report')
     ? {
@@ -202,9 +223,18 @@ export const MainLayout: React.FC = () => {
 
           <div className="flex shrink-0 items-center gap-2">
             <NotificationCenter />
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8C9B5] bg-brand-soft text-[11px] font-black text-brand-hover shadow-[0_8px_18px_-14px_rgba(36,33,29,0.55)]">
+            <button
+              ref={profileButtonRef}
+              type="button"
+              onClick={() => setShowProfileModal(true)}
+              aria-label="View recruiter profile"
+              aria-haspopup="dialog"
+              aria-expanded={showProfileModal}
+              aria-controls="recruiter-profile-dialog"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8C9B5] bg-brand-soft text-[11px] font-black text-brand-hover shadow-[0_8px_18px_-14px_rgba(36,33,29,0.55)] transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-[#EAD7BE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2"
+            >
               {initials}
-            </div>
+            </button>
           </div>
         </header>
 
@@ -216,6 +246,90 @@ export const MainLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {showProfileModal && (
+        <div
+          className="ibot-overlay !z-[90]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowProfileModal(false);
+              profileButtonRef.current?.focus();
+            }
+          }}
+        >
+          <section
+            id="recruiter-profile-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recruiter-profile-title"
+            className="ibot-modal max-w-sm"
+          >
+            <header className="relative overflow-hidden border-b border-default bg-gradient-to-br from-white via-[#FCFAF6] to-brand-soft px-6 pb-5 pt-6">
+              <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-brand-accent/10" />
+              <button
+                ref={profileCloseRef}
+                type="button"
+                onClick={() => {
+                  setShowProfileModal(false);
+                  profileButtonRef.current?.focus();
+                }}
+                aria-label="Close recruiter profile"
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="relative flex items-center gap-4 pr-9">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-accent to-brand-hover font-display text-base font-black text-white shadow-[0_12px_24px_-14px_rgba(36,33,29,0.65)]">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-hover">
+                    Recruiter profile
+                  </p>
+                  <h2
+                    id="recruiter-profile-title"
+                    className="mt-1 truncate font-display text-lg font-extrabold tracking-[-0.025em] text-slate-950"
+                  >
+                    {user?.full_name || 'Recruiter'}
+                  </h2>
+                </div>
+              </div>
+            </header>
+
+            <div className="space-y-2.5 p-5">
+              <ProfileDetail
+                icon={UserRound}
+                label="Full name"
+                value={user?.full_name || 'Recruiter'}
+              />
+              <ProfileDetail
+                icon={Mail}
+                label="Email address"
+                value={user?.email || 'Not available'}
+              />
+              <ProfileDetail
+                icon={Building2}
+                label="Company"
+                value={user?.company_name || 'Not available'}
+              />
+            </div>
+
+            <footer className="flex justify-end border-t border-default bg-slate-50/70 px-5 py-3.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProfileModal(false);
+                  profileButtonRef.current?.focus();
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-brand-charcoal px-4 text-xs font-bold text-white transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2"
+              >
+                Close
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {/* ── Mobile bottom nav ── */}
       <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-default bg-white/95 p-1.5 shadow-[0_18px_44px_-18px_rgba(36,33,29,0.38)] backdrop-blur-xl sm:hidden">
@@ -242,3 +356,23 @@ export const MainLayout: React.FC = () => {
     </div>
   );
 };
+
+const ProfileDetail: React.FC<{
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}> = ({ icon: Icon, label, value }) => (
+  <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-sm">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-hover">
+      <Icon className="h-4 w-4" />
+    </span>
+    <span className="min-w-0">
+      <span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400">
+        {label}
+      </span>
+      <span className="mt-0.5 block truncate text-xs font-semibold text-slate-800">
+        {value}
+      </span>
+    </span>
+  </div>
+);

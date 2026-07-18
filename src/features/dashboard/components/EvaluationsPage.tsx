@@ -46,7 +46,7 @@ import {
 type DecisionFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED';
 type SortOption = 'score' | 'recent' | 'rank';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 3;
 const CANDIDATE_AVATAR_TONES = [
   'from-brand-accent to-brand-hover shadow-[rgba(185,131,63,0.18)] ring-brand-soft',
   'from-[#8A6A45] to-brand-hover shadow-[rgba(138,106,69,0.18)] ring-brand-soft',
@@ -232,17 +232,54 @@ export const EvaluationsPage: React.FC = () => {
           </div>
           <div className="grid w-full shrink-0 grid-cols-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/80 sm:grid-cols-4 sm:divide-x sm:divide-slate-200 xl:w-auto">
             {[
-              { label: 'Reports', value: String(stats.total), tone: 'text-slate-900' },
-              { label: 'Average', value: stats.average.toFixed(1), tone: 'text-brand-hover' },
-              { label: 'Hired', value: String(stats.approved), tone: 'text-emerald-700' },
-              { label: 'Rejected', value: String(stats.rejected), tone: 'text-rose-700' },
+              {
+                label: 'Reports',
+                value: String(stats.total),
+                tone: 'text-slate-900',
+                active: decisionFilter === 'all',
+                onClick: () => handleFilterChange('all'),
+                title: 'Show all evaluation reports',
+              },
+              {
+                label: 'Average',
+                value: stats.average.toFixed(1),
+                tone: 'text-brand-hover',
+                active: sort === 'score',
+                onClick: () => handleSortChange('score'),
+                title: 'Sort evaluation reports by score',
+              },
+              {
+                label: 'Hired',
+                value: String(stats.approved),
+                tone: 'text-emerald-700',
+                active: decisionFilter === 'APPROVED',
+                onClick: () => handleFilterChange('APPROVED'),
+                title: 'Show hired candidates',
+              },
+              {
+                label: 'Rejected',
+                value: String(stats.rejected),
+                tone: 'text-rose-700',
+                active: decisionFilter === 'REJECTED',
+                onClick: () => handleFilterChange('REJECTED'),
+                title: 'Show rejected candidates',
+              },
             ].map((item) => (
-              <div key={item.label} className="min-w-0 border-b border-slate-200 px-3.5 py-2 text-center odd:border-r sm:border-b-0 sm:odd:border-r-0">
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.onClick}
+                aria-pressed={item.active}
+                title={item.title}
+                className={`min-w-0 border-b border-slate-200 px-3.5 py-2 text-center transition-colors odd:border-r hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent sm:border-b-0 sm:odd:border-r-0 ${
+                  item.active ? 'bg-white' : ''
+                }`}
+              >
                 <p className={`font-display text-[16px] font-black ${item.tone}`}>{item.value}</p>
                 <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-slate-400">
                   {item.label}
                 </p>
-              </div>
+              </button>
             ))}
           </div>
         </section>
@@ -362,8 +399,17 @@ export const EvaluationsPage: React.FC = () => {
                   return (
                     <article
                       key={evaluation.candidate_assessment_id}
-                      className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-accent hover:bg-brand-soft/30"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Review ${evaluation.candidate_name}'s evaluation summary`}
+                      className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-brand-accent hover:bg-brand-soft/30 focus-visible:border-brand-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                       onClick={() => setSelectedEvaluation(evaluation)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setSelectedEvaluation(evaluation);
+                        }
+                      }}
                     >
                       <div className="flex min-w-0 items-start gap-3">
                         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br font-display text-xs font-black text-white shadow-md ring-4 ${candidateAvatarTone(evaluation.candidate_name)}`}>
@@ -402,7 +448,7 @@ export const EvaluationsPage: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="ibot-scrollbar hidden min-h-0 flex-1 overflow-auto lg:block">
+              <div className="ibot-scrollbar hidden min-h-0 flex-1 overflow-x-auto overflow-y-hidden lg:block">
               <table className="min-w-[980px] w-full table-fixed border-collapse text-left">
                 <thead className="border-b border-slate-200 bg-slate-50/95">
                   <tr className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
@@ -422,7 +468,7 @@ export const EvaluationsPage: React.FC = () => {
                     return (
                       <tr
                         key={evaluation.candidate_assessment_id}
-                        className="group h-[64px] cursor-pointer transition-all hover:bg-brand-soft/60 focus-visible:bg-brand-soft focus-visible:outline-none"
+                        className="group h-[68px] cursor-pointer transition-all hover:bg-brand-soft/60 focus-visible:bg-brand-soft focus-visible:outline-none"
                         onClick={() => setSelectedEvaluation(evaluation)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {

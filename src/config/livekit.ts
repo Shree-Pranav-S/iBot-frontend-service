@@ -19,3 +19,4 @@ export const INTERVIEW_PROCTORING_TOPIC = 'ibot.proctoring';
 export const INTERVIEW_CLOSING_EVENT = 'interview_closing';
 export const INTERVIEW_TERMINATED_EVENT = 'interview_terminated';
 export const TAB_SWITCH_EVENT = 'tab_switch';
+export const TAB_SWITCH_RECORDED_EVENT = 'tab_switch_recorded';

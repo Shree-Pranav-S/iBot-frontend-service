@@ -19,6 +19,7 @@ import {
   INTERVIEW_TERMINATED_EVENT,
   LIVEKIT_FORCE_RELAY,
   TAB_SWITCH_EVENT,
+  TAB_SWITCH_RECORDED_EVENT,
 } from '../../../config/livekit';
 import {
   AudioLines,
@@ -30,6 +31,7 @@ import {
   Video,
   VideoOff,
   ShieldCheck,
+  ShieldAlert,
   Sparkles,
   Wifi,
 } from 'lucide-react';
@@ -103,6 +105,7 @@ const parseInterviewDataPayload = (payload: Uint8Array) => {
   try {
     return JSON.parse(new TextDecoder().decode(payload)) as {
       type?: string;
+      event_id?: string;
       tab_switch_count?: number;
     };
   } catch {
@@ -419,6 +422,7 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({ token, durationMin
         durationMins={durationMins}
         initialElapsedSecs={Math.max(0, data.elapsed_secs ?? 0)}
         interviewStarted={Boolean(data.interview_started)}
+        initialTabSwitchCount={Math.max(0, data.tab_switch_count ?? 0)}
         onExit={onExit}
         onComplete={onComplete}
       />
@@ -431,12 +435,14 @@ function InterviewStage({
   durationMins,
   initialElapsedSecs,
   interviewStarted,
+  initialTabSwitchCount,
   onExit,
   onComplete,
 }: {
   durationMins?: number;
   initialElapsedSecs: number;
   interviewStarted: boolean;
+  initialTabSwitchCount: number;
   onExit?: () => void;
   onComplete?: () => void;
 }) {
@@ -463,6 +469,7 @@ function InterviewStage({
     'active' | 'complete' | 'terminated' | 'ended'
   >('active');
   const [terminationTabSwitchCount, setTerminationTabSwitchCount] = useState(0);
+  const [tabSwitchCount, setTabSwitchCount] = useState(initialTabSwitchCount);
   const [closingSignalReceived, setClosingSignalReceived] = useState(false);
   const hasConnectedRef = useRef(false);
   const hasAutoDisconnectedRef = useRef(false);
@@ -470,6 +477,10 @@ function InterviewStage({
   const closingSignalReceivedRef = useRef(false);
   const terminationSignalReceivedRef = useRef(false);
   const micMutedByUserRef = useRef(false);
+  const pendingTabSwitchesRef = useRef(
+    new Map<string, { event_id: string; occurred_at: string }>(),
+  );
+  const lastVisibilityStateRef = useRef(document.visibilityState);
 
   const signalInterviewClosing = useCallback(() => {
     if (closingSignalReceivedRef.current) return;
@@ -483,9 +494,20 @@ function InterviewStage({
       signalInterviewClosing();
       return;
     }
+    if (parsed?.type === TAB_SWITCH_RECORDED_EVENT) {
+      if (parsed.event_id) {
+        pendingTabSwitchesRef.current.delete(parsed.event_id);
+      }
+      if (typeof parsed.tab_switch_count === 'number') {
+        setTabSwitchCount((current) => Math.max(current, parsed.tab_switch_count ?? 0));
+      }
+      return;
+    }
     if (parsed?.type === INTERVIEW_TERMINATED_EVENT) {
       terminationSignalReceivedRef.current = true;
-      setTerminationTabSwitchCount(Math.max(6, parsed.tab_switch_count ?? 6));
+      const finalCount = Math.max(6, parsed.tab_switch_count ?? 6);
+      setTabSwitchCount(finalCount);
+      setTerminationTabSwitchCount(finalCount);
       setSessionPhase('terminated');
       room.disconnect();
     }
@@ -608,44 +630,71 @@ function InterviewStage({
   const displayedMicError = micError || lastMicrophoneError?.message || null;
   const displayedCameraError = cameraError || lastCameraError?.message || null;
 
+  const publishTabSwitchEvent = useCallback(
+    async (event: { event_id: string; occurred_at: string }) => {
+      if (connectionState !== ConnectionState.Connected) return;
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: TAB_SWITCH_EVENT, ...event }),
+      );
+      try {
+        await localParticipant.publishData(payload, {
+          reliable: true,
+          topic: INTERVIEW_PROCTORING_TOPIC,
+        });
+      } catch (err) {
+        console.warn('Unable to report interview tab switch', err);
+      }
+    },
+    [connectionState, localParticipant],
+  );
+
+  const flushPendingTabSwitches = useCallback(() => {
+    for (const event of pendingTabSwitchesRef.current.values()) {
+      void publishTabSwitchEvent(event);
+    }
+  }, [publishTabSwitchEvent]);
+
   useEffect(() => {
-    if (
-      connectionState !== ConnectionState.Connected ||
-      !agentIsReady ||
-      sessionPhase !== 'active'
-    ) {
+    if (sessionPhase !== 'active') {
       return;
     }
 
     const reportTabSwitch = () => {
+      const previousVisibility = lastVisibilityStateRef.current;
+      lastVisibilityStateRef.current = document.visibilityState;
       if (
         document.visibilityState !== 'hidden' ||
+        previousVisibility === 'hidden' ||
         closingSignalReceivedRef.current ||
         terminationSignalReceivedRef.current
       ) {
         return;
       }
 
-      const payload = new TextEncoder().encode(
-        JSON.stringify({
-          type: TAB_SWITCH_EVENT,
-          event_id: window.crypto.randomUUID(),
-          occurred_at: new Date().toISOString(),
-        }),
-      );
-      void localParticipant
-        .publishData(payload, {
-          reliable: true,
-          topic: INTERVIEW_PROCTORING_TOPIC,
-        })
-        .catch((err) => {
-          console.warn('Unable to report interview tab switch', err);
-        });
+      const event = {
+        event_id: window.crypto.randomUUID(),
+        occurred_at: new Date().toISOString(),
+      };
+      pendingTabSwitchesRef.current.set(event.event_id, event);
+      setTabSwitchCount((current) => current + 1);
+      void publishTabSwitchEvent(event);
     };
 
     document.addEventListener('visibilitychange', reportTabSwitch);
     return () => document.removeEventListener('visibilitychange', reportTabSwitch);
-  }, [agentIsReady, connectionState, localParticipant, sessionPhase]);
+  }, [publishTabSwitchEvent, sessionPhase]);
+
+  useEffect(() => {
+    if (
+      connectionState !== ConnectionState.Connected ||
+      sessionPhase !== 'active'
+    ) {
+      return;
+    }
+    flushPendingTabSwitches();
+    const retryTimer = window.setInterval(flushPendingTabSwitches, 2000);
+    return () => window.clearInterval(retryTimer);
+  }, [connectionState, flushPendingTabSwitches, sessionPhase]);
 
   const readinessText = (() => {
     if (connectionState === ConnectionState.Connecting) return 'Connecting to LiveKit';
@@ -769,6 +818,19 @@ function InterviewStage({
             />
           )}
           <StatusPill status={statusStr} isBotSpeaking={botIsSpeaking} />
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1.5 text-[10px] font-black sm:gap-1.5 sm:px-3 ${
+              tabSwitchCount > 0
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-slate-200 bg-white text-slate-600'
+            }`}
+            title="Tab switches recorded. More than 5 switches will end the interview."
+            aria-label={`${tabSwitchCount} tab switches recorded; more than 5 ends the interview`}
+          >
+            <ShieldAlert className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Tabs</span>
+            {tabSwitchCount}/5
+          </span>
           {isRecording && (
             <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700 sm:inline-flex">
               <AudioLines className="h-3.5 w-3.5" />

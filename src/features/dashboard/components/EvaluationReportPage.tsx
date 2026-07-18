@@ -14,7 +14,6 @@ import {
   FileCheck2,
   ListChecks,
   Loader2,
-  Mail,
   MessageSquareText,
   Printer,
   Scale,
@@ -22,7 +21,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  Target,
   User,
   UserCheck,
   UserRound,
@@ -51,7 +49,6 @@ import {
   candidateInitials,
   cleanRecruiterNarrative,
   decisionMeta,
-  formatDateTime,
   formatLabel,
   recommendationMeta,
   scoreLabel,
@@ -212,48 +209,37 @@ export const EvaluationReportPage: React.FC = () => {
 
   return (
     <>
-      <div className="ibot-scrollbar h-full min-h-0 overflow-y-auto overflow-x-hidden animate-fadeIn print:hidden lg:overflow-hidden">
-        <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-col gap-3">
+      <div className="ibot-scrollbar h-full min-h-0 min-w-0 overflow-y-auto overflow-x-hidden animate-fadeIn print:hidden lg:overflow-hidden">
+        <div className="mx-auto flex h-full min-h-0 min-w-0 w-full max-w-[1400px] flex-col gap-3">
 
           {/* ── Top Nav Bar ─────────────────────────────────────────── */}
-          <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-            <button type="button" onClick={() => navigate('/evaluations')} className="inline-flex items-center gap-2 text-xs font-black text-slate-600 transition-colors hover:text-brand-hover">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Evaluations
-            </button>
-            <div className="flex min-w-0 items-center gap-2">
-              {isFetching && <Loader2 className="h-4 w-4 animate-spin text-brand-accent" />}
-              <span className="hidden text-[11px] font-bold text-slate-500 sm:inline">
-                Generated {formatDateTime(evaluation.generated_at)}
-              </span>
-              <button
-                type="button"
-                onClick={handlePrintReport}
-                disabled={isTranscriptLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-charcoal px-3.5 py-2.5 text-xs font-black text-white shadow-sm transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:opacity-55"
-                title={
-                  isTranscriptLoading
-                    ? 'Preparing the complete report'
-                    : 'Print or save the complete evaluation report as PDF'
-                }
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Print report
-              </button>
-            </div>
-          </header>
-
           {/* ── Candidate Hero Card ─────────────────────────────────── */}
           <section className="ibot-section-surface shrink-0 overflow-hidden print:shadow-none">
-            <div className="h-2 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
-            <div className="p-4 sm:px-5 sm:py-4">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-accent to-brand-hover font-display text-[16px] font-black text-white shadow-lg shadow-black/15">
-                    {candidateInitials(candidateName)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap gap-2">
+            <div className="h-1.5 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
+            <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/evaluations')}
+                  className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-600 transition-all hover:border-brand-accent hover:bg-brand-soft hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back
+                </button>
+                <span className="hidden h-7 w-px bg-slate-200 sm:block" aria-hidden="true" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-accent to-brand-hover font-display text-sm font-black text-white shadow-md shadow-black/10">
+                  {candidateInitials(candidateName)}
+                </div>
+                <div className="min-w-[160px] flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <h1
+                      className="min-w-0 truncate font-display text-lg font-black tracking-tight text-slate-950 sm:text-xl"
+                      title={candidateName}
+                    >
+                      {candidateName}
+                    </h1>
+                    {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-accent" />}
+                    <div className="flex flex-wrap gap-1.5">
                       <button
                         type="button"
                         onClick={() => navigateToTab('overview')}
@@ -262,7 +248,14 @@ export const EvaluationReportPage: React.FC = () => {
                       >
                         <StatusPill {...recommendation} />
                       </button>
-                      <StatusPill {...decision} />
+                      <button
+                        type="button"
+                        onClick={() => navigateToTab('overview')}
+                        className="rounded-full transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2"
+                        title="Open decision overview"
+                      >
+                        <StatusPill {...decision} />
+                      </button>
                       {evaluation.violation_summary?.has_violation && (
                         <button
                           type="button"
@@ -278,64 +271,50 @@ export const EvaluationReportPage: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    <h1 className="mt-2 font-display text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{candidateName}</h1>
-                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-500">
-                      {evaluation.role_name && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Target className="h-3.5 w-3.5 text-slate-400" />
-                          {evaluation.role_name}
-                        </span>
-                      )}
-                      {evaluation.assessment_title && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Sparkles className="h-3.5 w-3.5 text-slate-400" />
-                          {evaluation.assessment_title}
-                        </span>
-                      )}
-                      {evaluation.candidate_email && (
-                        <a
-                          href={`mailto:${evaluation.candidate_email}`}
-                          className="inline-flex min-w-0 items-center gap-1.5 break-all transition-colors hover:text-brand-hover"
-                        >
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          {evaluation.candidate_email}
-                        </a>
-                      )}
-                    </div>
-                    {evaluation.recruiter_feedback && (
-                      <p className="mt-1.5 line-clamp-1 text-[10px] font-semibold text-brand-hover">
-                        Recruiter note: {evaluation.recruiter_feedback}
-                      </p>
-                    )}
                   </div>
                 </div>
+              </div>
 
-                <div className="flex w-full shrink-0 flex-wrap gap-2 print:hidden xl:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'APPROVED')}
-                    disabled={isDecisionFinalized(evaluation.recruiter_decision)}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
-                  >
-                    <UserCheck className="h-4 w-4" />
-                    Hire
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'REJECTED')}
-                    disabled={isDecisionFinalized(evaluation.recruiter_decision)}
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
-                  >
-                    <UserX className="h-4 w-4" />
-                    Reject
-                  </button>
-                </div>
+              <div className="grid w-full shrink-0 grid-cols-3 gap-2 print:hidden lg:w-auto">
+                <button
+                  type="button"
+                  onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'APPROVED')}
+                  disabled={isDecisionFinalized(evaluation.recruiter_decision)}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-[11px] font-black text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Hire
+                </button>
+                <button
+                  type="button"
+                  onClick={() => requestDecision(evaluation.candidate_assessment_id, candidateName, evaluation.recruiter_decision || 'PENDING', 'REJECTED')}
+                  disabled={isDecisionFinalized(evaluation.recruiter_decision)}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-[11px] font-black text-rose-700 transition-all hover:bg-rose-600 hover:text-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintReport}
+                  disabled={isTranscriptLoading}
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand-charcoal px-3 text-[11px] font-black text-white shadow-sm transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:opacity-55"
+                  title={
+                    isTranscriptLoading
+                      ? 'Preparing the complete report'
+                      : 'Print or save the complete evaluation report as PDF'
+                  }
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="sm:hidden">Print</span>
+                  <span className="hidden sm:inline">Print report</span>
+                </button>
               </div>
             </div>
 
             {/* Tab navigation */}
             <nav
-              className="grid grid-cols-2 gap-1 border-t border-slate-200 bg-slate-50/80 px-3 py-2 sm:grid-cols-3 md:grid-cols-6"
+              className="grid grid-cols-2 gap-1 border-t border-slate-200 bg-slate-50/80 px-2.5 py-1.5 sm:grid-cols-3 md:grid-cols-6"
               role="tablist"
               aria-label="Evaluation report sections"
             >
@@ -382,7 +361,7 @@ export const EvaluationReportPage: React.FC = () => {
             id="evaluation-tab-content"
             role="tabpanel"
             tabIndex={-1}
-            className="ibot-scrollbar min-h-[320px] flex-1 overflow-y-auto pb-3 pr-1 outline-none lg:min-h-0"
+            className="ibot-scrollbar min-h-[320px] min-w-0 flex-1 overscroll-contain overflow-y-auto overflow-x-hidden pb-2 pr-1 outline-none lg:min-h-0"
           >
           {activeTab === 'overview' && (
             <OverviewTab
@@ -392,7 +371,10 @@ export const EvaluationReportPage: React.FC = () => {
               recommendationReasoning={recommendationReasoning}
               recommendation={recommendation}
               onDetailModal={setDetailModal}
-              onNavigate={navigateToTab}
+              onNavigate={(tab) => {
+                setDetailModal(null);
+                navigateToTab(tab);
+              }}
             />
           )}
           {activeTab === 'skills' && (
@@ -435,25 +417,25 @@ export const EvaluationReportPage: React.FC = () => {
           className="max-w-3xl"
         >
           <div className="h-1.5 shrink-0 bg-gradient-to-r from-brand-charcoal via-brand-accent to-brand-hover" />
-          <header className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-gradient-to-r from-white to-brand-soft/60 px-5 py-4">
-            <div>
+          <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white to-brand-soft/60 px-4 py-4 sm:px-5">
+            <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-hover">
                 Evaluation detail
               </p>
-              <h2 id="evaluation-detail-title" className="mt-0.5 text-[16px] font-black text-slate-950">
+              <h2 id="evaluation-detail-title" className="mt-0.5 break-words text-[16px] font-black text-slate-950">
                 {detailModal.title}
               </h2>
             </div>
             <button
               type="button"
               onClick={() => setDetailModal(null)}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-700"
               aria-label="Close evaluation detail"
             >
               <X className="h-4 w-4" />
             </button>
           </header>
-          <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+          <div className="ibot-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
             {detailModal.content}
           </div>
         </CenteredDialog>
@@ -494,6 +476,71 @@ export const EvaluationReportPage: React.FC = () => {
 };
 
 /* ── Overview Tab ──────────────────────────────────────────────────────── */
+const competencyRadarPoints = (evaluation: InterviewEvaluationResponse) => [
+  {
+    label: 'Technical',
+    detailLabel: 'Technical skills',
+    score: evaluation.overall_technical_skill_score,
+  },
+  {
+    label: 'Behaviour',
+    detailLabel: 'Behaviour & culture',
+    score: evaluation.behavioural_cultural_score,
+  },
+  {
+    label: 'Communication',
+    detailLabel: 'Communication',
+    score: evaluation.communication_score,
+  },
+  {
+    label: 'Introduction',
+    detailLabel: 'Self introduction',
+    score: evaluation.intro_section_score,
+  },
+];
+
+const OverviewScoreMetrics: React.FC<{
+  evaluation: InterviewEvaluationResponse;
+  onNavigate: (tab: ReportTab) => void;
+}> = ({ evaluation, onNavigate }) => (
+  <div className="grid gap-3 sm:grid-cols-2">
+    {[
+      { label: 'Technical', score: evaluation.overall_technical_skill_score, icon: <BrainCircuit className="h-4 w-4" />, tab: 'skills' as const },
+      { label: 'Behaviour & culture', score: evaluation.behavioural_cultural_score, icon: <Users className="h-4 w-4" />, tab: 'dimensions' as const },
+      { label: 'Communication', score: evaluation.communication_score, icon: <MessageSquareText className="h-4 w-4" />, tab: 'dimensions' as const },
+      { label: 'Self introduction', score: evaluation.intro_section_score, icon: <UserRound className="h-4 w-4" />, tab: 'dimensions' as const },
+    ].map((metric) => (
+      <button
+        key={metric.label}
+        type="button"
+        onClick={() => onNavigate(metric.tab)}
+        className="group min-w-0 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+              {metric.label}
+            </p>
+            <p className={`mt-1.5 font-display text-2xl font-black ${scoreTextClass(metric.score)}`}>
+              {metric.score.toFixed(1)}
+              <span className="ml-1 text-[10px] text-slate-400">/10</span>
+            </p>
+            <p className="mt-1 text-[10px] font-bold text-slate-500">{scoreLabel(metric.score)}</p>
+          </div>
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 ${scoreTextClass(metric.score)}`}>
+            {metric.icon}
+          </div>
+        </div>
+        <div className="mt-3"><ScoreBar score={metric.score} compact /></div>
+        <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
+          Open section
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+        </p>
+      </button>
+    ))}
+  </div>
+);
+
 const OverviewTab: React.FC<{
   evaluation: InterviewEvaluationResponse;
   executiveSummary: string;
@@ -512,8 +559,8 @@ const OverviewTab: React.FC<{
   onNavigate,
 }) => (
   <div className="space-y-4 animate-fadeIn">
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
-      <div className="space-y-4">
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)]">
+      <div className="min-w-0 space-y-4">
         <ClickableCard
           title="Executive summary"
           subtitle="Holistic evidence-based assessment"
@@ -583,13 +630,14 @@ const OverviewTab: React.FC<{
             />
           </div>
         </div>
+        <OverviewScoreMetrics evaluation={evaluation} onNavigate={onNavigate} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
         <button
           type="button"
           onClick={() => onNavigate('questions')}
-          className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
+          className="group min-w-0 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="grid place-items-center">
             <ScoreRing score={evaluation.overall_score} size={164} />
@@ -611,61 +659,82 @@ const OverviewTab: React.FC<{
 
         <button
           type="button"
-          onClick={() => onNavigate('dimensions')}
-          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
+          onClick={() =>
+            onDetailModal({
+              title: 'Competency radar',
+              content: (
+                <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1.1fr)_minmax(240px,0.9fr)]">
+                  <div className="min-w-0 rounded-2xl border border-default bg-gradient-to-br from-brand-soft/55 via-white to-slate-50 p-4">
+                    <div className="mx-auto max-w-md">
+                      <CompetencyRadar points={competencyRadarPoints(evaluation)} />
+                    </div>
+                    <p className="mt-1 text-center text-[10px] font-semibold leading-5 text-slate-500">
+                      Points nearer the outer edge indicate stronger demonstrated performance in that dimension.
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-hover">
+                      Dimension scores
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
+                      Select any dimension to open its full narrative and supporting evidence.
+                    </p>
+                    <div className="mt-3 grid gap-2">
+                      {competencyRadarPoints(evaluation).map((point) => (
+                        <button
+                          key={point.label}
+                          type="button"
+                          onClick={() => onNavigate('dimensions')}
+                          className="group rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft/30 hover:shadow-sm"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-[11px] font-black text-slate-800 group-hover:text-brand-hover">
+                                {point.detailLabel}
+                              </p>
+                              <p className="mt-0.5 text-[9px] font-bold text-slate-400">
+                                {scoreLabel(point.score)}
+                              </p>
+                            </div>
+                            <p className={`shrink-0 font-display text-lg font-black ${scoreTextClass(point.score)}`}>
+                              {point.score.toFixed(1)}
+                              <span className="ml-0.5 text-[9px] text-slate-400">/10</span>
+                            </p>
+                          </div>
+                          <div className="mt-2">
+                            <ScoreBar score={point.score} compact />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('dimensions')}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-charcoal px-4 py-2.5 text-[10px] font-black text-white transition-colors hover:bg-brand-hover"
+                    >
+                      Open dimension evidence
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ),
+            })
+          }
+          className="group min-w-0 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
         >
           <div className="px-1">
             <p className="text-[11px] font-black text-slate-900">Competency radar</p>
             <p className="mt-1 text-[10px] font-semibold text-slate-400">Balance across scoring dimensions</p>
           </div>
-          <CompetencyRadar
-            points={[
-              { label: 'Technical', score: evaluation.overall_technical_skill_score },
-              { label: 'Behaviour', score: evaluation.behavioural_cultural_score },
-              { label: 'Communication', score: evaluation.communication_score },
-              { label: 'Introduction', score: evaluation.intro_section_score },
-            ]}
-          />
+          <CompetencyRadar points={competencyRadarPoints(evaluation)} />
           <p className="mt-1 inline-flex items-center gap-1 px-1 text-[10px] font-black text-brand-hover">
-            Explore dimensions
+            Open radar details
             <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
           </p>
         </button>
       </div>
     </div>
 
-    {/* Score metrics */}
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {[
-        { label: 'Technical', score: evaluation.overall_technical_skill_score, icon: <BrainCircuit className="h-4 w-4" />, tab: 'skills' as const },
-        { label: 'Behaviour & culture', score: evaluation.behavioural_cultural_score, icon: <Users className="h-4 w-4" />, tab: 'dimensions' as const },
-        { label: 'Communication', score: evaluation.communication_score, icon: <MessageSquareText className="h-4 w-4" />, tab: 'dimensions' as const },
-        { label: 'Self introduction', score: evaluation.intro_section_score, icon: <UserRound className="h-4 w-4" />, tab: 'dimensions' as const },
-      ].map((m) => (
-        <button
-          key={m.label}
-          type="button"
-          onClick={() => onNavigate(m.tab)}
-          className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">{m.label}</p>
-              <p className={`mt-1.5 font-display text-2xl font-black ${scoreTextClass(m.score)}`}>
-                {m.score.toFixed(1)}<span className="ml-1 text-[10px] text-slate-400">/10</span>
-              </p>
-              <p className="mt-1 text-[10px] font-bold text-slate-500">{scoreLabel(m.score)}</p>
-            </div>
-            <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 ${scoreTextClass(m.score)}`}>{m.icon}</div>
-          </div>
-          <div className="mt-3"><ScoreBar score={m.score} compact /></div>
-          <p className="mt-3 inline-flex items-center gap-1 text-[10px] font-black text-brand-hover">
-            Open section
-            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-          </p>
-        </button>
-      ))}
-    </div>
   </div>
 );
 

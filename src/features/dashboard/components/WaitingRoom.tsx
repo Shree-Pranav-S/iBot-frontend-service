@@ -679,7 +679,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">{overviewItems.map((item) => <div key={item} className="flex gap-2 rounded-xl bg-slate-50 p-3"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" /><p className="text-[11px] font-semibold leading-relaxed text-slate-600">{item}</p></div>)}</div>
                 <button onClick={() => setInstructionsOpen(true)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-brand-hover hover:text-brand-charcoal"><Info className="h-3.5 w-3.5" />Read interview rules and privacy details</button>
               </div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:max-w-sm"><div className="flex gap-2"><Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><p className="text-[11px] font-semibold leading-relaxed text-amber-900">This is a proctored assessment. Browser focus, media input, and session continuity may be monitored.</p></div></div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:max-w-sm"><div className="flex gap-2"><Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><p className="text-[11px] font-semibold leading-relaxed text-amber-900">Don’t switch between tabs. This is a proctored environment, and every tab switch is recorded as a violation.</p></div></div>
             </div>
           </section>
 

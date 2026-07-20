@@ -42,7 +42,12 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import type { AssessmentStatus, AssessmentSummaryResponse } from '../../../types/assessment.types';
-import { buildAssessmentInstanceNumbers } from '../utils/assessmentDisplay';
+import {
+  buildAssessmentInstanceNumbers,
+  formatAssessmentCreatedDate,
+  formatAssessmentReference,
+  nextAssessmentRunNumber,
+} from '../utils/assessmentDisplay';
 import {
   CARD_MIN_W,
   SIDEBAR_CARD_MIN_H,
@@ -239,6 +244,7 @@ export const AssessmentsPage: React.FC = () => {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
+  const [showCandidatesModal, setShowCandidatesModal] = useState(false);
 
   const browseGridRef = useRef<HTMLDivElement>(null);
   const sidebarGridRef = useRef<HTMLDivElement>(null);
@@ -359,6 +365,10 @@ export const AssessmentsPage: React.FC = () => {
   const [createRoleName, setCreateRoleName] = useState('');
   const [createDuration, setCreateDuration] = useState(30);
   const [createError, setCreateError] = useState<string | null>(null);
+  const duplicateRunNumber = useMemo(
+    () => nextAssessmentRunNumber(assessments, createTitle, createRoleName),
+    [assessments, createRoleName, createTitle],
+  );
 
   // Get date defaults
   const getDates = () => {
@@ -494,18 +504,9 @@ export const AssessmentsPage: React.FC = () => {
   const renderInstanceBadge = (id: string) => {
     const num = instanceNumbers.get(id);
     if (!num) return null;
-    const assessment = assessments.find((a) => a.id === id);
-    const dateStr = assessment
-      ? new Date(assessment.created_at).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })
-      : '';
-    const badgeText = dateStr ? `#${num} - ${dateStr}` : `#${num}`;
     return (
-      <span className="inline-flex items-center rounded-full border border-[#D8C9B5] bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold text-brand-hover">
-        {badgeText}
+      <span className="inline-flex shrink-0 items-center rounded-full border border-[#D8C9B5] bg-brand-soft px-2 py-0.5 text-[9px] font-black text-brand-hover">
+        Run {num}
       </span>
     );
   };
@@ -544,6 +545,12 @@ export const AssessmentsPage: React.FC = () => {
               </div>
               <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">
                 {assessment.role_name}
+              </p>
+              <p
+                className="mt-0.5 truncate text-[8px] font-bold text-slate-400"
+                title={`${formatAssessmentReference(assessment.id)} · ${formatAssessmentCreatedDate(assessment.created_at)}`}
+              >
+                {formatAssessmentReference(assessment.id)} · {formatAssessmentCreatedDate(assessment.created_at)}
               </p>
             </div>
             <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wide ${status.classes}`}>
@@ -587,11 +594,11 @@ export const AssessmentsPage: React.FC = () => {
         type="button"
         onClick={() => handleSelectAssessment(assessment.id)}
         className={`ibot-assessment-card group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-sm transition-colors duration-200 ${palette.border} ${
-          stretch ? 'flex h-full min-h-[320px] flex-col' : 'min-h-[210px]'
+          stretch ? 'flex h-full min-h-0 flex-col' : 'min-h-[210px]'
         }`}
       >
         <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${palette.line}`} />
-        <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-5 pb-5 pt-5">
+        <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-4 pb-4 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-lg transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-110 ${palette.icon}`}>
@@ -607,6 +614,12 @@ export const AssessmentsPage: React.FC = () => {
                 <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
                   Assessment campaign
                 </p>
+                <p
+                  className="mt-1 truncate text-[8px] font-bold tracking-normal text-slate-400"
+                  title={`${formatAssessmentReference(assessment.id)} · ${formatAssessmentCreatedDate(assessment.created_at)}`}
+                >
+                  {formatAssessmentReference(assessment.id)} · {formatAssessmentCreatedDate(assessment.created_at)}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -620,7 +633,7 @@ export const AssessmentsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className={`mt-4 flex items-center justify-between gap-3 rounded-2xl border border-[#E7DCCD] bg-gradient-to-r px-4 py-3.5 ${palette.wash}`}>
+          <div className={`mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#E7DCCD] bg-gradient-to-r px-3.5 py-2.5 ${palette.wash}`}>
             <div className="min-w-0">
               <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">Role</p>
               <p className="mt-1 truncate text-sm font-black text-slate-900">{assessment.role_name}</p>
@@ -630,7 +643,7 @@ export const AssessmentsPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="mt-3 grid min-h-[96px] flex-1 grid-cols-3 gap-2.5">
+          <div className="mt-2.5 grid min-h-[82px] flex-1 grid-cols-3 gap-2.5">
             {[
               {
                 label: 'Duration',
@@ -655,12 +668,12 @@ export const AssessmentsPage: React.FC = () => {
               return (
                 <div
                   key={item.label}
-                  className={`flex min-w-0 flex-col justify-center rounded-xl border px-3 py-3 ${item.tone}`}
+                  className={`flex min-w-0 flex-col justify-center rounded-xl border px-3 py-2 ${item.tone}`}
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 shadow-sm">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/90 shadow-sm">
                     <Icon className="h-3.5 w-3.5" />
                   </span>
-                  <p className="mt-2 text-[8px] font-black uppercase tracking-[0.1em] text-slate-400">
+                  <p className="mt-1.5 text-[8px] font-black uppercase tracking-[0.1em] text-slate-400">
                     {item.label}
                   </p>
                   <p className="mt-1 truncate text-[10px] font-black text-slate-800" title={item.value}>
@@ -671,7 +684,7 @@ export const AssessmentsPage: React.FC = () => {
             })}
           </div>
 
-          <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2.5 text-[9px] font-black text-slate-500 transition-colors group-hover:border-brand-accent/40 group-hover:bg-brand-soft/60 group-hover:text-brand-hover">
+          <div className="mt-2.5 flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3.5 py-2 text-[9px] font-black text-slate-500 transition-colors group-hover:border-brand-accent/40 group-hover:bg-brand-soft/60 group-hover:text-brand-hover">
             <span>Open assessment</span>
             <ArrowUpRight className={`h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${palette.meta}`} />
           </div>
@@ -856,7 +869,7 @@ export const AssessmentsPage: React.FC = () => {
                   className="grid min-h-0 flex-1 gap-3 overflow-hidden p-4"
                   style={{
                     gridTemplateColumns: `repeat(${browseCapacity.cols}, minmax(0, 1fr))`,
-                    gridTemplateRows: `repeat(${browseRowCount}, minmax(${BROWSE_CARD_MIN_H}px, 1fr))`,
+                    gridTemplateRows: `repeat(${browseRowCount}, minmax(0, 1fr))`,
                   }}
                 >
                   {visibleCampaigns.map((assessment) =>
@@ -1036,6 +1049,9 @@ export const AssessmentsPage: React.FC = () => {
                     </h2>
                     {renderInstanceBadge(selectedAssessment.id)}
                   </div>
+                  <p className="mt-1 text-[9px] font-bold text-slate-400">
+                    {formatAssessmentReference(selectedAssessment.id)} · {formatAssessmentCreatedDate(selectedAssessment.created_at)}
+                  </p>
 
                   <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
                     {[
@@ -1342,9 +1358,19 @@ export const AssessmentsPage: React.FC = () => {
                             <p className="mt-0.5 text-[9px] font-bold text-cyan-600">Progress for this assessment</p>
                           </div>
                         </div>
-                        <span className="rounded-full border border-cyan-200 bg-white px-2.5 py-1 text-[9px] font-black text-cyan-700">
-                          {totalCandidates} total
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full border border-cyan-200 bg-white px-2.5 py-1 text-[9px] font-black text-cyan-700">
+                            {totalCandidates} total
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowCandidatesModal(true)}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-cyan-200 bg-white px-3 py-2 text-[9px] font-black text-cyan-700 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                          >
+                            Open expanded view
+                            <ArrowUpRight className="h-3 w-3" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -1594,6 +1620,152 @@ export const AssessmentsPage: React.FC = () => {
         </div>
       )}
 
+      {showCandidatesModal && selectedAssessment && (
+        <div className="ibot-overlay">
+          <div className="ibot-modal max-h-[88vh] max-w-5xl animate-scaleIn">
+            <div className="h-1.5 shrink-0 bg-gradient-to-r from-cyan-600 via-sky-500 to-brand-accent" />
+            <div className="flex shrink-0 items-center justify-between border-b border-cyan-100 bg-gradient-to-r from-cyan-50 via-white to-[#FCFAF6] px-6 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-md shadow-cyan-200">
+                  <Users className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="font-display text-[16px] font-black text-slate-950">
+                    Assessment candidates
+                  </h2>
+                  <p className="mt-0.5 truncate text-[10px] font-semibold text-slate-500">
+                    {selectedAssessment.title} · {selectedAssessment.role_name} · {totalCandidates} candidates
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCandidatesModal(false)}
+                className="rounded-lg border border-slate-200 p-1.5 text-slate-400 transition-all hover:scale-105 hover:bg-slate-50 hover:text-slate-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                aria-label="Close expanded candidate view"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-cyan-100 bg-white px-6 py-3 sm:grid-cols-4">
+              {[
+                { label: 'Total', value: totalCandidates, tone: 'bg-cyan-50 text-cyan-700' },
+                { label: 'Screened', value: completedCandidates, tone: 'bg-emerald-50 text-emerald-700' },
+                { label: 'In progress', value: inProgressCandidates, tone: 'bg-blue-50 text-blue-700' },
+                { label: 'Invited', value: invitedCandidates, tone: 'bg-amber-50 text-amber-700' },
+              ].map((metric) => (
+                <div key={metric.label} className={`rounded-xl px-3 py-2.5 ${metric.tone}`}>
+                  <p className="text-[8px] font-black uppercase tracking-[0.11em] opacity-70">{metric.label}</p>
+                  <p className="mt-0.5 font-display text-lg font-black leading-none">{metric.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="ibot-scrollbar min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-white to-cyan-50/30 p-4 sm:p-5">
+              {loadingCandidates ? (
+                <div className="flex min-h-56 items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-cyan-600" />
+                </div>
+              ) : assessmentCandidates.length === 0 ? (
+                <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed border-cyan-200 bg-white p-8 text-center">
+                  <FileSpreadsheet className="h-8 w-8 text-slate-300" />
+                  <p className="mt-3 text-xs font-black text-slate-700">No candidates yet</p>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                    Add candidates to this assessment to see them here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="hidden grid-cols-[minmax(0,1fr)_150px_130px_132px] gap-3 px-4 pb-1 text-[9px] font-black uppercase tracking-[0.11em] text-slate-400 md:grid">
+                    <span>Candidate</span>
+                    <span>Status</span>
+                    <span>Decision</span>
+                    <span className="text-right">Action</span>
+                  </div>
+                  {assessmentCandidates.map((candidate) => {
+                    const reportAvailable = candidate.status === 'EVALUATED';
+                    const destination = reportAvailable
+                      ? `/candidates/${candidate.id}/report`
+                      : `/candidates?assessment=${encodeURIComponent(selectedAssessment.id)}`;
+
+                    return (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        onClick={() => {
+                          setShowCandidatesModal(false);
+                          navigate(destination);
+                        }}
+                        className="group grid w-full grid-cols-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 md:grid-cols-[minmax(0,1fr)_150px_130px_132px]"
+                        aria-label={`${reportAvailable ? 'Open evaluation report for' : 'Open candidate pipeline for'} ${candidate.full_name}`}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 font-display text-[11px] font-black text-cyan-700 transition-transform group-hover:scale-105">
+                            {candidate.full_name.charAt(0).toUpperCase()}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-black text-slate-900 transition-colors group-hover:text-cyan-800">
+                              {candidate.full_name}
+                            </span>
+                            <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] font-semibold text-slate-500">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{candidate.email}</span>
+                            </span>
+                          </span>
+                        </span>
+
+                        <span className={`w-fit rounded-full border px-2 py-1 text-[9px] font-black ${
+                          candidate.status === 'EVALUATED'
+                            ? 'border-teal-200 bg-teal-50 text-teal-700'
+                            : candidate.status === 'COMPLETED'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : candidate.status === 'IN_PROGRESS'
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                        }`}>
+                          {candidate.status.replace(/_/g, ' ')}
+                        </span>
+
+                        <span className={`w-fit rounded-full border px-2 py-1 text-[9px] font-black ${
+                          candidate.recruiter_decision === 'APPROVED'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : candidate.recruiter_decision === 'REJECTED'
+                              ? 'border-rose-200 bg-rose-50 text-rose-700'
+                              : 'border-amber-200 bg-amber-50 text-amber-700'
+                        }`}>
+                          {candidate.recruiter_decision === 'APPROVED'
+                            ? 'HIRED'
+                            : candidate.recruiter_decision || 'PENDING'}
+                        </span>
+
+                        <span className="inline-flex items-center justify-end gap-1.5 text-[10px] font-black text-cyan-700">
+                          {reportAvailable ? 'Open report' : 'Open pipeline'}
+                          <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/80 px-5 py-3">
+              <p className="text-[9px] font-semibold text-slate-400">
+                Select a candidate to open their report or assessment pipeline.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCandidatesModal(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:scale-[1.03] hover:bg-slate-50 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAnalysisModal && selectedAssessment && (
         <div className="ibot-overlay">
           <div className="ibot-modal max-w-4xl max-h-[88vh] relative flex flex-col bg-white">
@@ -1791,6 +1963,17 @@ export const AssessmentsPage: React.FC = () => {
                     />
                   </div>
                 </div>
+                {duplicateRunNumber && (
+                  <div
+                    className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[10px] font-semibold leading-5 text-amber-900"
+                    role="status"
+                  >
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+                    <p>
+                      A campaign with this title and role already exists. This one will be created as <span className="font-black">Run {duplicateRunNumber}</span> and receive its own assessment reference.
+                    </p>
+                  </div>
+                )}
                 </section>
 
                 <section className="rounded-2xl border border-default bg-white p-4 shadow-sm">

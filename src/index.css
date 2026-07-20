@@ -581,12 +581,14 @@
   }
 
   @keyframes dashboard-pipeline-grow {
-    from { transform: scaleX(0); }
-    to { transform: scaleX(1); }
-  }
-
-  @keyframes dashboard-gauge-draw {
-    from { stroke-dashoffset: 195; }
+    from {
+      opacity: 0.4;
+      transform: scaleX(0.08);
+    }
+    to {
+      opacity: 1;
+      transform: scaleX(1);
+    }
   }
 
   @keyframes dashboard-live-pulse {
@@ -600,109 +602,148 @@
     }
   }
 
-  .dashboard-enter {
+  .dashboard-enter,
+  .dashboard-card {
     animation: dashboard-card-in 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .dashboard-card {
-    animation: dashboard-card-in 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
     transition:
       border-color 180ms ease,
-      box-shadow 220ms ease,
-      transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow 220ms ease;
   }
 
-  .dashboard-card:hover,
-  article.dashboard-card:hover,
-  section.dashboard-card:hover {
-    border-color: var(--brand-accent);
-    box-shadow: 0 12px 28px rgba(36, 33, 29, 0.09);
-    transform: translateY(-2px);
+  .dashboard-layout,
+  .dashboard-operations-grid,
+  .dashboard-action-rail {
+    display: grid;
+    gap: 0.625rem;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .dashboard-card:hover,
-    article.dashboard-card:hover,
-    section.dashboard-card:hover {
-      transform: none;
-    }
+  .dashboard-layout {
+    min-height: 100%;
+    grid-template-rows: auto auto;
   }
 
-  .dashboard-surface-hero {
-    border-radius: 15px;
-    border: 1px solid rgba(185, 131, 63, 0.28);
+  .dashboard-operations-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-action-rail {
+    grid-template-rows: auto auto;
+  }
+
+  .dashboard-command-deck {
+    min-height: 138px;
+    border: 1px solid rgba(185, 131, 63, 0.45);
+    border-radius: 18px;
     background:
-      radial-gradient(circle at 88% 18%, rgba(185, 131, 63, 0.14), transparent 32%),
-      linear-gradient(135deg, #FFFFFF 0%, #FCFAF6 48%, #F4E8D6 100%);
+      radial-gradient(circle at 81% 12%, rgba(185, 131, 63, 0.28), transparent 31%),
+      radial-gradient(circle at 16% 120%, rgba(154, 106, 48, 0.22), transparent 38%),
+      linear-gradient(118deg, #1F1C18 0%, #29241E 48%, #3A2B1C 100%);
     box-shadow:
-      inset 3px 0 0 var(--brand-accent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.92),
-      0 2px 8px rgba(185, 131, 63, 0.08),
-      0 8px 24px rgba(36, 33, 29, 0.06);
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 22px 48px -34px rgba(36, 33, 29, 0.88);
   }
 
-  .dashboard-surface-kpi {
-    border-radius: 15px;
-    border: 1px solid var(--border-default);
-    background:
-      linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 42%, #FFFFFF 100%);
+  .dashboard-command-orbit {
+    position: absolute;
+    right: 28%;
+    top: -118px;
+    width: 270px;
+    height: 270px;
+    border: 1px solid rgba(227, 193, 143, 0.12);
+    border-radius: 9999px;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      0 2px 10px rgba(36, 33, 29, 0.06),
-      0 10px 28px rgba(36, 33, 29, 0.04);
+      0 0 0 48px rgba(227, 193, 143, 0.025),
+      0 0 0 96px rgba(227, 193, 143, 0.018);
+    pointer-events: none;
+  }
+
+  .dashboard-command-grid {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem 1.125rem;
   }
 
   .dashboard-surface-panel {
-    border-radius: 15px;
     border: 1px solid var(--border-default);
+    border-radius: 18px;
     background: #FFFFFF;
     box-shadow:
-      0 1px 3px rgba(36, 33, 29, 0.05),
-      0 10px 28px rgba(36, 33, 29, 0.055);
+      inset 0 1px 0 rgba(255, 255, 255, 0.96),
+      0 2px 8px rgba(36, 33, 29, 0.04),
+      0 18px 42px -32px rgba(36, 33, 29, 0.32);
   }
 
-  .dashboard-panel-candidate {
+  .dashboard-pipeline-panel {
+    min-height: 430px;
     background:
-      radial-gradient(circle at 96% 4%, rgba(185, 131, 63, 0.09), transparent 28%),
+      radial-gradient(circle at 94% 2%, rgba(185, 131, 63, 0.09), transparent 28%),
       linear-gradient(180deg, #FFFFFF 0%, #FCFAF6 100%);
   }
 
-  .dashboard-panel-evaluation {
+  .dashboard-review-panel {
+    min-height: 400px;
     background:
-      radial-gradient(circle at 4% 0%, rgba(185, 131, 63, 0.08), transparent 30%),
+      radial-gradient(circle at 100% 0%, rgba(185, 131, 63, 0.07), transparent 30%),
+      #FFFFFF;
+  }
+
+  .dashboard-review-deck {
+    background:
+      radial-gradient(circle at 8% 0%, rgba(185, 131, 63, 0.09), transparent 34%),
+      linear-gradient(145deg, #F8F5EF 0%, #FCFAF6 52%, #F6F1E9 100%);
+  }
+
+  .dashboard-review-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.96),
+      0 10px 24px -22px rgba(36, 33, 29, 0.5);
+    transition:
+      transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 220ms ease;
+  }
+
+  .dashboard-review-card-priority {
+    background:
+      radial-gradient(circle at 0% 50%, rgba(217, 180, 123, 0.18), transparent 30%),
+      linear-gradient(105deg, #FFF9F0 0%, #FFFFFF 68%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.96),
+      0 14px 28px -24px rgba(138, 90, 36, 0.72);
+  }
+
+  .dashboard-review-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(185, 131, 63, 0.72);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.98),
+      0 18px 32px -24px rgba(36, 33, 29, 0.58);
+  }
+
+  .dashboard-review-score-bar {
+    transition:
+      width 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 180ms ease;
+  }
+
+  .dashboard-review-card:hover .dashboard-review-score-bar {
+    filter: saturate(1.15) brightness(1.04);
+  }
+
+  .dashboard-campaign-panel {
+    min-height: 250px;
+    background:
+      radial-gradient(circle at 0% 100%, rgba(185, 131, 63, 0.08), transparent 34%),
       linear-gradient(180deg, #FFFFFF 0%, #FCFAF6 100%);
   }
 
-  .dashboard-panel-priority {
-    background:
-      radial-gradient(circle at 92% 8%, rgba(245, 158, 11, 0.09), transparent 26%),
-      linear-gradient(180deg, #FFFFFF 0%, #FCFAF6 100%);
-  }
-
-  .dashboard-panel-accent-emerald {
-    border-top: 2px solid var(--brand-accent);
-  }
-
-  .dashboard-panel-accent-indigo {
-    border-top: 2px solid var(--brand-accent);
-  }
-
-  .dashboard-panel-accent-amber {
-    border-top: 2px solid #F59E0B;
-  }
-
-  .dashboard-score-band {
-    background:
-      linear-gradient(180deg, rgba(252, 250, 246, 0.92) 0%, rgba(255, 255, 255, 0.48) 100%);
-  }
-
-  .dashboard-pipeline-bar {
+  .dashboard-pipeline-segment {
     transform-origin: left center;
-    animation: dashboard-pipeline-grow 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .dashboard-gauge-ring {
-    animation: dashboard-gauge-draw 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+    animation: dashboard-pipeline-grow 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .dashboard-live-dot {
@@ -713,17 +754,167 @@
     scrollbar-gutter: stable;
   }
 
-  /* Dashboard fits within one viewport on desktop-sized windows; on short or
-     narrow windows it falls back to scrolling so content is never clipped. */
+  /* Short and narrow windows get one safe page scroller. Standard recruiter
+     desktop viewports keep the command deck and workspace in one screen. */
   .dashboard-viewport {
+    overflow-x: hidden;
     overflow-y: auto;
     scrollbar-gutter: stable;
   }
 
-  @media (min-width: 1024px) and (min-height: 700px) {
+  @media (min-width: 1024px) {
+    .dashboard-command-grid {
+      grid-template-columns: minmax(0, 0.92fr) minmax(430px, 1.08fr);
+      align-items: center;
+      padding: 1rem 1.25rem;
+    }
+
+    .dashboard-operations-grid {
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+      align-items: stretch;
+    }
+
+    .dashboard-action-rail {
+      grid-template-rows: minmax(320px, 1fr) minmax(260px, 0.82fr);
+    }
+
+    .dashboard-pipeline-panel {
+      min-height: 592px;
+    }
+  }
+
+  @media (min-width: 1024px) and (min-height: 600px) {
     .dashboard-viewport {
       overflow: hidden;
       scrollbar-gutter: auto;
+    }
+
+    .dashboard-layout {
+      height: 100%;
+      min-height: 0;
+      grid-template-rows: 96px minmax(0, 1fr);
+    }
+
+    .dashboard-command-grid {
+      padding: 0.5rem 1rem;
+    }
+
+    .dashboard-command-description {
+      display: none;
+    }
+
+    .dashboard-command-deck,
+    .dashboard-pipeline-panel,
+    .dashboard-review-panel,
+    .dashboard-campaign-panel {
+      min-height: 0;
+    }
+
+    .dashboard-operations-grid {
+      min-height: 0;
+      grid-template-columns: minmax(460px, 1.12fr) minmax(380px, 0.88fr);
+      grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    }
+
+    .dashboard-action-rail {
+      display: contents;
+    }
+
+    .dashboard-review-panel {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
+    .dashboard-pipeline-panel {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .dashboard-campaign-panel {
+      grid-column: 2;
+      grid-row: 2;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dashboard-command-signal:hover,
+    .dashboard-pipeline-stage:hover,
+    .dashboard-review-card:hover {
+      transform: none;
+    }
+
+    .dashboard-enter,
+    .dashboard-card,
+    .dashboard-pipeline-segment,
+    .dashboard-live-dot {
+      animation: none;
+    }
+
+    .dashboard-review-card,
+    .dashboard-review-score-bar {
+      transition: none;
+    }
+  }
+
+  /* Evaluation cockpit remains a single-screen workspace on standard desktop
+     viewports, with a height-aware scroll fallback for minimized windows. */
+  .evaluation-viewport {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .evaluation-board {
+    min-height: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .evaluation-board {
+      min-height: 420px;
+    }
+  }
+
+  @media (min-width: 1440px) and (min-height: 800px) {
+    .evaluation-viewport {
+      overflow: hidden;
+      scrollbar-gutter: auto;
+    }
+
+    .evaluation-board {
+      min-height: 0;
+      flex: 1 1 0%;
+    }
+  }
+
+  .evaluation-candidate-card {
+    transition:
+      border-color 180ms ease,
+      box-shadow 220ms ease,
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .evaluation-candidate-card:hover {
+    border-color: rgba(185, 131, 63, 0.58);
+    box-shadow: 0 18px 38px -26px rgba(36, 33, 29, 0.48);
+    transform: translateY(-2px);
+  }
+
+  @keyframes evaluation-bar-grow {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+
+  .evaluation-chart-bar {
+    transform-origin: bottom center;
+    animation: evaluation-bar-grow 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .evaluation-chart-bar {
+      animation: none;
+    }
+
+    .evaluation-candidate-card {
+      transition: none;
     }
   }
 

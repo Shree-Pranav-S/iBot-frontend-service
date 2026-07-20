@@ -35,6 +35,7 @@ import type {
   QuestionEvaluationBreakdown,
   SectionCommunicationBreakdown,
   TranscriptTurn,
+  ViolationCategoryDetail,
 } from '../../../types/candidate.types';
 import {
   CenteredDialog,
@@ -64,6 +65,7 @@ import {
   transcriptFileName,
   transcriptTurnTime,
 } from './evaluationReportUtils';
+import { buildViolationCategoryPresentation } from './violationCategoryUi';
 
 type ReportTab = 'overview' | 'skills' | 'questions' | 'dimensions' | 'integrity' | 'transcript';
 
@@ -1228,6 +1230,24 @@ const IntegrityTab: React.FC<{
         <SeverityTile label="Critical" value={summary.severity_counts.critical} tone={hasCritical ? 'rose' : 'slate'} />
       </div>
       <p className="mt-4 text-[11px] font-medium leading-6 text-slate-600">{summary.summary}</p>
+      {(summary.category_details?.length ?? 0) > 0 && (
+        <div className="mt-4">
+          <div className="mb-2">
+            <p className="text-[11px] font-black text-slate-900">Recorded proctoring details</p>
+            <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+              Actual activity is retained for recruiter review while each policy category is scored only once.
+            </p>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {summary.category_details?.map((detail) => (
+              <ViolationCategoryCard
+                key={`${detail.violation_type}-${detail.timestamp ?? 'undated'}`}
+                detail={detail}
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {summary.hard_gate_reasons.length > 0 && (
         <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
           <div className="flex items-center gap-2">
@@ -1671,6 +1691,64 @@ const EvidenceList: React.FC<{ evidence: string[]; empty: string; compact?: bool
       {evidence.length === 0 && <li className="text-[10px] font-semibold text-slate-400">{empty}</li>}
     </ul>
   </div>
+  );
+};
+
+const ViolationCategoryCard: React.FC<{
+  detail: ViolationCategoryDetail;
+}> = ({ detail }) => {
+  const presentation = buildViolationCategoryPresentation(detail);
+  const severe = detail.severity === 'high' || detail.severity === 'critical';
+
+  return (
+    <div
+      className={`rounded-xl border bg-white p-4 shadow-sm ${
+        severe ? 'border-rose-200' : 'border-amber-200'
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[12px] font-black text-slate-950">{presentation.label}</p>
+          <p className="mt-0.5 text-[9px] font-semibold text-slate-500">
+            First recorded {presentation.occurredAt}
+          </p>
+        </div>
+        <span
+          className={`rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.1em] ${
+            severe
+              ? 'border-rose-200 bg-rose-50 text-rose-700'
+              : 'border-amber-200 bg-amber-50 text-amber-700'
+          }`}
+        >
+          {presentation.severityLabel}
+        </span>
+      </div>
+
+      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+        {presentation.facts.map((fact) => (
+          <div key={fact.label} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+            <dt className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-400">
+              {fact.label}
+            </dt>
+            <dd className="mt-1 text-[10px] font-black leading-4 text-slate-800">
+              {fact.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <p className="mt-3 text-[10px] font-semibold leading-5 text-slate-600">
+        {presentation.scoringNote}
+      </p>
+      {presentation.terminationTriggered && (
+        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-bold leading-5 text-rose-800">
+          Interview termination was triggered
+          {presentation.terminationReason
+            ? `: ${presentation.terminationReason}.`
+            : '.'}
+        </div>
+      )}
+    </div>
   );
 };
 

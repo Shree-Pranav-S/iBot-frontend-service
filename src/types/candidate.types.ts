@@ -97,20 +97,42 @@ export interface SectionCommunicationBreakdown {
   evidence: string[];
 }
 
-interface SeverityCounts {
+export interface SeverityCounts {
   low: number;
   medium: number;
   high: number;
   critical: number;
 }
 
-interface ViolationSummary {
+export type ViolationSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface ViolationCategoryDetail {
+  violation_type: string;
+  severity: ViolationSeverity;
+  scored_occurrence_count: number;
+  occurrence_count: number;
+  timestamp: string | null;
+  termination_triggered?: boolean;
+  termination_reason?: string | null;
+  tab_switch_count?: number | null;
+  observed_duration_ms?: number | null;
+  observed_durations_ms?: number[];
+  max_observed_duration_ms?: number | null;
+  total_observed_duration_ms?: number | null;
+  termination_duration_ms?: number | null;
+  max_face_count?: number | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface ViolationSummary {
   has_violation: boolean;
   validated_violation_count: number;
   severity_counts: SeverityCounts;
   summary: string;
   penalty_applied: number;
   hard_gate_reasons: string[];
+  /** Optional for evaluations persisted before category-level reporting. */
+  category_details?: ViolationCategoryDetail[];
 }
 
 export interface InterviewEvaluationResponse {

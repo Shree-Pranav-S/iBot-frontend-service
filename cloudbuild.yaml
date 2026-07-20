@@ -1,0 +1,17 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - VITE_API_BASE_URL=${_VITE_API_BASE_URL}
+      - --build-arg
+      - VITE_FACE_PROCTORING_ENABLED=${_VITE_FACE_PROCTORING_ENABLED}
+      - --tag
+      - ${_IMAGE}
+      - .
+images:
+  - ${_IMAGE}
+substitutions:
+  _IMAGE: us-east1-docker.pkg.dev/gwx-internship-2026-01/gwx-gar-intern-01/ibot-frontend-service:latest
+  _VITE_API_BASE_URL: https://ibot-gateway-service-jzanqg6pua-ue.a.run.app
+  _VITE_FACE_PROCTORING_ENABLED: "true"

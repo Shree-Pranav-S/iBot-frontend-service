@@ -13,11 +13,13 @@ import {
 } from '@livekit/components-react';
 import { ConnectionState, Track } from 'livekit-client';
 import {
+  FACE_PROCTORING_ENABLED,
   INTERVIEW_CLOSING_EVENT,
   INTERVIEW_DATA_TOPIC,
   INTERVIEW_PROCTORING_TOPIC,
   INTERVIEW_TERMINATED_EVENT,
   LIVEKIT_FORCE_RELAY,
+  PROCTORING_EVENT_RECORDED_EVENT,
   TAB_SWITCH_EVENT,
   TAB_SWITCH_RECORDED_EVENT,
 } from '../../../config/livekit';
@@ -28,7 +30,6 @@ import {
   Mic,
   MicOff,
   PhoneOff,
-  Video,
   VideoOff,
   ShieldCheck,
   ShieldAlert,
@@ -36,6 +37,10 @@ import {
   Wifi,
 } from 'lucide-react';
 import { useLiveKitInterviewToken } from '../hooks/useLiveKitInterviewToken';
+import {
+  useFaceProctoring,
+  type FaceProctoringViolationEvent,
+} from '../hooks/useFaceProctoring';
 import type { ChatMessage } from '../../../types/socket.types';
 import { IbotMark } from '../../../components/ui/IbotMark';
 import {
@@ -107,10 +112,69 @@ const parseInterviewDataPayload = (payload: Uint8Array) => {
       type?: string;
       event_id?: string;
       tab_switch_count?: number;
+      appended?: boolean;
+      reason?: string;
+      termination_reason?: string;
+      condition?: string;
+      violation_type?: string;
     };
   } catch {
     return null;
   }
+};
+
+type InterviewTerminationReason =
+  | 'tab_switch'
+  | 'face_absent'
+  | 'multiple_faces'
+  | 'unknown';
+
+const normalizeTerminationReason = (payload: {
+  reason?: string;
+  termination_reason?: string;
+  condition?: string;
+  violation_type?: string;
+  tab_switch_count?: number;
+}): InterviewTerminationReason => {
+  const rawReason = String(
+    payload.termination_reason ??
+      payload.reason ??
+      payload.condition ??
+      payload.violation_type ??
+      '',
+  )
+    .trim()
+    .toLowerCase();
+
+  if (rawReason.includes('multiple') && rawReason.includes('face')) {
+    return 'multiple_faces';
+  }
+  if (
+    (rawReason.includes('face') && rawReason.includes('absent')) ||
+    rawReason.includes('no_face')
+  ) {
+    return 'face_absent';
+  }
+  if (rawReason.includes('tab') || typeof payload.tab_switch_count === 'number') {
+    return 'tab_switch';
+  }
+  return 'unknown';
+};
+
+const terminationMessage = (
+  reason: InterviewTerminationReason,
+  tabSwitchCount: number,
+) => {
+  if (reason === 'face_absent') {
+    return 'The interview ended because no face was continuously visible for 30 seconds.';
+  }
+  if (reason === 'multiple_faces') {
+    return 'The interview ended because multiple faces were continuously visible for 20 seconds.';
+  }
+  if (reason === 'tab_switch') {
+    return `The interview ended after ${tabSwitchCount} tab switches were recorded.`;
+  }
+  return 'The interview was terminated because a proctoring limit was reached.';
 };
 
 const buildTurnMessages = (transcriptions: LiveTranscription[]): ChatMessage[] => {
@@ -265,18 +329,12 @@ interface InterviewRoomProps {
 export const InterviewControlDock: React.FC<{
   isMuted: boolean;
   isMicToggling: boolean;
-  isCameraEnabled: boolean;
-  isCameraToggling: boolean;
   onToggleMicrophone: () => void;
-  onToggleCamera: () => void;
   onEndSession: () => void;
 }> = ({
   isMuted,
   isMicToggling,
-  isCameraEnabled,
-  isCameraToggling,
   onToggleMicrophone,
-  onToggleCamera,
   onEndSession,
 }) => (
   <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-brand-charcoal/95 p-2 shadow-2xl shadow-black/25 ring-1 ring-black/10 backdrop-blur-xl">
@@ -301,28 +359,6 @@ export const InterviewControlDock: React.FC<{
         <Mic className="h-4 w-4 transition-transform group-hover:scale-110" />
       )}
       {isMuted ? 'Unmute' : 'Mute'}
-    </button>
-    <button
-      type="button"
-      onClick={onToggleCamera}
-      disabled={isCameraToggling}
-      className={`group inline-flex h-11 min-w-32 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 ${
-        isCameraEnabled
-          ? 'bg-white text-brand-charcoal hover:bg-brand-soft'
-          : 'bg-brand-soft text-brand-hover hover:bg-[#EAD7BE]'
-      }`}
-      title={isCameraEnabled ? 'Turn camera off' : 'Turn camera on'}
-      aria-label={isCameraEnabled ? 'Turn camera off' : 'Turn camera on'}
-      aria-pressed={!isCameraEnabled}
-    >
-      {isCameraToggling ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : isCameraEnabled ? (
-        <Video className="h-4 w-4 transition-transform group-hover:scale-110" />
-      ) : (
-        <VideoOff className="h-4 w-4" />
-      )}
-      {isCameraEnabled ? 'Camera off' : 'Camera on'}
     </button>
     <span className="h-8 w-px bg-white/15" aria-hidden="true" />
     <button
@@ -463,12 +499,15 @@ function InterviewStage({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [micMutedByUser, setMicMutedByUser] = useState(false);
   const [isMicToggling, setIsMicToggling] = useState(false);
-  const [isCameraToggling, setIsCameraToggling] = useState(false);
+  const [isCameraRecovering, setIsCameraRecovering] = useState(false);
+  const [cameraTrackHealthy, setCameraTrackHealthy] = useState(false);
   const [timerStartedAtMs, setTimerStartedAtMs] = useState<number | null>(null);
   const [sessionPhase, setSessionPhase] = useState<
     'active' | 'complete' | 'terminated' | 'ended'
   >('active');
   const [terminationTabSwitchCount, setTerminationTabSwitchCount] = useState(0);
+  const [terminationReason, setTerminationReason] =
+    useState<InterviewTerminationReason>('unknown');
   const [tabSwitchCount, setTabSwitchCount] = useState(initialTabSwitchCount);
   const [closingSignalReceived, setClosingSignalReceived] = useState(false);
   const hasConnectedRef = useRef(false);
@@ -480,6 +519,10 @@ function InterviewStage({
   const pendingTabSwitchesRef = useRef(
     new Map<string, { event_id: string; occurred_at: string }>(),
   );
+  const pendingFaceEventsRef = useRef(
+    new Map<string, FaceProctoringViolationEvent>(),
+  );
+  const candidateVideoRef = useRef<HTMLVideoElement | null>(null);
   const lastVisibilityStateRef = useRef(document.visibilityState);
 
   const signalInterviewClosing = useCallback(() => {
@@ -503,11 +546,21 @@ function InterviewStage({
       }
       return;
     }
+    if (parsed?.type === PROCTORING_EVENT_RECORDED_EVENT) {
+      if (parsed.event_id) {
+        pendingFaceEventsRef.current.delete(parsed.event_id);
+      }
+      return;
+    }
     if (parsed?.type === INTERVIEW_TERMINATED_EVENT) {
       terminationSignalReceivedRef.current = true;
-      const finalCount = Math.max(6, parsed.tab_switch_count ?? 6);
-      setTabSwitchCount(finalCount);
-      setTerminationTabSwitchCount(finalCount);
+      const reason = normalizeTerminationReason(parsed);
+      setTerminationReason(reason);
+      if (reason === 'tab_switch') {
+        const finalCount = Math.max(0, parsed.tab_switch_count ?? 5);
+        setTabSwitchCount(finalCount);
+        setTerminationTabSwitchCount(finalCount);
+      }
       setSessionPhase('terminated');
       room.disconnect();
     }
@@ -590,26 +643,84 @@ function InterviewStage({
     });
   }, [connectionState, isMicToggling, isMicrophoneEnabled, localParticipant]);
 
-  const toggleCamera = async () => {
-    if (connectionState !== ConnectionState.Connected || isCameraToggling) return;
+  const recoverCamera = useCallback(async () => {
+    if (
+      connectionState !== ConnectionState.Connected ||
+      isCameraRecovering ||
+      sessionPhase !== 'active'
+    ) {
+      return;
+    }
 
-    const enableCamera = !isCameraEnabled;
-    setIsCameraToggling(true);
+    setIsCameraRecovering(true);
     try {
-      const publication = await localParticipant.setCameraEnabled(enableCamera, {
+      const publication = await localParticipant.setCameraEnabled(true, {
         facingMode: 'user',
       });
       setCameraError(
-        enableCamera && !publication
+        !publication
           ? 'Camera was not published to the room.'
           : null,
       );
     } catch (err) {
-      setCameraError(err instanceof Error ? err.message : 'Unable to update camera.');
+      setCameraError(err instanceof Error ? err.message : 'Unable to restore camera.');
     } finally {
-      setIsCameraToggling(false);
+      setIsCameraRecovering(false);
     }
-  };
+  }, [connectionState, isCameraRecovering, localParticipant, sessionPhase]);
+
+  useEffect(() => {
+    if (
+      connectionState !== ConnectionState.Connected ||
+      sessionPhase !== 'active' ||
+      (cameraTrack && isCameraEnabled) ||
+      isCameraRecovering
+    ) {
+      return;
+    }
+
+    const retryTimer = window.setTimeout(() => {
+      void recoverCamera();
+    }, 750);
+    return () => window.clearTimeout(retryTimer);
+  }, [
+    cameraTrack,
+    connectionState,
+    isCameraEnabled,
+    isCameraRecovering,
+    recoverCamera,
+    sessionPhase,
+  ]);
+
+  useEffect(() => {
+    const mediaTrack = cameraTrack?.track?.mediaStreamTrack;
+    if (!mediaTrack) {
+      const resetFrame = window.requestAnimationFrame(() => {
+        setCameraTrackHealthy(false);
+      });
+      return () => window.cancelAnimationFrame(resetFrame);
+    }
+
+    const updateHealth = () => {
+      setCameraTrackHealthy(
+        mediaTrack.readyState === 'live' &&
+          mediaTrack.enabled &&
+          !mediaTrack.muted,
+      );
+    };
+    const initialHealthFrame = window.requestAnimationFrame(updateHealth);
+    mediaTrack.addEventListener('ended', updateHealth);
+    mediaTrack.addEventListener('mute', updateHealth);
+    mediaTrack.addEventListener('unmute', updateHealth);
+    const healthTimer = window.setInterval(updateHealth, 1000);
+    return () => {
+      mediaTrack.removeEventListener('ended', updateHealth);
+      mediaTrack.removeEventListener('mute', updateHealth);
+      mediaTrack.removeEventListener('unmute', updateHealth);
+      window.cancelAnimationFrame(initialHealthFrame);
+      window.clearInterval(healthTimer);
+    };
+  }, [cameraTrack]);
 
   const endSession = () => {
     if (!window.confirm('Are you sure you want to end this interview?')) return;
@@ -624,7 +735,8 @@ function InterviewStage({
   const botIsProcessing = agentState === 'thinking';
   const micIsPublished =
     Boolean(microphoneTrack) && isMicrophoneEnabled && !micMutedByUser;
-  const cameraIsPublished = Boolean(cameraTrack) && isCameraEnabled;
+  const cameraIsPublished =
+    Boolean(cameraTrack) && isCameraEnabled && cameraTrackHealthy;
   const agentIsReady = Boolean(agent) && agentState !== 'connecting' && agentState !== 'disconnected';
   const isRecording = isLive && micIsPublished && agentState === 'listening';
   const displayedMicError = micError || lastMicrophoneError?.message || null;
@@ -653,6 +765,59 @@ function InterviewStage({
       void publishTabSwitchEvent(event);
     }
   }, [publishTabSwitchEvent]);
+
+  const publishFaceProctoringEvent = useCallback(
+    async (event: FaceProctoringViolationEvent) => {
+      if (connectionState !== ConnectionState.Connected) return;
+      const payload = new TextEncoder().encode(JSON.stringify(event));
+      try {
+        await localParticipant.publishData(payload, {
+          reliable: true,
+          topic: INTERVIEW_PROCTORING_TOPIC,
+        });
+      } catch (err) {
+        console.warn('Unable to report face proctoring event', err);
+      }
+    },
+    [connectionState, localParticipant],
+  );
+
+  const handleFaceViolation = useCallback(
+    (event: FaceProctoringViolationEvent) => {
+      pendingFaceEventsRef.current.set(event.event_id, event);
+      void publishFaceProctoringEvent(event);
+    },
+    [publishFaceProctoringEvent],
+  );
+
+  const flushPendingFaceEvents = useCallback(() => {
+    for (const event of pendingFaceEventsRef.current.values()) {
+      void publishFaceProctoringEvent(event);
+    }
+  }, [publishFaceProctoringEvent]);
+
+  const faceProctoring = useFaceProctoring({
+    enabled:
+      FACE_PROCTORING_ENABLED && isLive && sessionPhase === 'active',
+    cameraAvailable: cameraIsPublished,
+    videoRef: candidateVideoRef,
+    onViolation: handleFaceViolation,
+  });
+  const faceMonitoringIsActive =
+    FACE_PROCTORING_ENABLED &&
+    isLive &&
+    sessionPhase === 'active' &&
+    faceProctoring.status === 'ready';
+  const faceMonitoringIsStarting =
+    FACE_PROCTORING_ENABLED &&
+    isLive &&
+    sessionPhase === 'active' &&
+    faceProctoring.status === 'starting';
+  const faceMonitoringIsUnavailable =
+    FACE_PROCTORING_ENABLED &&
+    isLive &&
+    sessionPhase === 'active' &&
+    faceProctoring.status === 'unavailable';
 
   useEffect(() => {
     if (sessionPhase !== 'active') {
@@ -695,6 +860,18 @@ function InterviewStage({
     const retryTimer = window.setInterval(flushPendingTabSwitches, 2000);
     return () => window.clearInterval(retryTimer);
   }, [connectionState, flushPendingTabSwitches, sessionPhase]);
+
+  useEffect(() => {
+    if (
+      connectionState !== ConnectionState.Connected ||
+      sessionPhase !== 'active'
+    ) {
+      return;
+    }
+    flushPendingFaceEvents();
+    const retryTimer = window.setInterval(flushPendingFaceEvents, 2000);
+    return () => window.clearInterval(retryTimer);
+  }, [connectionState, flushPendingFaceEvents, sessionPhase]);
 
   const readinessText = (() => {
     if (connectionState === ConnectionState.Connecting) return 'Connecting to LiveKit';
@@ -824,8 +1001,8 @@ function InterviewStage({
                 ? 'border-amber-200 bg-amber-50 text-amber-800'
                 : 'border-slate-200 bg-white text-slate-600'
             }`}
-            title="Tab switches recorded. More than 5 switches will end the interview."
-            aria-label={`${tabSwitchCount} tab switches recorded; more than 5 ends the interview`}
+            title="Tab switches recorded. The 5th switch will end the interview."
+            aria-label={`${tabSwitchCount} tab switches recorded; the 5th ends the interview`}
           >
             <ShieldAlert className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Tabs</span>
@@ -902,7 +1079,10 @@ function InterviewStage({
                   {sessionPhase === 'complete'
                     ? 'Your interview has been submitted and the room is now closed.'
                     : sessionPhase === 'terminated'
-                      ? `The interview ended after ${terminationTabSwitchCount} tab switches were recorded.`
+                      ? terminationMessage(
+                          terminationReason,
+                          terminationTabSwitchCount,
+                        )
                       : 'This interview room is no longer active.'}
                 </p>
               </div>
@@ -916,18 +1096,49 @@ function InterviewStage({
                 <p className="text-[9px] font-black uppercase tracking-[0.15em] text-[#E8C794]">Candidate video</p>
                 <p className="mt-0.5 text-xs font-bold">Your camera preview</p>
               </div>
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black ${
-                cameraIsPublished
-                  ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
-                  : 'border-white/20 bg-white/10 text-white/75'
-              }`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${cameraIsPublished ? 'bg-emerald-400' : 'bg-white/45'}`} />
-                {cameraIsPublished ? 'Camera on' : 'Camera off'}
-              </span>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {FACE_PROCTORING_ENABLED && isLive && sessionPhase === 'active' && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black ${
+                      faceMonitoringIsActive
+                        ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
+                        : faceMonitoringIsUnavailable
+                          ? 'border-red-300/50 bg-red-500/25 text-red-50'
+                          : 'border-amber-300/40 bg-amber-500/20 text-amber-50'
+                    }`}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        faceMonitoringIsActive
+                          ? 'bg-emerald-400'
+                          : faceMonitoringIsUnavailable
+                            ? 'bg-red-400'
+                            : 'animate-pulse bg-amber-300'
+                      }`}
+                    />
+                    {faceMonitoringIsActive
+                      ? 'Face monitoring active'
+                      : faceMonitoringIsStarting
+                        ? 'Face monitoring starting'
+                        : 'Face monitoring unavailable'}
+                  </span>
+                )}
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black ${
+                  cameraIsPublished
+                    ? 'border-emerald-300/40 bg-emerald-500/20 text-emerald-100'
+                    : 'border-white/20 bg-white/10 text-white/75'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${cameraIsPublished ? 'bg-emerald-400' : 'bg-white/45'}`} />
+                  {cameraIsPublished ? 'Camera required · on' : 'Camera required · off'}
+                </span>
+              </div>
             </div>
 
             {cameraIsPublished && cameraTrack ? (
               <VideoTrack
+                ref={candidateVideoRef}
                 trackRef={{
                   participant: localParticipant,
                   publication: cameraTrack,
@@ -940,14 +1151,62 @@ function InterviewStage({
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-[#E8C794]">
                   <VideoOff className="h-6 w-6" />
                 </div>
-                <p className="mt-4 text-sm font-black">Your camera is off</p>
+                <p className="mt-4 text-sm font-black">Candidate cannot be seen</p>
                 <p className="mt-1 max-w-xs text-[11px] font-medium leading-relaxed text-white/55">
-                  Use the camera control below whenever you are ready to show your video.
+                  Video must remain on throughout the interview. Absence is a high-severity violation, and 30 continuous seconds without a visible face will end the interview.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => void recoverCamera()}
+                  disabled={isCameraRecovering || !isLive}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-[10px] font-black text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isCameraRecovering && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {isCameraRecovering ? 'Restoring camera' : 'Restore camera'}
+                </button>
               </div>
             )}
 
-            {displayedCameraError && (
+            {faceMonitoringIsUnavailable && (
+              <div
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#17130F]/95 px-8 text-center text-white backdrop-blur-sm"
+                role="alert"
+                aria-live="assertive"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-300/25 bg-red-500/15 text-red-200">
+                  <ShieldAlert className="h-6 w-6" />
+                </div>
+                <p className="mt-4 text-sm font-black">Face monitoring is unavailable</p>
+                <p className="mt-1 max-w-sm text-[11px] font-medium leading-relaxed text-white/65">
+                  The interview cannot continue without active face monitoring. Refresh the room to reconnect monitoring.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-[10px] font-black text-brand-charcoal transition hover:bg-brand-soft"
+                >
+                  Refresh interview room
+                </button>
+              </div>
+            )}
+
+            {faceProctoring.alertCondition && cameraIsPublished && !faceMonitoringIsUnavailable && (
+              <div
+                className={`absolute inset-x-4 bottom-4 z-20 rounded-xl border px-4 py-3 text-xs font-black shadow-xl backdrop-blur ${
+                  faceProctoring.alertCondition === 'multiple_faces'
+                    ? 'border-orange-300/50 bg-orange-950/90 text-orange-50'
+                    : 'border-amber-300/50 bg-amber-950/90 text-amber-50'
+                }`}
+                role="alert"
+                aria-live="assertive"
+              >
+                {faceProctoring.alertCondition === 'multiple_faces'
+                  ? 'Only one person should attend the interview. This is a high-severity violation; 20 continuous seconds will end the interview.'
+                  : 'Candidate cannot be seen. This is a high-severity violation; remain visible to avoid termination after 30 continuous seconds.'}
+              </div>
+            )}
+
+            {displayedCameraError && !faceProctoring.alertCondition && !faceMonitoringIsUnavailable && (
               <div className="absolute inset-x-4 bottom-4 z-20 rounded-xl border border-amber-300/35 bg-[#2F2922]/90 px-3 py-2.5 text-[10px] font-semibold text-amber-100 backdrop-blur">
                 Camera issue: {displayedCameraError}
               </div>
@@ -1000,10 +1259,7 @@ function InterviewStage({
           <InterviewControlDock
             isMuted={micMutedByUser}
             isMicToggling={isMicToggling}
-            isCameraEnabled={cameraIsPublished}
-            isCameraToggling={isCameraToggling}
             onToggleMicrophone={toggleMicrophone}
-            onToggleCamera={toggleCamera}
             onEndSession={endSession}
           />
         </div>

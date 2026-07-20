@@ -509,7 +509,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
   const overviewItems = [
     'Use a quiet, well-lit room and speak naturally.',
     'Keep this tab open and active throughout the interview.',
-    'Allow enough uninterrupted time to complete the session.',
+    'Keep your camera on with only one person in view.',
   ];
   const readinessChecks = [
     {
@@ -679,7 +679,16 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">{overviewItems.map((item) => <div key={item} className="flex gap-2 rounded-xl bg-slate-50 p-3"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" /><p className="text-[11px] font-semibold leading-relaxed text-slate-600">{item}</p></div>)}</div>
                 <button onClick={() => setInstructionsOpen(true)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-brand-hover hover:text-brand-charcoal"><Info className="h-3.5 w-3.5" />Read interview rules and privacy details</button>
               </div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:max-w-sm"><div className="flex gap-2"><Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><p className="text-[11px] font-semibold leading-relaxed text-amber-900">Don’t switch between tabs. This is a proctored environment, and every tab switch is recorded as a violation.</p></div></div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:max-w-sm">
+                <div className="flex gap-2">
+                  <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="text-[11px] font-semibold leading-relaxed text-amber-900">
+                    <p className="font-black">Automatic termination limits</p>
+                    <p className="mt-1">The 5th tab switch, 30 continuous seconds without a visible face, or 20 continuous seconds with multiple faces ends the interview.</p>
+                    <p className="mt-1">Tab switching contributes one low violation; each face violation type contributes at most one high violation.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -715,10 +724,12 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
 
             <div className="mt-5 space-y-3">
               {[
-                'Maintain focus on the interview tab. Switching tabs or opening developer tools may be flagged.',
+                'Maintain focus on the interview tab. The exact switch count is tracked; switches contribute one low-severity violation in total, and the 5th switch terminates the interview.',
                 `The session runs continuously once launched. Make sure you are free for the full ${details.interview_duration_mins} minutes.`,
                 'Use a quiet, well-lit environment so speech transcription and video remain clear.',
                 'Test your camera and microphone in the waiting room before joining the live session.',
+                'Keep your camera on and remain visible. Face absence and multiple faces are high-severity violations; each type is counted at most once even if repeated.',
+                'The interview terminates if no face is continuously visible for 30 seconds or if multiple faces remain visible for 20 continuous seconds.',
                 'If your internet drops, do not close the tab. The client will try to reconnect automatically.',
               ].map((rule) => (
                 <div key={rule} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
@@ -731,7 +742,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
             <div className="mt-5 flex gap-3 rounded-2xl border border-[#D9C4A7] bg-brand-soft p-4 text-brand-hover">
               <Shield className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent" />
               <p className="text-xs font-semibold leading-relaxed">
-                By starting the assessment, you acknowledge that your camera and microphone will be active in the live room and that your responses may be transcribed, analyzed, and shared with the recruitment team.
+                By starting the assessment, you acknowledge that your camera and microphone will be active in the live room. Face presence and face count are checked on your device; camera frames are not uploaded or stored by this check, but detected proctoring events may be recorded for recruiter review. Your responses may also be transcribed, analyzed, and shared with the recruitment team.
               </p>
             </div>
           </div>
@@ -757,7 +768,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({
             <div className="space-y-2">
               <h3 className="text-lg font-black text-slate-950">Start the live interview?</h3>
               <p className="text-sm leading-relaxed text-slate-500">
-                You will enter a proctored interview environment with camera and microphone access. Browser focus, media input, and the assessment timeline may be monitored.
+                You will enter a proctored interview environment with camera and microphone access. The 5th tab switch, 30 continuous seconds without a visible face, or 20 continuous seconds with multiple faces will terminate the interview.
               </p>
             </div>
 

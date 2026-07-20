@@ -2,6 +2,7 @@ import React from 'react';
 import type {
   InterviewEvaluationResponse,
   InterviewTranscriptResponse,
+  ViolationCategoryDetail,
 } from '../../../types/candidate.types';
 import { formatDateTime, formatLabel, scoreLabel } from './evaluationUiUtils';
 import { RecruiterNarrativeContent } from './EvaluationUI';
@@ -11,6 +12,7 @@ import {
   transcriptTurnMeta,
   transcriptTurnTime,
 } from './evaluationReportUtils';
+import { buildViolationCategoryPresentation } from './violationCategoryUi';
 
 interface EvaluationPrintReportProps {
   evaluation: InterviewEvaluationResponse;
@@ -316,6 +318,19 @@ export const EvaluationPrintReport: React.FC<EvaluationPrintReportProps> = ({
             <div className="evaluation-print-block">
               <p>{violation.summary}</p>
             </div>
+            {(violation.category_details?.length ?? 0) > 0 && (
+              <div className="evaluation-print-list">
+                <h3 className="evaluation-print-subsection-title">
+                  Recorded proctoring details
+                </h3>
+                {violation.category_details?.map((detail) => (
+                  <PrintViolationCategory
+                    key={`${detail.violation_type}-${detail.timestamp ?? 'undated'}`}
+                    detail={detail}
+                  />
+                ))}
+              </div>
+            )}
             {violation.hard_gate_reasons.length > 0 && (
               <PrintSignalList
                 title="Hiring gate reasons"
@@ -444,6 +459,41 @@ const PrintSignalList: React.FC<{ title: string; items: string[] }> = ({
     )}
   </div>
 );
+
+const PrintViolationCategory: React.FC<{
+  detail: ViolationCategoryDetail;
+}> = ({ detail }) => {
+  const presentation = buildViolationCategoryPresentation(detail);
+
+  return (
+    <div className="evaluation-print-block">
+      <div className="evaluation-print-row-heading">
+        <div>
+          <h3>{presentation.label}</h3>
+          <p>
+            {presentation.severityLabel} · First recorded {presentation.occurredAt}
+          </p>
+        </div>
+        <strong>{detail.scored_occurrence_count} scored</strong>
+      </div>
+      <dl className="evaluation-print-inline-facts">
+        {presentation.facts.map((fact) => (
+          <div key={fact.label}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p>{presentation.scoringNote}</p>
+      {presentation.terminationTriggered && (
+        <div className="evaluation-print-alert">
+          <strong>Interview termination triggered</strong>
+          <p>{presentation.terminationReason ?? 'A configured proctoring limit was reached.'}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const PrintDimension: React.FC<{
   title: string;

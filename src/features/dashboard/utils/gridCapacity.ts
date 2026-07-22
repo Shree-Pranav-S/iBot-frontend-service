@@ -1,6 +1,5 @@
 export const CARD_MIN_H = 210;
 export const CARD_MIN_W = 290;
-export const SIDEBAR_CARD_MIN_H = 92;
 export const GRID_GAP = 12;
 
 export interface GridCapacity {

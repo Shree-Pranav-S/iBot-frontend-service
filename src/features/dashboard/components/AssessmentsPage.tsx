@@ -45,16 +45,15 @@ import type { AssessmentStatus, AssessmentSummaryResponse } from '../../../types
 import {
   buildAssessmentInstanceNumbers,
   formatAssessmentCreatedDate,
-  formatAssessmentReference,
   nextAssessmentRunNumber,
 } from '../utils/assessmentDisplay';
 import {
   CARD_MIN_W,
-  SIDEBAR_CARD_MIN_H,
   computeGridCapacity,
 } from '../utils/gridCapacity';
 
 const CANDIDATES_PAGE_SIZE = 5;
+const SIDEBAR_PAGE_SIZE = 3;
 const BROWSE_GRID_INSET = 32;
 const BROWSE_CARD_MIN_H = 320;
 type StatusFilter = 'all' | 'active' | 'closed';
@@ -247,12 +246,8 @@ export const AssessmentsPage: React.FC = () => {
   const [showCandidatesModal, setShowCandidatesModal] = useState(false);
 
   const browseGridRef = useRef<HTMLDivElement>(null);
-  const sidebarGridRef = useRef<HTMLDivElement>(null);
   const [browseCapacity, setBrowseCapacity] = useState(() =>
     computeGridCapacity(1200, 400, CARD_MIN_W, BROWSE_CARD_MIN_H),
-  );
-  const [sidebarCapacity, setSidebarCapacity] = useState(() =>
-    computeGridCapacity(260, 400, CARD_MIN_W, SIDEBAR_CARD_MIN_H, 1),
   );
 
   useEffect(() => {
@@ -273,21 +268,8 @@ export const AssessmentsPage: React.FC = () => {
     return () => observer.disconnect();
   }, [selectedId, loadingAssessments]);
 
-  useEffect(() => {
-    const el = sidebarGridRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      setSidebarCapacity(
-        computeGridCapacity(width, height, CARD_MIN_W, SIDEBAR_CARD_MIN_H, 1),
-      );
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [selectedId, loadingAssessments]);
-
   const campaignPageSize = browseCapacity.pageSize;
-  const sidebarPageSize = sidebarCapacity.pageSize;
+  const sidebarPageSize = SIDEBAR_PAGE_SIZE;
 
   const instanceNumbers = useMemo(
     () => buildAssessmentInstanceNumbers(assessments),
@@ -333,8 +315,6 @@ export const AssessmentsPage: React.FC = () => {
     safeSidebarPage * sidebarPageSize,
     (safeSidebarPage + 1) * sidebarPageSize,
   );
-  const sidebarRowCount = Math.max(1, visibleSidebarCampaigns.length);
-
   const visibleCandidates = assessmentCandidates.slice(
     safeCandidatesPage * CANDIDATES_PAGE_SIZE,
     (safeCandidatesPage + 1) * CANDIDATES_PAGE_SIZE,
@@ -526,7 +506,8 @@ export const AssessmentsPage: React.FC = () => {
           key={assessment.id}
           type="button"
           onClick={() => handleSelectAssessment(assessment.id)}
-          className={`group relative flex h-full min-h-[126px] w-full flex-col overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 ${
+          aria-pressed={isSelected}
+          className={`group relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent ${
             isSelected
               ? 'border-brand-accent bg-brand-soft/75 shadow-md shadow-black/10'
               : 'border-default bg-surface hover:-translate-y-0.5 hover:border-brand-accent hover:shadow-md'
@@ -548,41 +529,41 @@ export const AssessmentsPage: React.FC = () => {
               </p>
               <p
                 className="mt-0.5 truncate text-[8px] font-bold text-slate-400"
-                title={`${formatAssessmentReference(assessment.id)} · ${formatAssessmentCreatedDate(assessment.created_at)}`}
+                title={formatAssessmentCreatedDate(assessment.created_at)}
               >
-                {formatAssessmentReference(assessment.id)} · {formatAssessmentCreatedDate(assessment.created_at)}
+                {formatAssessmentCreatedDate(assessment.created_at)}
               </p>
             </div>
-            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wide ${status.classes}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-              {status.label}
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wide ${status.classes}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                {status.label}
+              </span>
+              <span className={`flex h-6 w-6 items-center justify-center rounded-lg border border-slate-200 bg-white/80 text-slate-400 transition-all group-hover:translate-x-0.5 group-hover:border-brand-accent group-hover:text-brand-hover ${isSelected ? 'text-brand-hover' : ''}`}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </span>
             </span>
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-slate-200/80 pt-2.5 pl-1">
-            <div className="min-w-0">
+          <div className="mt-auto grid grid-cols-3 divide-x divide-slate-200/80 overflow-hidden rounded-lg border border-slate-200/80 bg-white/75">
+            <div className="min-w-0 px-2 py-2">
               <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">Duration</p>
               <p className="mt-0.5 truncate text-[9px] font-black text-slate-700">
                 {assessment.interview_duration_mins} min
               </p>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 px-2 py-2">
               <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">Starts</p>
               <p className="mt-0.5 truncate text-[9px] font-black text-slate-700">
                 {formatAssessmentDateShort(assessment.window_start)}
               </p>
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 px-2 py-2">
               <p className="text-[7px] font-black uppercase tracking-wider text-slate-400">Ends</p>
               <p className="mt-0.5 truncate text-[9px] font-black text-slate-700">
                 {formatAssessmentDateShort(assessment.window_end)}
               </p>
             </div>
-          </div>
-
-          <div className={`mt-auto flex items-center justify-between pl-1 pt-2 text-[8px] font-black ${isSelected ? 'text-brand-hover' : 'text-slate-400'}`}>
-            <span>{isSelected ? 'Currently viewing' : 'Open assessment'}</span>
-            <ArrowUpRight className={`h-3.5 w-3.5 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${palette.meta}`} />
           </div>
         </button>
       );
@@ -616,9 +597,9 @@ export const AssessmentsPage: React.FC = () => {
                 </p>
                 <p
                   className="mt-1 truncate text-[8px] font-bold tracking-normal text-slate-400"
-                  title={`${formatAssessmentReference(assessment.id)} · ${formatAssessmentCreatedDate(assessment.created_at)}`}
+                  title={formatAssessmentCreatedDate(assessment.created_at)}
                 >
-                  {formatAssessmentReference(assessment.id)} · {formatAssessmentCreatedDate(assessment.created_at)}
+                  {formatAssessmentCreatedDate(assessment.created_at)}
                 </p>
               </div>
             </div>
@@ -915,13 +896,10 @@ export const AssessmentsPage: React.FC = () => {
             ) : (
               <div className="ibot-section-surface flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div
-                  ref={sidebarGridRef}
                   className="grid min-h-0 flex-1 content-start gap-2 p-2"
                   style={{
                     gridTemplateColumns: '1fr',
-                    gridTemplateRows: `repeat(${sidebarRowCount}, minmax(${SIDEBAR_CARD_MIN_H}px, ${
-                      visibleSidebarCampaigns.length === 1 ? '154px' : '1fr'
-                    }))`,
+                    gridTemplateRows: `repeat(${SIDEBAR_PAGE_SIZE}, minmax(0, 1fr))`,
                   }}
                 >
                   {visibleSidebarCampaigns.map((a) =>
@@ -934,49 +912,6 @@ export const AssessmentsPage: React.FC = () => {
                   total={sortedAssessments.length}
                   onPageChange={setSidebarPage}
                 />
-                {selectedAssessment && (
-                  <div className="flex-shrink-0 border-t border-slate-200 bg-gradient-to-br from-brand-soft/70 via-white to-white p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[8px] font-black uppercase tracking-[0.14em] text-brand-hover">
-                        Assessment at a glance
-                      </p>
-                      <span className="text-[8px] font-bold text-slate-400">
-                        {assessmentCandidates.length} candidates
-                      </span>
-                    </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1.5">
-                      {[
-                        {
-                          label: 'Sections',
-                          value: String(selectedAssessment.interview_plan?.sections.length ?? 0),
-                        },
-                        {
-                          label: 'Skills',
-                          value: String(selectedAssessment.jd_analysis?.skills.length ?? 0),
-                        },
-                        {
-                          label: 'Signals',
-                          value: String(selectedAssessment.jd_analysis?.behavioural_signals.length ?? 0),
-                        },
-                      ].map((item) => (
-                        <div key={item.label} className="rounded-lg border border-[#E4D8C8] bg-white px-2 py-2 text-center shadow-sm">
-                          <p className="text-xs font-black text-slate-800">{item.value}</p>
-                          <p className="mt-0.5 text-[7px] font-black uppercase tracking-wider text-slate-400">
-                            {item.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateModal(true)}
-                      className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#D8C9B5] bg-white px-2.5 py-2 text-[9px] font-black text-brand-hover shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft"
-                    >
-                      <Plus className="h-3 w-3" />
-                      Create another assessment
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -1050,7 +985,7 @@ export const AssessmentsPage: React.FC = () => {
                     {renderInstanceBadge(selectedAssessment.id)}
                   </div>
                   <p className="mt-1 text-[9px] font-bold text-slate-400">
-                    {formatAssessmentReference(selectedAssessment.id)} · {formatAssessmentCreatedDate(selectedAssessment.created_at)}
+                    {formatAssessmentCreatedDate(selectedAssessment.created_at)}
                   </p>
 
                   <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">

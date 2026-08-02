@@ -7,6 +7,7 @@ import type {
   AssessmentSummaryResponse,
   AssessmentResponse,
   AssessmentStatus,
+  AssessmentUpdatePayload,
 } from "../types/assessment.types";
 import type {
   CandidateAssessmentListItem,
@@ -81,6 +82,49 @@ export const useUpdateAssessmentStatus = () => {
     onSuccess: (data) => {
       client.invalidateQueries({ queryKey: ["assessments"] });
       client.invalidateQueries({ queryKey: ["assessments", data.id] });
+    },
+  });
+};
+
+export const useUpdateAssessment = () => {
+  const client = useQueryClient();
+  return useMutation<
+    AssessmentResponse,
+    Error,
+    { id: string; payload: AssessmentUpdatePayload }
+  >({
+    mutationFn: async ({ id, payload }) => {
+      const resp = await assessmentService.updateAssessment(id, payload);
+      if (!resp.success || !resp.data) {
+        throw new Error(resp.message || "Failed to update assessment");
+      }
+      return resp.data;
+    },
+    onSuccess: (data) => {
+      client.setQueryData(["assessments", data.id], data);
+      client.invalidateQueries({ queryKey: ["assessments"] });
+      client.invalidateQueries({ queryKey: ["candidates", data.id] });
+      client.invalidateQueries({ queryKey: ["evaluations"] });
+    },
+  });
+};
+
+export const useDeleteAssessment = () => {
+  const client = useQueryClient();
+  return useMutation<null, Error, string>({
+    mutationFn: async (id) => {
+      const resp = await assessmentService.deleteAssessment(id);
+      if (!resp.success) {
+        throw new Error(resp.message || "Failed to delete assessment");
+      }
+      return null;
+    },
+    onSuccess: (_data, id) => {
+      client.removeQueries({ queryKey: ["assessments", id], exact: true });
+      client.removeQueries({ queryKey: ["candidates", id], exact: true });
+      client.invalidateQueries({ queryKey: ["assessments"] });
+      client.invalidateQueries({ queryKey: ["candidates"] });
+      client.invalidateQueries({ queryKey: ["evaluations"] });
     },
   });
 };

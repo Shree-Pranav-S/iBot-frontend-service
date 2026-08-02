@@ -5,6 +5,7 @@ import '@uiw/react-md-editor/markdown-editor.css';
 import { useToast } from '../../../hooks/useToast';
 import { CustomSelect } from '../../../components/ui/CustomSelect';
 import MarkdownView from '../../../components/ui/MarkdownView';
+import { EditAssessmentModal } from './EditAssessmentModal';
 import {
   useAssessments,
   useAssessmentDetails,
@@ -40,6 +41,7 @@ import {
   CheckCircle2,
   UserRoundPlus,
   FileCheck2,
+  Edit3,
 } from 'lucide-react';
 import type { AssessmentStatus, AssessmentSummaryResponse } from '../../../types/assessment.types';
 import {
@@ -244,6 +246,7 @@ export const AssessmentsPage: React.FC = () => {
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showJdModal, setShowJdModal] = useState(false);
   const [showCandidatesModal, setShowCandidatesModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const browseGridRef = useRef<HTMLDivElement>(null);
   const [browseCapacity, setBrowseCapacity] = useState(() =>
@@ -328,12 +331,14 @@ export const AssessmentsPage: React.FC = () => {
     setSelectedId(id);
     setDetailTab('interview-plan');
     setCandidatesPage(0);
+    setShowEditModal(false);
   };
 
   const handleBackToBrowse = () => {
     setSelectedId(null);
     setDetailTab('interview-plan');
     setCandidatesPage(0);
+    setShowEditModal(false);
   };
 
   const createMutation = useCreateAssessment();
@@ -936,6 +941,23 @@ export const AssessmentsPage: React.FC = () => {
                     </button>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowEditModal(true)}
+                        disabled={
+                          selectedAssessment.status === 'PROCESSING' ||
+                          !selectedAssessment.interview_plan
+                        }
+                        title={
+                          selectedAssessment.status === 'PROCESSING'
+                            ? 'Editing is available after interview-plan generation finishes.'
+                            : 'Edit assessment details and interview plan'
+                        }
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#D8C9B5] bg-white px-3 text-[10px] font-black text-brand-hover shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-accent hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Edit assessment
+                      </button>
                       <button
                         type="button"
                         onClick={() =>
@@ -2145,6 +2167,18 @@ export const AssessmentsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showEditModal && selectedAssessment && (
+        <EditAssessmentModal
+          key={selectedAssessment.id}
+          assessment={selectedAssessment}
+          onClose={() => setShowEditModal(false)}
+          onDeleted={() => {
+            setShowEditModal(false);
+            handleBackToBrowse();
+          }}
+        />
       )}
     </div>
   );
